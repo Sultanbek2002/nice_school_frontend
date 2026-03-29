@@ -8,3 +8,9 @@ export type HeaderType = {
   href: string
   submenu?: SubmenuItem[]
 }
+export type SocialType = {
+  whatsapp: string
+  telegramm: string
+  instagram: string
+}
+ 

@@ -1,130 +1,114 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React from 'react'
 import Link from 'next/link'
 import Logo from '../Header/Logo'
-import { Icon } from '@iconify/react/dist/iconify.js'
-import { FooterLinkType } from '@/app/types/footerlink'
+import { Icon } from '@iconify/react'
 
-const Footer = () => {
-  const [footerlink, SetFooterlink] = useState<FooterLinkType[]>([])
+interface FooterProps {
+  data?: any; // Сюда придут данные school_info
+}
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch('/api/data')
-        if (!res.ok) throw new Error('Failed to fetch')
-        const data = await res.json()
-        SetFooterlink(data.FooterLinkData)
-      } catch (error) {
-        console.error('Error fetching services:', error)
-      }
-    }
-    fetchData()
-  }, [])
+const Footer: React.FC<FooterProps> = ({ data }) => {
+  // Если данных нет, можно вернуть пустой блок или дефолтные значения
+  const school = data || {};
 
   return (
-    <footer className='bg-deep-slate pt-10'>
-      <div className='container'>
+    <footer className='bg-deep-slate pt-16 border-t border-black/5'>
+      <div className='container mx-auto px-4'>
         <div className='grid grid-cols-1 sm:grid-cols-6 lg:gap-20 md:gap-24 sm:gap-12 gap-12 pb-10'>
+          
+          {/* 1. Логотип и Соцсети */}
           <div className='col-span-2'>
-            <div className='mb-10'>
+            <div className='mb-8'>
               <Logo />
             </div>
             <div className='flex items-center gap-4'>
-              <Link
-                href='https://facebook.com'
-                className='hover:text-primary text-black text-3xl'>
-                <Icon icon='tabler:brand-facebook' />
-              </Link>
-              <Link
-                href='https://twitter.com'
-                className='hover:text-primary text-black text-3xl'>
-                <Icon icon='tabler:brand-twitter' />
-              </Link>
-              <Link
-                href='https://instagram.com'
-                className='hover:text-primary text-black text-3xl'>
-                <Icon icon='tabler:brand-instagram' />
-              </Link>
+              {school.instagram && (
+                <Link href={school.instagram} target="_blank" className='hover:text-primary text-black text-3xl transition-colors'>
+                  <Icon icon='tabler:brand-instagram' />
+                </Link>
+              )}
+              {school.whatsapp && (
+                <Link href={`https://wa.me/${school.whatsapp.replace(/\D/g, '')}`} target="_blank" className='hover:text-primary text-black text-3xl transition-colors'>
+                  <Icon icon='tabler:brand-whatsapp' />
+                </Link>
+              )}
+              {school.telegram && (
+                <Link href={school.telegram} target="_blank" className='hover:text-primary text-black text-3xl transition-colors'>
+                  <Icon icon='tabler:brand-telegram' />
+                </Link>
+              )}
+              {school.facebook && (
+                <Link href={school.facebook} target="_blank" className='hover:text-primary text-black text-3xl transition-colors'>
+                  <Icon icon='tabler:brand-facebook' />
+                </Link>
+              )}
             </div>
           </div>
+
+          {/* 2. Быстрые ссылки (можно оставить статичными или завязать на меню) */}
           <div className='col-span-2'>
-            <div className='flex gap-20'>
-              {footerlink.map((product, i) => (
-                <div key={i} className='group relative col-span-2'>
-                  <p className='text-black text-xl font-semibold mb-9'>
-                    {product.section}
-                  </p>
-                  <ul>
-                    {product.links.map((item, i) => (
-                      <li key={i} className='mb-3'>
-                        <Link
-                          href={item.href}
-                          className='text-black/60 hover:text-primary text-base font-normal mb-6'>
-                          {item.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
+            <p className='text-black text-xl font-bold mb-7 uppercase tracking-wider'>
+              Байланыш
+            </p>
+            <ul className='space-y-4'>
+              <li>
+                <Link href="/about" className='text-black/60 hover:text-primary transition-colors'>Биз жөнүндө</Link>
+              </li>
+              <li>
+                <Link href="/courses" className='text-black/60 hover:text-primary transition-colors'>Курстар</Link>
+              </li>
+              <li>
+                <Link href="/contact" className='text-black/60 hover:text-primary transition-colors'>Контакттар</Link>
+              </li>
+            </ul>
           </div>
-          <div className='col-span-2 sm:col-span-6 md:col-span-2'>
-            <div className='flex flex-col gap-10'>
-              <div className='flex item-center'>
-                <Icon
-                  icon='solar:point-on-map-perspective-bold'
-                  className='text-primary text-3xl lg:text-2xl inline-block me-2'
-                />
-                <p className='text-black text-base'>
-                  925 Filbert Street Pennsylvania 18072
-                </p>
-              </div>
-              <Link href='tel:+1(909) 235-9814' className='flex items-center w-fit'>
-                <Icon
-                  icon='solar:phone-bold'
-                  className='text-primary text-3xl lg:text-2xl inline-block me-2'
-                />
-                <p className='text-black/60 hover:text-primary text-base'>
-                  +1(909) 235-9814
-                </p>
-              </Link>
-              <Link href='/' className='flex items-center w-fit'>
-                <Icon
-                  icon='solar:mailbox-bold'
-                  className='text-primary text-3xl lg:text-2xl inline-block me-2'
-                />
-                <p className='text-black/60 hover:text-primary text-base'>
-                  info@gmail.com
-                </p>
-              </Link>
+
+          {/* 3. Контактная информация из Базы */}
+          <div className='col-span-2'>
+            <div className='flex flex-col gap-6'>
+              {school.address && (
+                <div className='flex items-start gap-3'>
+                  <Icon icon='solar:point-on-map-perspective-bold' className='text-primary text-2xl mt-1 flex-shrink-0' />
+                  <p className='text-black/80 text-sm leading-relaxed'>
+                    {school.address}
+                  </p>
+                </div>
+              )}
+
+              {school.phones && (
+                <Link href={`tel:${school.phones}`} className='flex items-center gap-3 group w-fit'>
+                  <Icon icon='solar:phone-bold' className='text-primary text-2xl flex-shrink-0' />
+                  <p className='text-black/60 group-hover:text-primary transition-colors font-medium'>
+                    {school.phones}
+                  </p>
+                </Link>
+              )}
+
+              {school.email && (
+                <Link href={`mailto:${school.email}`} className='flex items-center gap-3 group w-fit'>
+                  <Icon icon='solar:mailbox-bold' className='text-primary text-2xl flex-shrink-0' />
+                  <p className='text-black/60 group-hover:text-primary transition-colors font-medium'>
+                    {school.email}
+                  </p>
+                </Link>
+              )}
             </div>
           </div>
         </div>
 
-        <div className='mt-10 lg:flex items-center justify-between border-t border-black/10 py-5'>
-          <p className='text-black/50 text-base text-center lg:text-start font-normal'>
-            @2025 Agency. All Rights Reserved by{' '}
-            <Link
-              href='https://getnextjstemplates.com/'
-              target='_blank'
-              className='hover:text-primary hover:underline'>
-              {' '}
-              GetNextJsTemplates.com
-            </Link>
+        {/* 4. Нижняя панель */}
+        <div className='mt-10 lg:flex items-center justify-between border-t border-black/10 py-8'>
+          <p className='text-black/40 text-sm text-center lg:text-start'>
+            © {new Date().getFullYear()} Nice School. Бардык укуктар корголгон.
           </p>
-          <div className='flex gap-5 mt-5 lg:mt-0 justify-center lg:justify-start'>
-            <Link href='/' target='_blank'>
-              <p className='text-black/50 text-base font-normal hover:text-primary hover:underline px-5 border-r border-grey/20'>
-                Privacy policy
-              </p>
+          <div className='flex gap-6 mt-4 lg:mt-0 justify-center'>
+            <Link href='/privacy' className='text-black/40 hover:text-primary text-sm transition-colors'>
+              Privacy Policy
             </Link>
-            <Link href='/' target='_blank'>
-              <p className='text-black/50 text-base font-normal hover:text-primary hover:underline'>
-                Terms & conditions
-              </p>
+            <Link href='/terms' className='text-black/40 hover:text-primary text-sm transition-colors'>
+              Terms of Service
             </Link>
           </div>
         </div>

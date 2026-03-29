@@ -121,7 +121,7 @@ export const GET = async () => {
     if (!response.ok) throw new Error('Бэкенд не отвечает');
 
     const goData = await response.json();
-    console.log(goData);
+    
 
     // Маппим данные из Go (Name, Link) в формат HeaderType (label, href)
     const HeaderData: HeaderType[] = goData.map((item: any) => ({
