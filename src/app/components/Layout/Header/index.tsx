@@ -36,14 +36,9 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
   const whatsappLink = contactData?.whatsapp ? `https://wa.me/${contactData.whatsapp.replace(/\D/g, '')}` : '#'
 
   const fixedMenus: HeaderType[] = [
-    {
-      label: "Рейтинг", 
-      href: "/rating", 
-    },
-    {
-      label: "Оюндар", 
-      href: "/games", 
-    }
+    { label: "Рейтинг", href: "/rating" },
+    { label: "Олимпиада", href: "/olympiads" },
+    { label: "Оюндар", href: "/games" },
   ];
   // 2. Бэкендден келген меню менен туруктуу менюларды бириктирүү
   const baseNavData = navData || [];
