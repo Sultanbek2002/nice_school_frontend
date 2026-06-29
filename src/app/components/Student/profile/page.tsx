@@ -9,7 +9,6 @@ import { motion } from 'framer-motion'
 import { GO_API_URL } from '@/utils/apiData'
 
 const MD = motion.div as any
-const MButton = motion.button as any
 
 interface UserInfo { id: number; email: string; role: string }
 
@@ -125,9 +124,12 @@ const menuItems = [
 export default function ProfilePage() {
   const [user, setUser] = useState<UserInfo | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
   const [apps, setApps] = useState<MyApplication[]>([])
   const [appsLoading, setAppsLoading] = useState(false)
   const router = useRouter()
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     const token = Cookies.get('auth_token')
@@ -182,14 +184,14 @@ export default function ProfilePage() {
                 style={{ background: 'linear-gradient(135deg, #6556ff, #1a21bc)' }}>
                 {getAvatar(user?.email || '')}
               </MD>
-              <MButton onClick={handleLogout} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+              <button onClick={handleLogout}
                 className="flex items-center gap-2 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-2xl text-sm font-bold border border-red-100 transition-colors cursor-pointer">
-                <Icon icon="solar:logout-3-bold-duotone" width={18} />Чыгуу
-              </MButton>
+                {mounted && <Icon icon="solar:logout-3-bold-duotone" width={18} />}Чыгуу
+              </button>
             </div>
             <div className="space-y-1">
               <span className={`inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border ${roleColor}`}>
-                <Icon icon="solar:shield-user-bold-duotone" width={12} />{roleLabel}
+                {mounted && <Icon icon="solar:shield-user-bold-duotone" width={12} />}{roleLabel}
               </span>
               <h1 className="text-xl font-black text-midnight_text mt-2">{user?.email}</h1>
             </div>
@@ -207,7 +209,7 @@ export default function ProfilePage() {
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">Статистика</p>
               <div className="flex items-center gap-3 bg-amber-50 p-3 rounded-2xl">
                 <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                  <Icon icon="solar:cup-bold-duotone" className="text-amber-500 text-lg" />
+                  {mounted && <Icon icon="solar:cup-bold-duotone" className="text-amber-500 text-lg" />}
                 </div>
                 <div>
                   <p className="text-lg font-black text-midnight_text leading-none">{apps.length}</p>
@@ -216,7 +218,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex items-center gap-3 bg-emerald-50 p-3 rounded-2xl">
                 <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                  <Icon icon="solar:check-circle-bold-duotone" className="text-emerald-500 text-lg" />
+                  {mounted && <Icon icon="solar:check-circle-bold-duotone" className="text-emerald-500 text-lg" />}
                 </div>
                 <div>
                   <p className="text-lg font-black text-midnight_text leading-none">{approvedCount}</p>
@@ -225,7 +227,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl">
                 <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-                  <Icon icon="solar:clock-circle-bold-duotone" className="text-slate-400 text-lg" />
+                  {mounted && <Icon icon="solar:clock-circle-bold-duotone" className="text-slate-400 text-lg" />}
                 </div>
                 <div>
                   <p className="text-lg font-black text-midnight_text leading-none">{pendingCount}</p>
@@ -241,9 +243,9 @@ export default function ProfilePage() {
                 {menuItems.map((item, i) => (
                   <Link key={i} href={item.href}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors group">
-                    <Icon icon={item.icon} className={`text-xl ${item.color} group-hover:scale-110 transition-transform`} />
+                    {mounted && <Icon icon={item.icon} className={`text-xl ${item.color} group-hover:scale-110 transition-transform`} />}
                     <span className="text-sm font-semibold text-midnight_text">{item.label}</span>
-                    <Icon icon="solar:arrow-right-linear" className="ml-auto text-gray-300 group-hover:text-gray-400 text-sm" />
+                    {mounted && <Icon icon="solar:arrow-right-linear" className="ml-auto text-gray-300 group-hover:text-gray-400 text-sm" />}
                   </Link>
                 ))}
               </nav>
@@ -254,11 +256,11 @@ export default function ProfilePage() {
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Аккаунт</p>
               <div className="space-y-1">
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50">
-                  <Icon icon="solar:id-badge-bold-duotone" className="text-xl text-gray-400" />
+                  {mounted && <Icon icon="solar:id-badge-bold-duotone" className="text-xl text-gray-400" />}
                   <div><p className="text-[10px] text-gray-400 font-medium">ID</p><p className="text-sm font-bold text-midnight_text">#{user?.id}</p></div>
                 </div>
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50">
-                  <Icon icon="solar:verified-check-bold-duotone" className="text-xl text-green-500" />
+                  {mounted && <Icon icon="solar:verified-check-bold-duotone" className="text-xl text-green-500" />}
                   <div><p className="text-[10px] text-gray-400 font-medium">Статус</p><p className="text-sm font-bold text-green-600">Активдүү</p></div>
                 </div>
               </div>
@@ -271,13 +273,13 @@ export default function ProfilePage() {
 
             <div className="flex items-center justify-between">
               <h2 className="text-base font-black text-midnight_text flex items-center gap-2">
-                <Icon icon="solar:cup-star-bold-duotone" className="text-amber-500 text-xl" />
+                {mounted && <Icon icon="solar:cup-star-bold-duotone" className="text-amber-500 text-xl" />}
                 Менин олимпиадаларым
               </h2>
               <Link href="/olympiads"
                 className="text-xs font-bold text-primary hover:text-secondary flex items-center gap-1 transition-colors">
                 Бардык олимпиадалар
-                <Icon icon="solar:arrow-right-linear" width={14} />
+                {mounted && <Icon icon="solar:arrow-right-linear" width={14} />}
               </Link>
             </div>
 
@@ -289,13 +291,13 @@ export default function ProfilePage() {
             ) : apps.length === 0 ? (
               <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-10 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
-                  <Icon icon="solar:cup-bold-duotone" className="text-4xl text-amber-200" />
+                  {mounted && <Icon icon="solar:cup-bold-duotone" className="text-4xl text-amber-200" />}
                 </div>
                 <p className="text-slate-500 font-bold text-sm mb-1">Олимпиадага өтүнүч бересиз жок</p>
                 <p className="text-xs text-slate-400 mb-4">Катышкыңыз келген олимпиаданы тандаңыз</p>
                 <Link href="/olympiads"
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-2xl hover:bg-secondary transition-colors shadow-sm shadow-primary/20">
-                  <Icon icon="solar:cup-bold-duotone" />Олимпиадаларды көрүү
+                  {mounted && <Icon icon="solar:cup-bold-duotone" />}Олимпиадаларды көрүү
                 </Link>
               </div>
             ) : (
@@ -320,14 +322,14 @@ export default function ProfilePage() {
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <h3 className="font-black text-sm text-midnight_text leading-snug line-clamp-2">{app.olympiad_title}</h3>
                             <span className={`flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black border ${sm.bg} ${sm.border} ${sm.text}`}>
-                              <Icon icon={sm.icon} width={12} className={sm.iconColor} />{sm.label}
+                              {mounted && <Icon icon={sm.icon} width={12} className={sm.iconColor} />}{sm.label}
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 font-semibold">
-                            <span className="flex items-center gap-1"><Icon icon="solar:book-bold-duotone" width={11} />{app.olympiad_subject}</span>
+                            <span className="flex items-center gap-1">{mounted && <Icon icon="solar:book-bold-duotone" width={11} />}{app.olympiad_subject}</span>
                             <span>•</span>
                             <span className="flex items-center gap-1">
-                              <Icon icon={app.olympiad_format === 'Онлайн' ? 'solar:monitor-bold-duotone' : 'solar:map-point-bold-duotone'} width={11} />
+                              {mounted && <Icon icon={app.olympiad_format === 'Онлайн' ? 'solar:monitor-bold-duotone' : 'solar:map-point-bold-duotone'} width={11} />}
                               {app.olympiad_format}
                             </span>
                           </div>
@@ -338,26 +340,26 @@ export default function ProfilePage() {
                       <div className={`px-4 py-3 border-t ${sm.border} ${sm.bg} space-y-2`}>
                         {/* Countdown */}
                         <div className="flex items-center gap-2">
-                          <Icon icon="solar:hourglass-bold-duotone" width={14} className={sm.iconColor} />
+                          {mounted && <Icon icon="solar:hourglass-bold-duotone" width={14} className={sm.iconColor} />}
                           <Countdown startTime={app.start_time} />
                         </div>
 
                         {/* Status messages */}
                         {app.status === 'pending' && (
                           <p className="text-[11px] text-amber-600 font-semibold flex items-center gap-1">
-                            <Icon icon="solar:info-circle-bold-duotone" width={12} />
+                            {mounted && <Icon icon="solar:info-circle-bold-duotone" width={12} />}
                             Администратор маалыматтарыңызды текшерет, күтүп туруңуз
                           </p>
                         )}
                         {app.status === 'approved' && (
                           <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-                            <Icon icon="solar:check-circle-bold-duotone" width={12} />
+                            {mounted && <Icon icon="solar:check-circle-bold-duotone" width={12} />}
                             Катышуу бекитилди! Убакыт жеткенде линкке өтүңүз
                           </p>
                         )}
                         {app.status === 'rejected' && app.reject_reason && (
                           <p className="text-[11px] text-red-600 font-semibold flex items-center gap-1">
-                            <Icon icon="solar:danger-circle-bold-duotone" width={12} />
+                            {mounted && <Icon icon="solar:danger-circle-bold-duotone" width={12} />}
                             Себеп: {app.reject_reason}
                           </p>
                         )}
@@ -366,7 +368,7 @@ export default function ProfilePage() {
                         <Link href={`/olympiads/${app.olympiad_id}`}
                           className={`inline-flex items-center gap-1 text-[11px] font-black ${sm.text} hover:underline underline-offset-2`}>
                           Олимпиада барагына өтүү
-                          <Icon icon="solar:arrow-right-up-linear" width={11} />
+                          {mounted && <Icon icon="solar:arrow-right-up-linear" width={11} />}
                         </Link>
                       </div>
                     </MD>
