@@ -7,8 +7,19 @@ import { GO_API_URL } from "@/utils/apiData";
 
 interface Olympiad {
     ID: number; title: string; description: string; subject: string; date: string;
+    start_time: string | null;
     image_url: string; file_url: string; format: string; location: string;
     prize_1: string; prize_2: string; prize_3: string; status: string; time_limit: number;
+}
+
+function fmtDateTime(iso: string | null | undefined): string {
+    if (!iso) return "";
+    try {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return "";
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${d.getDate()}-${pad(d.getMonth() + 1)}-${d.getFullYear()}  ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch { return ""; }
 }
 
 function decodeToken(token: string): { user_id?: number; email?: string } | null {
@@ -18,19 +29,20 @@ function getToken() { return Cookies.get("auth_token") || null; }
 function saveToken(t: string) { Cookies.set("auth_token", t, { expires: 7, path: "/" }); }
 
 const FACE_PHASES = [
-    { key: "front", label: "Алдыга карата туруңуз",  dirIcon: null,    hint: "Жүзүңүздү тике кармаңыз" },
-    { key: "left",  label: "Солго 45° буруңуз",       dirIcon: "left",  hint: "Башыңызды акырын солго буруңуз" },
-    { key: "right", label: "Оңго 45° буруңуз",        dirIcon: "right", hint: "Башыңызды акырын оңго буруңуз" },
+    { key: "front", label: "Алдыга карата туруңуз", dirIcon: null,   hint: "Жүзүңүздү тике кармаңыз", yawMin: -0.12, yawMax: 0.12 },
+    { key: "left",  label: "Солго 45° буруңуз",     dirIcon: "left",  hint: "Башыңызды акырын солго буруңуз", yawMin: -0.55, yawMax: -0.22 },
+    { key: "right", label: "Оңго 45° буруңуз",      dirIcon: "right", hint: "Башыңызды акырын оңго буруңуз", yawMin: 0.22,  yawMax: 0.55 },
 ] as const;
 type FaceKey = "front" | "left" | "right";
 
-interface FaceQuality {
-    score: number;        // 0–100
-    facePresent: boolean;
+// MediaPipe yaw: nose deviation from eye midpoint, normalized by eye width
+// positive = face turned right (raw video), negative = face turned left (raw video)
+interface PoseResult {
+    faceDetected: boolean;
+    yaw: number;          // -1..+1, 0 = straight
     lightingOk: boolean;
-    tooDark: boolean;
-    tooBright: boolean;
-    centered: boolean;
+    brightness: number;
+    angleOk: boolean;     // matches current phase requirement
 }
 
 type ModalView = "auth" | "form" | "done";
@@ -42,7 +54,8 @@ interface RegForm {
     birth_date: string; phone: string; certificate_url: string;
 }
 
-export default function OlympiadDetailPage({ params }: { params: { id: string } }) {
+export default function OlympiadDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = React.use(params);
     const [olympiad, setOlympiad] = useState<Olympiad | null>(null);
     const [loading, setLoading]   = useState(true);
     const [mounted, setMounted]   = useState(false);
@@ -52,12 +65,15 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
     const [modalView, setModalView] = useState<ModalView | null>(null);
 
     // Auth
-    const [authTab,      setAuthTab]      = useState<AuthTab>("register");
-    const [authEmail,    setAuthEmail]    = useState("");
-    const [authPassword, setAuthPassword] = useState("");
-    const [authConfirm,  setAuthConfirm]  = useState("");
-    const [authLoading,  setAuthLoading]  = useState(false);
-    const [authError,    setAuthError]    = useState("");
+    const [authTab,         setAuthTab]         = useState<AuthTab>("register");
+    const [authStep,        setAuthStep]        = useState<"credentials" | "otp">("credentials");
+    const [authEmail,       setAuthEmail]       = useState("");
+    const [authPassword,    setAuthPassword]    = useState("");
+    const [authConfirm,     setAuthConfirm]     = useState("");
+    const [authLoading,     setAuthLoading]     = useState(false);
+    const [authError,       setAuthError]       = useState("");
+    const [otpCode,         setOtpCode]         = useState("");
+    const [pendingPassword, setPendingPassword] = useState("");
 
     // Form
     const [formStep,    setFormStep]    = useState<FormStep>(1);
@@ -68,46 +84,77 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
     const [formError,   setFormError]   = useState("");
     const [submitting,  setSubmitting]  = useState(false);
     const [facesUploading, setFacesUploading] = useState(false);
+    const [hasExistingProfile, setHasExistingProfile] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Camera / face
-    const videoRef    = useRef<HTMLVideoElement>(null);
-    const canvasRef   = useRef<HTMLCanvasElement>(null);
-    const streamRef   = useRef<MediaStream | null>(null);
-    const offscreenRef = useRef<HTMLCanvasElement | null>(null);
-    const rafRef      = useRef<number>(0);
-    const stableRef   = useRef<number>(0);   // frames with good quality
+    const videoRef       = useRef<HTMLVideoElement>(null);
+    const canvasRef      = useRef<HTMLCanvasElement>(null);
+    const offscreenRef   = useRef<HTMLCanvasElement | null>(null);
+    const streamRef      = useRef<MediaStream | null>(null);
+    const rafRef         = useRef<number>(0);
+    const landmarkerRef  = useRef<import("@mediapipe/tasks-vision").FaceLandmarker | null>(null);
+    const stableRef      = useRef<number>(0);
     const countdownRunningRef = useRef(false);
 
     const [facePhaseIdx,   setFacePhaseIdx]   = useState(0);
     const [countdown,      setCountdown]      = useState(0);
     const [capturedFaces,  setCapturedFaces]  = useState<Partial<Record<FaceKey, string>>>({});
     const [cameraError,    setCameraError]    = useState("");
-    const [faceQuality,    setFaceQuality]    = useState<FaceQuality | null>(null);
-    const [autoCapturing,  setAutoCapturing]  = useState(false);   // "Камера издеп жатат..."
+    const [poseResult,     setPoseResult]     = useState<PoseResult | null>(null);
+    const [mpReady,        setMpReady]        = useState(false);
+    const [mpLoading,      setMpLoading]      = useState(false);
+    const [autoCapturing,  setAutoCapturing]  = useState(false);
 
-    useEffect(() => { setMounted(true); offscreenRef.current = document.createElement("canvas"); }, []);
-
-    // Fetch olympiad
     useEffect(() => {
-        fetch(`${GO_API_URL}/api/olympiads/${params.id}`)
+        setMounted(true);
+        offscreenRef.current = document.createElement("canvas");
+    }, []);
+
+    useEffect(() => {
+        fetch(`${GO_API_URL}/api/olympiads/${id}`)
             .then(r => r.ok ? r.json() : null)
             .then(d => { if (d) setOlympiad(d); })
             .finally(() => setLoading(false));
-    }, [params.id]);
+    }, [id]);
 
-    // My application status
     useEffect(() => {
         const token = getToken();
         if (!token) return;
         const claims = decodeToken(token);
         if (claims?.email) setUserEmail(claims.email);
-        fetch(`${GO_API_URL}/api/olympiads/${params.id}/my-application`, {
+        fetch(`${GO_API_URL}/api/olympiads/${id}/my-application`, {
             headers: { Authorization: `Bearer ${token}` },
         }).then(r => r.ok ? r.json() : null)
           .then(d => { if (d?.status) setAppStatus(d.status); })
           .catch(() => {});
-    }, [params.id]);
+    }, [id]);
+
+    // ── Load MediaPipe FaceLandmarker ──────────────────────
+    const loadMediaPipe = useCallback(async () => {
+        if (landmarkerRef.current || mpLoading) return;
+        setMpLoading(true);
+        try {
+            const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
+            const vision = await FilesetResolver.forVisionTasks(
+                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+            );
+            landmarkerRef.current = await FaceLandmarker.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+                    delegate: "GPU",
+                },
+                runningMode: "VIDEO",
+                numFaces: 1,
+            });
+            setMpReady(true);
+        } catch (e) {
+            console.error("MediaPipe load failed", e);
+            setCameraError("MediaPipe жүктөлүүдө ката. Интернет туташуусун текшериңиз.");
+        } finally {
+            setMpLoading(false);
+        }
+    }, [mpLoading]);
 
     // ── Camera ──────────────────────────────────────────────
     const startCamera = useCallback(async () => {
@@ -117,7 +164,16 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                 video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
             });
             streamRef.current = s;
-            if (videoRef.current) { videoRef.current.srcObject = s; videoRef.current.play(); }
+            const video = videoRef.current;
+            if (video) {
+                video.srcObject = s;
+                // wait for metadata before playing to avoid interrupted-play error
+                await new Promise<void>(resolve => {
+                    if (video.readyState >= 1) { resolve(); return; }
+                    video.onloadedmetadata = () => resolve();
+                });
+                await video.play().catch(() => {});
+            }
         } catch {
             setCameraError("Камерага уруксат жок. Браузердин жөндөөлөрүнөн уруксат бериңиз.");
         }
@@ -129,104 +185,76 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
         streamRef.current = null;
     }, []);
 
-    // ── Face quality via pixel sampling ─────────────────────
-    const analyzeFace = useCallback((): FaceQuality | null => {
+    // ── Brightness via offscreen canvas ─────────────────────
+    const getBrightness = useCallback((): number => {
         const video = videoRef.current;
-        const offscreen = offscreenRef.current;
-        if (!video || !offscreen || video.videoWidth === 0 || video.readyState < 2) return null;
-
-        const W = 80, H = 60;
-        offscreen.width = W; offscreen.height = H;
-        const ctx = offscreen.getContext("2d", { willReadFrequently: true });
-        if (!ctx) return null;
-
-        // Mirror draw to match the CSS scale-x-[-1] on video
-        ctx.save(); ctx.translate(W, 0); ctx.scale(-1, 1);
+        const canvas = offscreenRef.current;
+        if (!video || !canvas || video.videoWidth === 0 || video.readyState < 2) return 128;
+        const W = 40, H = 30;
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return 128;
         ctx.drawImage(video, 0, 0, W, H);
-        ctx.restore();
         const { data } = ctx.getImageData(0, 0, W, H);
-
-        const cx = W / 2, cy = H / 2;
-        const rx = W * 0.30, ry = H * 0.42;
-
-        let skin = 0, total = 0, brightness = 0;
-        let topSkin = 0, topTotal = 0;   // upper 1/3 of oval (where face is centered)
-
-        for (let y = 0; y < H; y++) {
-            for (let x = 0; x < W; x++) {
-                const nx = (x - cx) / rx, ny = (y - cy) / ry;
-                if (nx * nx + ny * ny > 1) continue;
-
-                const i = (y * W + x) * 4;
-                const r = data[i], g = data[i + 1], b = data[i + 2];
-                total++;
-                brightness += (r + g + b) / 3;
-
-                // Broad skin-tone detector (works for many skin tones)
-                const isSkin =
-                    r > 60 && g > 30 && b > 15 &&
-                    r > b &&
-                    Math.abs(r - g) > 8 &&
-                    r / (b + 1) > 1.05;
-
-                if (isSkin) skin++;
-                if (ny < -0.1) { topTotal++; if (isSkin) topSkin++; }
-            }
-        }
-
-        if (total === 0) return null;
-
-        const skinRatio = skin / total;
-        const avgBrightness = brightness / total;
-        const topRatio = topTotal > 0 ? topSkin / topTotal : 0;
-
-        // Centerdness: face pixels concentrated in the top-center of oval
-        const centered = topRatio > 0.15;
-
-        // Score: blend skin ratio + centered penalty
-        let score = Math.round(Math.min(100, skinRatio * 250));
-        if (!centered && skinRatio > 0.1) score = Math.round(score * 0.75);
-
-        return {
-            score,
-            facePresent:  skinRatio > 0.10,
-            lightingOk:   avgBrightness > 55 && avgBrightness < 225,
-            tooDark:      avgBrightness <= 55,
-            tooBright:    avgBrightness >= 225,
-            centered,
-        };
+        let sum = 0;
+        for (let i = 0; i < data.length; i += 4) sum += (data[i] + data[i+1] + data[i+2]) / 3;
+        return sum / (W * H);
     }, []);
 
-    // ── RAF analysis loop ───────────────────────────────────
+    // ── Detection RAF loop ──────────────────────────────────
     useEffect(() => {
-        if (modalView !== "form" || formStep !== 3 || cameraError) return;
+        if (modalView !== "form" || formStep !== 3 || !mpReady || cameraError) return;
 
         let active = true;
-        let frameCount = 0;
+        let lastTs = -1;
 
-        const loop = () => {
+        const loop = (ts: number) => {
             if (!active) return;
-            frameCount++;
+            const video = videoRef.current;
+            const lm = landmarkerRef.current;
 
-            // Analyze every 3rd frame
-            if (frameCount % 3 === 0) {
-                const q = analyzeFace();
-                if (q) {
-                    setFaceQuality(q);
+            if (video && lm && video.readyState >= 3 && video.videoWidth > 0 && !video.paused && ts !== lastTs) {
+                lastTs = ts;
+                try {
+                    const results = lm.detectForVideo(video, ts);
+                    const brightness = getBrightness();
+                    const lightingOk = brightness > 50 && brightness < 230;
 
-                    // Auto-countdown when quality is high
-                    if (q.score >= 60 && !countdownRunningRef.current) {
-                        stableRef.current++;
-                        if (stableRef.current >= 40) {   // ~1.3s at 30fps
+                    if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+                        const pts = results.faceLandmarks[0];
+                        // Landmarks: left eye outer = 33, right eye outer = 263, nose tip = 4
+                        const leftEye  = pts[33];
+                        const rightEye = pts[263];
+                        const noseTip  = pts[4];
+
+                        const midX     = (leftEye.x + rightEye.x) / 2;
+                        const eyeWidth = Math.abs(rightEye.x - leftEye.x);
+                        // Normalize: positive = nose right of midpoint (face turned right in raw)
+                        const yaw = eyeWidth > 0.01 ? (noseTip.x - midX) / eyeWidth : 0;
+
+                        const phase = FACE_PHASES[facePhaseIdx];
+                        const angleOk = yaw >= phase.yawMin && yaw <= phase.yawMax;
+
+                        const pose: PoseResult = { faceDetected: true, yaw, lightingOk, brightness, angleOk };
+                        setPoseResult(pose);
+
+                        // Auto-countdown when angle is correct + lighting ok
+                        if (angleOk && lightingOk && !countdownRunningRef.current) {
+                            stableRef.current++;
+                            if (stableRef.current >= 45) {  // ~1.5s at 30fps
+                                stableRef.current = 0;
+                                countdownRunningRef.current = true;
+                                setAutoCapturing(true);
+                                setCountdown(3);
+                            }
+                        } else if (!angleOk) {
                             stableRef.current = 0;
-                            countdownRunningRef.current = true;
-                            setAutoCapturing(true);
-                            setCountdown(3);
                         }
-                    } else if (q.score < 40) {
+                    } else {
+                        setPoseResult({ faceDetected: false, yaw: 0, lightingOk, brightness, angleOk: false });
                         stableRef.current = 0;
                     }
-                }
+                } catch { /* video not ready yet */ }
             }
 
             rafRef.current = requestAnimationFrame(loop);
@@ -237,8 +265,7 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
             active = false;
             cancelAnimationFrame(rafRef.current);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [modalView, formStep, cameraError, facePhaseIdx, analyzeFace]);
+    }, [modalView, formStep, mpReady, cameraError, facePhaseIdx, getBrightness]);
 
     // ── Countdown tick ──────────────────────────────────────
     useEffect(() => {
@@ -259,7 +286,6 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
         canvas.height = video.videoHeight || 480;
         const ctx = canvas.getContext("2d");
         if (ctx) {
-            // mirror to match display
             ctx.save(); ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0);
             ctx.restore();
@@ -271,82 +297,162 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
         setAutoCapturing(false);
         countdownRunningRef.current = false;
         stableRef.current = 0;
-        setFaceQuality(null);
+        setPoseResult(null);
         if (facePhaseIdx < FACE_PHASES.length - 1) {
             setTimeout(() => setFacePhaseIdx(i => i + 1), 800);
         }
     };
 
-    // Reset when phase changes (user moved to next angle)
     useEffect(() => {
         stableRef.current = 0;
         countdownRunningRef.current = false;
         setAutoCapturing(false);
         setCountdown(0);
-        setFaceQuality(null);
+        setPoseResult(null);
     }, [facePhaseIdx]);
 
-    // Camera lifecycle
+    // Camera + MediaPipe lifecycle
     useEffect(() => {
         if (modalView === "form" && formStep === 3) {
             setFacePhaseIdx(0);
             setCapturedFaces({});
             setCountdown(0);
             startCamera();
+            loadMediaPipe();
         } else {
             stopCamera();
         }
         return () => { stopCamera(); };
-    }, [modalView, formStep, startCamera, stopCamera]);
-
-    // ── Helpers ─────────────────────────────────────────────
-    const dataUrlToBlob = (dataUrl: string): Blob => {
-        const [header, data] = dataUrl.split(",");
-        const mime = header.match(/:(.*?);/)?.[1] || "image/jpeg";
-        const binary = atob(data);
-        const arr = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
-        return new Blob([arr], { type: mime });
-    };
-
-    const uploadFacePhoto = async (dataUrl: string): Promise<string | null> => {
-        const blob = dataUrlToBlob(dataUrl);
-        const fd = new FormData();
-        fd.append("file", blob, "face.jpg");
-        const res = await fetch(`${GO_API_URL}/api/upload-certificate`, { method: "POST", body: fd });
-        if (!res.ok) return null;
-        return (await res.json()).url || null;
-    };
+    }, [modalView, formStep, startCamera, stopCamera, loadMediaPipe]);
 
     const allFacesCaptured = FACE_PHASES.every(p => capturedFaces[p.key]);
+
+    // ── face-api.js: extract 128-float descriptor from front face ──
+    const extractFaceDescriptor = useCallback(async (dataUrl: string): Promise<number[] | null> => {
+        try {
+            const faceapi = await import("@vladmandic/face-api");
+            const MODEL_URL = "/face-models";
+            if (!faceapi.nets.ssdMobilenetv1.isLoaded) {
+                await Promise.all([
+                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+                ]);
+            }
+            const img = document.createElement("img");
+            img.src = dataUrl;
+            await new Promise<void>(resolve => { img.onload = () => resolve(); });
+            const det = await faceapi
+                .detectSingleFace(img)
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+            if (!det) return null;
+            return Array.from(det.descriptor);
+        } catch (e) {
+            console.error("face-api error", e);
+            return null;
+        }
+    }, []);
 
     // ── Auth ────────────────────────────────────────────────
     const handleAuth = async () => {
         setAuthError("");
         if (!authEmail.trim()) { setAuthError("Email киргизиңиз"); return; }
+
+        // LOGIN — direct, no OTP
+        if (authTab === "login") {
+            if (!authPassword || authPassword.length < 6) { setAuthError("Пароль минимум 6 белги"); return; }
+            setAuthLoading(true);
+            try {
+                const res  = await fetch(`${GO_API_URL}/api/login`, { method: "POST", headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ email: authEmail.trim().toLowerCase(), password: authPassword }) });
+                const data = await res.json();
+                if (res.ok && data.token) { saveToken(data.token); setUserEmail(data.user?.email || authEmail); openForm(data.token); }
+                else setAuthError(data.error || "Email же пароль туура эмес");
+            } finally { setAuthLoading(false); }
+            return;
+        }
+
+        // REGISTER — send OTP first
         if (!authPassword || authPassword.length < 6) { setAuthError("Пароль минимум 6 белги"); return; }
-        if (authTab === "register" && authPassword !== authConfirm) { setAuthError("Паролдор дал келбейт"); return; }
+        if (authPassword !== authConfirm) { setAuthError("Паролдор дал келбейт"); return; }
         setAuthLoading(true);
         try {
-            const url = authTab === "register" ? `${GO_API_URL}/api/quick-register` : `${GO_API_URL}/api/login`;
-            const res  = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
-                                            body: JSON.stringify({ email: authEmail.trim().toLowerCase(), password: authPassword }) });
+            const res  = await fetch(`${GO_API_URL}/api/quick-auth`, { method: "POST", headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ email: authEmail.trim().toLowerCase() }) });
             const data = await res.json();
-            if (res.ok && data.token) { saveToken(data.token); setUserEmail(data.user?.email || authEmail); openForm(); }
-            else setAuthError(data.error || "Ката кетти");
+            if (res.ok) {
+                setPendingPassword(authPassword);
+                setOtpCode("");
+                setAuthStep("otp");
+            } else {
+                setAuthError(data.error || "Ката кетти");
+            }
         } finally { setAuthLoading(false); }
     };
 
-    const openForm = () => {
-        setFormStep(1); setFormError(""); setCertFile(null); setCertPreview(null);
+    const handleOtpVerify = async () => {
+        setAuthError("");
+        if (otpCode.length < 4) { setAuthError("Кодду туура киргизиңиз"); return; }
+        setAuthLoading(true);
+        try {
+            const res  = await fetch(`${GO_API_URL}/api/quick-verify`, { method: "POST", headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ email: authEmail.trim().toLowerCase(), code: otpCode }) });
+            const data = await res.json();
+            if (!res.ok) { setAuthError(data.error || "Код туура эмес"); return; }
+
+            const token = data.token;
+            // If new user, set their password
+            if (data.needs_password && pendingPassword) {
+                await fetch(`${GO_API_URL}/api/user/set-password`, {
+                    method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ password: pendingPassword }),
+                });
+            }
+            saveToken(token);
+            setUserEmail(data.user?.email || authEmail);
+            openForm(token);
+        } finally { setAuthLoading(false); }
+    };
+
+    // Load existing profile and pre-fill form, skip steps 1-2 if data exists
+    const openForm = async (tokenOverride?: string) => {
+        const token = tokenOverride || getToken();
+        setFormError(""); setCertFile(null); setCertPreview(null);
         setForm({ fio: "", school: "", class_name: "", birth_date: "", phone: "", certificate_url: "" });
+        setHasExistingProfile(false);
+
+        if (token) {
+            try {
+                const res = await fetch(`${GO_API_URL}/api/my-profile-data`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (res.ok) {
+                    const d = await res.json();
+                    setForm({
+                        fio: d.fio || "",
+                        school: d.school || "",
+                        class_name: d.class_name || "",
+                        birth_date: d.birth_date || "",
+                        phone: d.phone || "",
+                        certificate_url: d.certificate_url || "",
+                    });
+                    setHasExistingProfile(true);
+                    setFormStep(3); // skip to face scan
+                    setModalView("form");
+                    return;
+                }
+            } catch { /* no previous data, show full form */ }
+        }
+
+        setFormStep(1);
         setModalView("form");
     };
 
     const handleOpen = () => {
         const token = getToken();
         if (token) { const c = decodeToken(token); if (c?.email) setUserEmail(c.email); openForm(); }
-        else { setAuthEmail(""); setAuthPassword(""); setAuthConfirm(""); setAuthError(""); setAuthTab("register"); setModalView("auth"); }
+        else { setAuthEmail(""); setAuthPassword(""); setAuthConfirm(""); setAuthError(""); setOtpCode(""); setAuthTab("register"); setAuthStep("credentials"); setModalView("auth"); }
     };
 
     const closeModal = () => { stopCamera(); setModalView(null); };
@@ -382,17 +488,22 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
         if (!allFacesCaptured) { setFormError("Үч тараптан сүрөт тартыңыз"); return; }
         setSubmitting(true); setFacesUploading(true);
         try {
-            const faceUrls: Partial<Record<FaceKey, string>> = {};
-            for (const phase of FACE_PHASES) {
-                const dataUrl = capturedFaces[phase.key];
-                if (dataUrl) { const url = await uploadFacePhoto(dataUrl); if (url) faceUrls[phase.key] = url; }
-            }
+            // Extract 128-float face descriptor from front face
+            const descriptor = await extractFaceDescriptor(capturedFaces.front!);
             setFacesUploading(false);
+            if (!descriptor) {
+                setFormError("Жүзүңүз аныкталган жок. Жарык жерде, камерага жакыныраак туруп кайра аракет кылыңыз.");
+                return;
+            }
             const token = getToken();
-            const res = await fetch(`${GO_API_URL}/api/olympiads/${params.id}/apply`, {
+            const res = await fetch(`${GO_API_URL}/api/olympiads/${id}/apply`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ ...form, email: userEmail, face_embeddings: JSON.stringify(faceUrls) }),
+                body: JSON.stringify({
+                    ...form,
+                    email: userEmail,
+                    face_embeddings: JSON.stringify(descriptor), // 128 floats
+                }),
             });
             const data = await res.json();
             if (res.ok) { stopCamera(); setModalView("done"); setAppStatus("pending"); }
@@ -400,20 +511,32 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
         } finally { setSubmitting(false); setFacesUploading(false); }
     };
 
-    // ── Score → color ───────────────────────────────────────
-    const scoreColor = (s: number) =>
-        s >= 75 ? "#22c55e" : s >= 50 ? "#84cc16" : s >= 30 ? "#f97316" : "#94a3b8";
-    const scoreBg    = (s: number) =>
-        s >= 75 ? "#dcfce7" : s >= 50 ? "#ecfccb" : s >= 30 ? "#ffedd5" : "#f1f5f9";
-    const scoreLabel = (q: FaceQuality) => {
-        if (q.tooDark)    return "Жарык жетишсиз — чырак жак";
-        if (q.tooBright)  return "Өтө жарык — арка жакка ооңуз";
-        if (!q.facePresent) return "Жүзүңүз табылган жок — жакыныраак туруңуз";
-        if (!q.centered)   return "Башыңызды жогору же төмөн жылдырыңыз";
-        if (q.score < 50)  return "Дагы жакшыраак болсо болот...";
-        if (q.score < 75)  return "Жакшы! Туруңуз...";
-        return "Аябай жакшы! Туруп туруңуз...";
+    // ── Pose UI helpers ─────────────────────────────────────
+    const poseColor = (p: PoseResult | null, phase: typeof FACE_PHASES[number]) => {
+        if (!p) return "#94a3b8";
+        if (!p.faceDetected) return "#94a3b8";
+        if (!p.lightingOk) return "#f97316";
+        if (p.angleOk) return "#22c55e";
+        // how close to target
+        const mid = (phase.yawMin + phase.yawMax) / 2;
+        const dist = Math.abs(p.yaw - mid);
+        return dist < 0.2 ? "#84cc16" : "#f97316";
     };
+
+    const poseLabel = (p: PoseResult | null) => {
+        if (!p) return "Камера алдына туруңуз...";
+        if (!p.faceDetected) return "Жүзүңүз табылган жок — жакыныраак туруңуз";
+        if (p.brightness < 50) return "Өтө бүдөмүк — жарык жакка ооңуз";
+        if (p.brightness > 230) return "Өтө жарык — арка жакка ооңуз";
+        if (p.angleOk) return "Туура! Туруп туруңуз...";
+        const phase = FACE_PHASES[facePhaseIdx];
+        if (phase.dirIcon === "left")  return "Башыңызды солго буруңуз ←";
+        if (phase.dirIcon === "right") return "Башыңызды оңго буруңуз →";
+        return "Жүзүңүздү тике кармаңыз";
+    };
+
+    // Yaw visual bar: -1..+1 maps to 0..100%
+    const yawPercent = (yaw: number) => Math.round(Math.min(100, Math.max(0, (yaw + 1) / 2 * 100)));
 
     // ── Render helpers ──────────────────────────────────────
     if (loading) return <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(145deg,#f0f4ff,#faf5ff)" }}><p className="text-slate-400 font-bold animate-pulse">Жүктөлүүдө...</p></div>;
@@ -446,9 +569,11 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
         </div>
     );
 
+    const currentPhase = FACE_PHASES[facePhaseIdx];
+    const ovalColor = poseColor(poseResult, currentPhase);
+
     return (
         <main className="min-h-screen pb-24" style={{ background: "linear-gradient(145deg,#f0f4ff 0%,#faf5ff 35%,#f0fdf4 65%,#fff7ed 100%)" }}>
-            {/* decorative bg */}
             <div className="pointer-events-none fixed inset-0" style={{ backgroundImage: "radial-gradient(circle,rgba(99,102,241,0.1) 1px,transparent 1px)", backgroundSize: "36px 36px" }} />
             <div className="pointer-events-none fixed inset-0 overflow-hidden">
                 <div style={{ position:"absolute", top:"-10%", right:"-5%", width:"500px", height:"500px", borderRadius:"50%", background:"radial-gradient(circle,rgba(167,139,250,0.25) 0%,transparent 70%)", filter:"blur(60px)" }} />
@@ -461,7 +586,6 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                     Олимпиадаларга кайтуу
                 </a>
 
-                {/* ── HERO ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start mb-14">
                     <div className="lg:col-span-5 relative aspect-video lg:aspect-square w-full rounded-[2.5rem] overflow-hidden shadow-2xl shadow-violet-200/50 border-4 border-white">
                         <Image src={olympiad.image_url || "/images/courses/placeholder.png"} alt={olympiad.title} fill className="object-cover" />
@@ -480,7 +604,12 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                                 <div className="p-3 rounded-xl" style={{ background:"rgba(124,58,237,0.08)" }}>{mounted && <Icon icon="solar:calendar-date-bold-duotone" width={22} style={{ color:"#7c3aed" }} />}</div>
-                                <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Өткөрүлүүчү күнү</p><p className="text-sm font-black text-slate-800">{olympiad.date}</p></div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Өткөрүлүүчү күнү</p>
+                                    <p className="text-sm font-black text-slate-800">
+                                        {olympiad.start_time ? fmtDateTime(olympiad.start_time) : (olympiad.date || "Такталууда")}
+                                    </p>
+                                </div>
                             </div>
                             <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                                 <div className="p-3 rounded-xl" style={{ background:"rgba(239,68,68,0.07)" }}>{mounted && <Icon icon="solar:map-point-bold-duotone" width={22} className="text-rose-500" />}</div>
@@ -507,7 +636,6 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                     </div>
                 </div>
 
-                {/* ── BOTTOM INFO ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 border-t border-slate-200/60 pt-12">
                     <div className="lg:col-span-2 space-y-8">
                         <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
@@ -547,13 +675,14 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
             {/* ══════════════ MODAL ══════════════ */}
             {modalView && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className={`bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl w-full ${formStep === 3 && modalView === "form" ? "max-w-lg" : "max-w-lg"} max-h-[95vh] overflow-y-auto`}>
+                    <div className="bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl w-full max-w-lg max-h-[95vh] overflow-y-auto">
 
                         {/* Header */}
                         <div className="p-5 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white rounded-t-[2.5rem] z-10">
                             <div>
                                 <h2 className="text-lg font-black text-slate-800">
-                                    {modalView === "auth" && (authTab === "register" ? "Каттоо" : "Кирүү")}
+                                    {modalView === "auth" && authStep === "otp" && "Email верификациясы"}
+                                    {modalView === "auth" && authStep === "credentials" && (authTab === "register" ? "Каттоо" : "Кирүү")}
                                     {modalView === "form" && formStep === 1 && "Жеке маалымат"}
                                     {modalView === "form" && formStep === 2 && "Мектеп справкасы"}
                                     {modalView === "form" && formStep === 3 && "Жүз верификациясы"}
@@ -569,40 +698,93 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                             {/* ── AUTH ── */}
                             {modalView === "auth" && (
                                 <div>
-                                    <div className="flex bg-slate-100 rounded-2xl p-1 mb-5">
-                                        {(["register","login"] as AuthTab[]).map(tab => (
-                                            <button key={tab} onClick={() => { setAuthTab(tab); setAuthError(""); }}
-                                                className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-all ${authTab === tab ? "bg-white shadow text-violet-600" : "text-slate-500 hover:text-slate-700"}`}>
-                                                {tab === "register" ? "Катталуу" : "Кирүү"}
+                                    {/* Tab switcher — only show on credentials step */}
+                                    {authStep === "credentials" && (
+                                        <div className="flex bg-slate-100 rounded-2xl p-1 mb-5">
+                                            {(["register","login"] as AuthTab[]).map(tab => (
+                                                <button key={tab} onClick={() => { setAuthTab(tab); setAuthError(""); setAuthStep("credentials"); }}
+                                                    className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-all ${authTab === tab ? "bg-white shadow text-violet-600" : "text-slate-500 hover:text-slate-700"}`}>
+                                                    {tab === "register" ? "Катталуу" : "Кирүү"}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* ── CREDENTIALS step ── */}
+                                    {authStep === "credentials" && (
+                                        <div className="space-y-3">
+                                            <div><label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Email</label>
+                                                <input type="email" autoFocus className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder="email@example.com" value={authEmail} onChange={e => { setAuthEmail(e.target.value); setAuthError(""); }} /></div>
+                                            <div><label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Пароль</label>
+                                                <input type="password" className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder="Минимум 6 белги" value={authPassword} onChange={e => { setAuthPassword(e.target.value); setAuthError(""); }} /></div>
+                                            {authTab === "register" && (
+                                                <div><label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Паролду кайталаңыз</label>
+                                                    <input type="password" className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder="Жогорудагы пароль" value={authConfirm} onChange={e => { setAuthConfirm(e.target.value); setAuthError(""); }} onKeyDown={e => e.key === "Enter" && handleAuth()} /></div>
+                                            )}
+                                            {authError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{authError}</p>}
+                                            <button onClick={handleAuth} disabled={authLoading} className="w-full py-4 rounded-2xl font-black text-white mt-1 disabled:opacity-60" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
+                                                {authLoading ? "Жүктөлүүдө..." : authTab === "register" ? "Emailге код жиберүү →" : "Кирүү жана уланткыла →"}
                                             </button>
-                                        ))}
-                                    </div>
-                                    <div className="space-y-3">
-                                        <div><label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Email</label>
-                                            <input type="email" autoFocus className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder="email@example.com" value={authEmail} onChange={e => { setAuthEmail(e.target.value); setAuthError(""); }} /></div>
-                                        <div><label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Пароль</label>
-                                            <input type="password" className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder="Минимум 6 белги" value={authPassword} onChange={e => { setAuthPassword(e.target.value); setAuthError(""); }} /></div>
-                                        {authTab === "register" && (
-                                            <div><label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Паролду кайталаңыз</label>
-                                                <input type="password" className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder="Жогорудагы пароль" value={authConfirm} onChange={e => { setAuthConfirm(e.target.value); setAuthError(""); }} onKeyDown={e => e.key === "Enter" && handleAuth()} /></div>
-                                        )}
-                                        {authError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{authError}</p>}
-                                        <button onClick={handleAuth} disabled={authLoading} className="w-full py-4 rounded-2xl font-black text-white mt-1 disabled:opacity-60" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                                            {authLoading ? "Жүктөлүүдө..." : authTab === "register" ? "Катталуу жана уланткыла →" : "Кирүү жана уланткыла →"}
-                                        </button>
-                                        {authTab === "register" ? (
-                                            <p className="text-center text-xs text-slate-400 pt-1">Мурда аккаунт ачкансызбы?{" "}<button onClick={() => { setAuthTab("login"); setAuthError(""); }} className="text-violet-600 font-bold hover:underline">Кирүү</button></p>
-                                        ) : (
-                                            <p className="text-center text-xs text-slate-400 pt-1">Аккаунтуңуз жок беле?{" "}<button onClick={() => { setAuthTab("register"); setAuthError(""); }} className="text-violet-600 font-bold hover:underline">Катталуу</button></p>
-                                        )}
-                                    </div>
+                                            {authTab === "register" ? (
+                                                <p className="text-center text-xs text-slate-400 pt-1">Мурда аккаунт ачкансызбы?{" "}<button onClick={() => { setAuthTab("login"); setAuthError(""); }} className="text-violet-600 font-bold hover:underline">Кирүү</button></p>
+                                            ) : (
+                                                <p className="text-center text-xs text-slate-400 pt-1">Аккаунтуңуз жок беле?{" "}<button onClick={() => { setAuthTab("register"); setAuthError(""); }} className="text-violet-600 font-bold hover:underline">Катталуу</button></p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* ── OTP step ── */}
+                                    {authStep === "otp" && (
+                                        <div className="space-y-4">
+                                            <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 text-center">
+                                                <p className="text-2xl mb-2">📧</p>
+                                                <p className="text-sm font-black text-violet-700">Код жиберилди!</p>
+                                                <p className="text-xs text-violet-500 mt-1">
+                                                    <span className="font-bold">{authEmail}</span> дарегиңизге 6 орундуу код жиберилди
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Код</label>
+                                                <input
+                                                    type="text"
+                                                    autoFocus
+                                                    maxLength={6}
+                                                    inputMode="numeric"
+                                                    className="w-full px-4 py-4 border border-slate-200 rounded-2xl text-2xl font-black text-slate-800 text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300 placeholder:text-base placeholder:tracking-normal"
+                                                    placeholder="------"
+                                                    value={otpCode}
+                                                    onChange={e => { setOtpCode(e.target.value.replace(/\D/g,"")); setAuthError(""); }}
+                                                    onKeyDown={e => e.key === "Enter" && handleOtpVerify()}
+                                                />
+                                            </div>
+                                            {authError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{authError}</p>}
+                                            <button onClick={handleOtpVerify} disabled={authLoading || otpCode.length < 4} className="w-full py-4 rounded-2xl font-black text-white disabled:opacity-60" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
+                                                {authLoading ? "Текшерилүүдө..." : "Ырастоо жана уланткыла →"}
+                                            </button>
+                                            <button onClick={() => { setAuthStep("credentials"); setAuthError(""); setOtpCode(""); }} className="w-full py-2 text-xs font-bold text-slate-400 hover:text-slate-600">
+                                                ← Артка
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             {/* ── FORM ── */}
                             {modalView === "form" && (
                                 <div>
-                                    <StepBar current={formStep} total={3} />
+                                    {hasExistingProfile && formStep === 3 ? (
+                                        /* Pre-filled profile banner */
+                                        <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+                                            <span className="text-lg flex-shrink-0">👤</span>
+                                            <div>
+                                                <p className="text-xs font-black text-violet-700 mb-0.5">Маалыматтарыңыз автоматтык толтурулду</p>
+                                                <p className="text-xs text-violet-500 font-medium">{form.fio} · {form.school} · {form.class_name}</p>
+                                                <button onClick={() => { setHasExistingProfile(false); setFormStep(1); }} className="text-[10px] text-violet-400 hover:text-violet-600 underline mt-0.5">Маалыматтарды өзгөртүү</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <StepBar current={formStep} total={3} />
+                                    )}
 
                                     {/* STEP 1 */}
                                     {formStep === 1 && (
@@ -640,11 +822,11 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                                         </div>
                                     )}
 
-                                    {/* ── STEP 3: FACE CAPTURE ── */}
+                                    {/* ── STEP 3: FACE CAPTURE (MediaPipe) ── */}
                                     {formStep === 3 && (
                                         <div className="space-y-3">
 
-                                            {/* Phase progress dots */}
+                                            {/* Phase tabs */}
                                             <div className="flex gap-2 mb-1">
                                                 {FACE_PHASES.map((p, i) => (
                                                     <div key={p.key} className={`flex-1 py-2 rounded-xl text-xs font-black text-center transition-all border ${capturedFaces[p.key] ? "bg-emerald-50 border-emerald-300 text-emerald-600" : i === facePhaseIdx ? "border-violet-300 text-violet-700" : "bg-slate-50 border-slate-200 text-slate-400"}`}
@@ -654,11 +836,19 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                                                 ))}
                                             </div>
 
+                                            {/* MediaPipe loading state */}
+                                            {mpLoading && !cameraError && (
+                                                <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 text-center">
+                                                    <div className="animate-spin w-6 h-6 border-2 border-violet-400 border-t-transparent rounded-full mx-auto mb-2" />
+                                                    <p className="text-xs font-bold text-violet-600">AI модели жүктөлүүдө...</p>
+                                                </div>
+                                            )}
+
                                             {cameraError ? (
                                                 <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
                                                     <p className="text-4xl mb-3">📷</p>
                                                     <p className="text-sm font-bold text-red-600">{cameraError}</p>
-                                                    <button onClick={startCamera} className="mt-4 px-5 py-2 bg-red-500 text-white rounded-xl font-bold text-sm">Кайра аракет</button>
+                                                    <button onClick={() => { startCamera(); loadMediaPipe(); }} className="mt-4 px-5 py-2 bg-red-500 text-white rounded-xl font-bold text-sm">Кайра аракет</button>
                                                 </div>
                                             ) : (
                                                 <>
@@ -667,42 +857,59 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                                                         <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                                                         <canvas ref={canvasRef} className="hidden" />
 
-                                                        {/* Oval guide */}
-                                                        {(() => {
-                                                            const s = faceQuality?.score ?? 0;
-                                                            const color = scoreColor(s);
-                                                            const glow  = s >= 75 ? `0 0 0 2000px rgba(0,0,0,0.4), 0 0 20px 4px ${color}40` : "0 0 0 2000px rgba(0,0,0,0.45)";
-                                                            return (
-                                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                                    <div className="rounded-full transition-all duration-300"
-                                                                        style={{ width:"56%", height:"78%", border:`3px solid ${color}`, boxShadow: glow, opacity: faceQuality ? 1 : 0.5 }}>
+                                                        {/* Oval guide — color shows angle match */}
+                                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                            <div className="rounded-full transition-all duration-200"
+                                                                style={{
+                                                                    width:"56%", height:"78%",
+                                                                    border:`3px solid ${ovalColor}`,
+                                                                    boxShadow: poseResult?.angleOk
+                                                                        ? `0 0 0 2000px rgba(0,0,0,0.38), 0 0 24px 6px ${ovalColor}60`
+                                                                        : "0 0 0 2000px rgba(0,0,0,0.48)",
+                                                                }} />
+                                                        </div>
+
+                                                        {/* Yaw angle bar — horizontal meter */}
+                                                        {poseResult?.faceDetected && !capturedFaces[currentPhase.key] && (
+                                                            <div className="absolute bottom-14 left-4 right-4 pointer-events-none">
+                                                                <div className="bg-black/40 backdrop-blur-sm rounded-xl p-2">
+                                                                    <div className="relative h-2 bg-white/20 rounded-full overflow-hidden">
+                                                                        {/* Target zone highlight */}
+                                                                        <div className="absolute h-full bg-emerald-400/40 rounded-full"
+                                                                            style={{
+                                                                                left: `${yawPercent(currentPhase.yawMin)}%`,
+                                                                                width: `${yawPercent(currentPhase.yawMax) - yawPercent(currentPhase.yawMin)}%`,
+                                                                            }} />
+                                                                        {/* Current position dot */}
+                                                                        <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white transition-all duration-100"
+                                                                            style={{
+                                                                                left: `calc(${yawPercent(poseResult.yaw)}% - 6px)`,
+                                                                                background: ovalColor,
+                                                                            }} />
                                                                     </div>
+                                                                    <p className="text-white text-[10px] font-bold text-center mt-1 opacity-80">
+                                                                        {currentPhase.dirIcon === "left" ? "← " : ""}{poseLabel(poseResult)}{currentPhase.dirIcon === "right" ? " →" : ""}
+                                                                    </p>
                                                                 </div>
-                                                            );
-                                                        })()}
+                                                            </div>
+                                                        )}
 
                                                         {/* Direction arrow overlay */}
-                                                        {FACE_PHASES[facePhaseIdx]?.dirIcon && !capturedFaces[FACE_PHASES[facePhaseIdx].key] && countdown === 0 && (
+                                                        {currentPhase.dirIcon && !capturedFaces[currentPhase.key] && countdown === 0 && !(poseResult?.angleOk) && (
                                                             <div className="absolute inset-0 flex items-center pointer-events-none"
-                                                                style={{ justifyContent: FACE_PHASES[facePhaseIdx].dirIcon === "left" ? "flex-end" : "flex-start" }}>
+                                                                style={{ justifyContent: currentPhase.dirIcon === "left" ? "flex-end" : "flex-start" }}>
                                                                 <div className="flex flex-col gap-1 px-3 py-4 opacity-80">
                                                                     {[0,1,2].map(i => (
-                                                                        <div key={i} className="text-white font-black text-xl" style={{
-                                                                            animationName: "arrowPulse",
-                                                                            animationDuration: "0.8s",
-                                                                            animationDelay: `${i * 0.15}s`,
-                                                                            animationIterationCount: "infinite",
-                                                                            animationTimingFunction: "ease-in-out",
-                                                                            opacity: 0,
-                                                                        }}>
-                                                                            {FACE_PHASES[facePhaseIdx].dirIcon === "left" ? "◀" : "▶"}
+                                                                        <div key={i} className="text-white font-black text-xl"
+                                                                            style={{ animationName:"arrowPulse", animationDuration:"0.8s", animationDelay:`${i*0.15}s`, animationIterationCount:"infinite", animationTimingFunction:"ease-in-out", opacity:0 }}>
+                                                                            {currentPhase.dirIcon === "left" ? "◀" : "▶"}
                                                                         </div>
                                                                     ))}
                                                                 </div>
                                                             </div>
                                                         )}
 
-                                                        {/* Countdown overlay */}
+                                                        {/* Countdown */}
                                                         {countdown > 0 && (
                                                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                                                 <div className="flex flex-col items-center gap-2">
@@ -712,70 +919,51 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                                                             </div>
                                                         )}
 
-                                                        {/* Flash after capture */}
-                                                        {countdown === 0 && capturedFaces[FACE_PHASES[facePhaseIdx]?.key] && (
+                                                        {/* Captured flash */}
+                                                        {countdown === 0 && capturedFaces[currentPhase.key] && (
                                                             <div className="absolute inset-0 flex items-center justify-center bg-white/20 pointer-events-none">
                                                                 <div className="text-5xl">✅</div>
                                                             </div>
                                                         )}
 
-                                                        {/* Top instruction bar */}
+                                                        {/* Top instruction */}
                                                         <div className="absolute top-3 left-0 right-0 flex justify-center pointer-events-none">
                                                             <div className="bg-black/50 backdrop-blur-sm text-white text-xs font-bold px-4 py-2 rounded-full">
-                                                                {capturedFaces[FACE_PHASES[facePhaseIdx]?.key]
-                                                                    ? "✓ Сүрөт тартылды!"
-                                                                    : FACE_PHASES[facePhaseIdx]?.label}
+                                                                {capturedFaces[currentPhase.key] ? "✓ Сүрөт тартылды!" : currentPhase.label}
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    {/* Quality panel */}
-                                                    {faceQuality && !capturedFaces[FACE_PHASES[facePhaseIdx]?.key] && (
-                                                        <div className="rounded-2xl p-4 space-y-2.5 border transition-all" style={{ background: scoreBg(faceQuality.score), borderColor: scoreColor(faceQuality.score) + "80" }}>
-                                                            {/* Score bar */}
-                                                            <div className="flex items-center gap-3">
-                                                                <span className="text-xs font-black text-slate-500 w-16 flex-shrink-0">Сапаты</span>
-                                                                <div className="flex-1 bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                                                                    <div className="h-full rounded-full transition-all duration-300" style={{ width:`${faceQuality.score}%`, background: scoreColor(faceQuality.score) }} />
-                                                                </div>
-                                                                <span className="text-xs font-black w-8 text-right" style={{ color: scoreColor(faceQuality.score) }}>{faceQuality.score}%</span>
-                                                            </div>
-
-                                                            {/* Status message */}
-                                                            <p className="text-xs font-bold text-center" style={{ color: scoreColor(faceQuality.score) }}>{scoreLabel(faceQuality)}</p>
-
-                                                            {/* Checklist */}
-                                                            <div className="grid grid-cols-3 gap-1.5 pt-1">
+                                                    {/* Status panel */}
+                                                    {poseResult && !capturedFaces[currentPhase.key] && (
+                                                        <div className="rounded-2xl p-3 border transition-all space-y-2"
+                                                            style={{ background: poseResult.angleOk ? "#f0fdf4" : "#f8fafc", borderColor: ovalColor + "60" }}>
+                                                            <div className="grid grid-cols-3 gap-1.5">
                                                                 {[
-                                                                    { ok: faceQuality.facePresent, label: "Жүз табылды" },
-                                                                    { ok: faceQuality.lightingOk,  label: "Жарык жакшы" },
-                                                                    { ok: faceQuality.centered,    label: "Туура бурч" },
+                                                                    { ok: poseResult.faceDetected, label: "Жүз табылды" },
+                                                                    { ok: poseResult.lightingOk,   label: "Жарык жакшы" },
+                                                                    { ok: poseResult.angleOk,      label: "Туура бурч" },
                                                                 ].map(({ ok, label }) => (
                                                                     <div key={label} className={`flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-bold ${ok ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
                                                                         <span>{ok ? "✓" : "○"}</span><span>{label}</span>
                                                                     </div>
                                                                 ))}
                                                             </div>
-
-                                                            {/* Auto hint */}
-                                                            {faceQuality.score >= 60 && countdown === 0 && (
-                                                                <p className="text-[10px] text-center font-bold text-violet-600 animate-pulse">
-                                                                    Автоматтык тартылат — туруп туруңуз...
-                                                                </p>
+                                                            {poseResult.angleOk && countdown === 0 && (
+                                                                <p className="text-[10px] text-center font-bold text-violet-600 animate-pulse">Автоматтык тартылат — туруп туруңуз...</p>
                                                             )}
                                                         </div>
                                                     )}
 
-                                                    {/* Hint card when no face yet */}
-                                                    {!faceQuality && !capturedFaces[FACE_PHASES[facePhaseIdx]?.key] && (
+                                                    {!poseResult && !capturedFaces[currentPhase.key] && (
                                                         <div className="bg-violet-50 border border-violet-200 rounded-2xl p-3 text-center">
-                                                            <p className="text-xs font-bold text-violet-600">{FACE_PHASES[facePhaseIdx]?.hint}</p>
+                                                            <p className="text-xs font-bold text-violet-600">{currentPhase.hint}</p>
                                                         </div>
                                                     )}
                                                 </>
                                             )}
 
-                                            {/* Captured previews */}
+                                            {/* Thumbnail previews */}
                                             <div className="flex gap-2">
                                                 {FACE_PHASES.map((p, i) => (
                                                     <div key={p.key} className={`flex-1 rounded-xl overflow-hidden border-2 transition-all ${capturedFaces[p.key] ? "border-emerald-400" : i === facePhaseIdx ? "border-violet-300" : "border-slate-200"}`} style={{ aspectRatio:"4/3" }}>
@@ -790,7 +978,7 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                                             </div>
 
                                             {/* Manual capture button */}
-                                            {!allFacesCaptured && !cameraError && countdown === 0 && !capturedFaces[FACE_PHASES[facePhaseIdx]?.key] && (
+                                            {!allFacesCaptured && !cameraError && countdown === 0 && !capturedFaces[currentPhase.key] && (
                                                 <div className="flex gap-2">
                                                     <button onClick={() => { stableRef.current = 0; countdownRunningRef.current = true; setCountdown(3); }}
                                                         className="flex-1 py-3 rounded-2xl font-black text-white"
@@ -809,7 +997,7 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                                             {formError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{formError}</p>}
 
                                             <div className="flex gap-3">
-                                                <button onClick={() => { stopCamera(); setFormStep(2); }} className="px-5 py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">← Артка</button>
+                                                <button onClick={() => { stopCamera(); setFormStep(hasExistingProfile ? 1 : 2); setHasExistingProfile(false); }} className="px-5 py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">← Артка</button>
                                                 <button onClick={handleSubmit} disabled={submitting || !allFacesCaptured}
                                                     className="flex-1 py-3 rounded-2xl font-black text-white disabled:opacity-40 transition-all"
                                                     style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
@@ -843,12 +1031,11 @@ export default function OlympiadDetailPage({ params }: { params: { id: string } 
                 </div>
             )}
 
-            {/* Arrow animation keyframes */}
             <style>{`
                 @keyframes arrowPulse {
-                    0%   { opacity: 0;   transform: scale(0.7); }
-                    50%  { opacity: 1;   transform: scale(1.1); }
-                    100% { opacity: 0;   transform: scale(0.7); }
+                    0%   { opacity:0; transform:scale(0.7); }
+                    50%  { opacity:1; transform:scale(1.1); }
+                    100% { opacity:0; transform:scale(0.7); }
                 }
             `}</style>
         </main>

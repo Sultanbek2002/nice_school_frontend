@@ -11,9 +11,11 @@
   "dependencies": {
     "@iconify/icons-ion": "^1.2.10",
     "@iconify/react": "^5.0.1",
+    "@mediapipe/tasks-vision": "^0.10.35",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@types/three": "^0.185.0",
+    "@vladmandic/face-api": "^1.7.15",
     "aos": "^2.3.4",
     "axios": "^1.7.2",
     "date-fns": "^3.4.0",

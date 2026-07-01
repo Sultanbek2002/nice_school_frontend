@@ -28,6 +28,7 @@ interface MyApplication {
   olympiad_status: string
   image_url: string
   start_time: string | null
+  olympiad_time_limit: number
 }
 
 function decodeJWT(token: string): UserInfo | null {
@@ -304,6 +305,11 @@ export default function ProfilePage() {
               <div className="space-y-3">
                 {apps.map((app, i) => {
                   const sm = STATUS_META[app.status] || STATUS_META.pending
+                  const started = !!(app.start_time && new Date(app.start_time).getTime() <= Date.now())
+                  const deadline = app.start_time
+                    ? new Date(app.start_time).getTime() + (app.olympiad_time_limit || 60) * 60000
+                    : null
+                  const closed = deadline != null && Date.now() > deadline
                   return (
                     <MD key={app.ID}
                       initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
@@ -338,11 +344,13 @@ export default function ProfilePage() {
 
                       {/* Bottom: countdown + status detail */}
                       <div className={`px-4 py-3 border-t ${sm.border} ${sm.bg} space-y-2`}>
-                        {/* Countdown */}
-                        <div className="flex items-center gap-2">
-                          {mounted && <Icon icon="solar:hourglass-bold-duotone" width={14} className={sm.iconColor} />}
-                          <Countdown startTime={app.start_time} />
-                        </div>
+                        {/* Countdown — hidden once the test window has closed */}
+                        {!closed && (
+                          <div className="flex items-center gap-2">
+                            {mounted && <Icon icon="solar:hourglass-bold-duotone" width={14} className={sm.iconColor} />}
+                            <Countdown startTime={app.start_time} />
+                          </div>
+                        )}
 
                         {/* Status messages */}
                         {app.status === 'pending' && (
@@ -351,16 +359,32 @@ export default function ProfilePage() {
                             Администратор маалыматтарыңызды текшерет, күтүп туруңуз
                           </p>
                         )}
-                        {app.status === 'approved' && (
+                        {app.status === 'approved' && !started && (
                           <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
                             {mounted && <Icon icon="solar:check-circle-bold-duotone" width={12} />}
-                            Катышуу бекитилди! Убакыт жеткенде линкке өтүңүз
+                            Катышуу бекитилди! Убакыт жеткенде тестке кириңиз
                           </p>
                         )}
                         {app.status === 'rejected' && app.reject_reason && (
                           <p className="text-[11px] text-red-600 font-semibold flex items-center gap-1">
                             {mounted && <Icon icon="solar:danger-circle-bold-duotone" width={12} />}
                             Себеп: {app.reject_reason}
+                          </p>
+                        )}
+
+                        {/* Test entry button — shown when approved, started, and still within the time window */}
+                        {app.status === 'approved' && started && !closed && (
+                          <Link href={`/olympiads/${app.olympiad_id}/test`}
+                            className="inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black transition-all hover:scale-[1.01] active:scale-[0.99] shadow-sm shadow-emerald-200">
+                            {mounted && <Icon icon="solar:play-circle-bold-duotone" width={14} />}
+                            Тестке кирүү
+                          </Link>
+                        )}
+
+                        {app.status === 'approved' && started && closed && (
+                          <p className="text-sm text-slate-600 font-black flex items-center gap-1.5">
+                            {mounted && <Icon icon="solar:lock-circle-bold-duotone" width={16} />}
+                            Олимпиаданын убактысы аяктады
                           </p>
                         )}
 

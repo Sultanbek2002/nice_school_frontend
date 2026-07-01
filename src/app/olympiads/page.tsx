@@ -11,10 +11,24 @@ interface Olympiad {
   description: string;
   subject: string;
   date: string;
+  start_time: string | null;
   image_url: string;
   file_url: string;
   format: string;
   location: string;
+  status: string;
+  time_limit: number;
+}
+
+// Format ISO date using UTC (stored time = displayed time, no timezone shift)
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getDate()}-${pad(d.getMonth() + 1)}-${d.getFullYear()}  ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch { return ""; }
 }
 
 async function openPDF(url: string) {
@@ -401,8 +415,14 @@ export default function OlympiadsPage() {
                       <div className="space-y-2 pt-3 border-t border-slate-100">
                         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
                           {mounted && <Icon icon="solar:calendar-date-bold-duotone" width={14} style={{ color }} />}
-                          {item.date}
+                          {item.start_time ? fmtDate(item.start_time) : (item.date || "Күнү такталууда")}
                         </div>
+                        {item.time_limit > 0 && (
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                            {mounted && <Icon icon="solar:clock-circle-bold-duotone" width={14} style={{ color }} />}
+                            Тест: {item.time_limit} мүнөт
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 truncate">
                           {mounted && <Icon icon="solar:map-point-bold-duotone" width={14} className="text-rose-400 flex-shrink-0" />}
                           <span className="truncate">{item.location || "Дареги такталууда"}</span>

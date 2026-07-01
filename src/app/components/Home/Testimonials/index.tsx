@@ -75,24 +75,15 @@ const Testimonial = () => {
 
     return (
       <>
-        {Array(fullStars).fill(
-          <Icon
-            icon='tabler:star-filled'
-            className='text-yellow-500 text-xl inline-block'
-          />
-        )}
+        {Array.from({ length: fullStars }, (_, i) => (
+          <Icon key={`full-${i}`} icon='tabler:star-filled' className='text-yellow-500 text-xl inline-block' />
+        ))}
         {halfStars > 0 && (
-          <Icon
-            icon='tabler:star-half-filled'
-            className='text-yellow-500 text-xl inline-block'
-          />
+          <Icon key='half' icon='tabler:star-half-filled' className='text-yellow-500 text-xl inline-block' />
         )}
-        {Array(emptyStars).fill(
-          <Icon
-            icon='tabler:star-filled'
-            className='text-gray-400 text-xl inline-block'
-          />
-        )}
+        {Array.from({ length: emptyStars }, (_, i) => (
+          <Icon key={`empty-${i}`} icon='tabler:star-filled' className='text-gray-400 text-xl inline-block' />
+        ))}
       </>
     )
   }
