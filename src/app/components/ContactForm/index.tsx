@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { Icon } from '@iconify/react'
+import { GO_API_URL } from '@/utils/apiData';
 
 const ContactForm = () => {
   const [formData, setFormData] = useState({
@@ -43,7 +44,7 @@ const ContactForm = () => {
 
     try {
       // Отправляем на ваш локальный или рабочий сервер Go
-      const res = await fetch('http://localhost:8080/api/contact', { // Если Next.js проксирует, или полный URL http://localhost:8080/contact
+      const res = await fetch(`${GO_API_URL}/api/contact`, { // Если Next.js проксирует, или полный URL http://localhost:8080/contact
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

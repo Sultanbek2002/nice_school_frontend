@@ -4,6 +4,7 @@ import { MentorType } from '@/app/types/mentor'
 import { HeaderType } from '@/app/types/menu'
 import { TestimonialType } from '@/app/types/testimonial'
 import { NextResponse } from 'next/server'
+import { GO_API_URL } from '@/utils/apiData';
 
 // Оставляем эти данные как есть (статичными)
 const TechGaintsData: { imgSrc: string }[] = [
@@ -113,7 +114,7 @@ const FooterLinkData: FooterLinkType[] = [
 export const GET = async () => {
   try {
     // Делаем запрос к твоему Go бэкенду
-    const response = await fetch('http://localhost:8080/api/menu', {
+    const response = await fetch(`${GO_API_URL}/api/menu`, {
       cache: 'no-store' 
     });
 

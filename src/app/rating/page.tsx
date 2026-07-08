@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Icon } from '@iconify/react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { GO_API_URL } from '@/utils/apiData';
 
 const MD = motion.div as any
 const MS = motion.span as any
@@ -14,7 +15,6 @@ interface Student {
   score: number
 }
 
-const GO_API_URL = process.env.NEXT_PUBLIC_GO_API_URL || 'http://localhost:8080'
 
 // ── 3D Podium: rotating carousel of top-3 ──────────────────────────────────
 const MEDALS = [

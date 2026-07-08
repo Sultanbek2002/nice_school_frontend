@@ -13,6 +13,7 @@ interface Question {
 }
 interface SubmitResult {
     score: number; max_score: number; percentage: number; result_id: number;
+    has_open_questions?: boolean;
 }
 
 type Stage =
@@ -20,7 +21,8 @@ type Stage =
     | "face-setup"    // first-time / re-registration face scan (no stored descriptor)
     | "face-check"    // camera verification (up to 3 attempts)
     | "testing"       // timer + questions
-    | "submitted"     // result screen
+    | "submitted"     // result screen (no open questions)
+    | "pending-review" // submitted but has open questions — waiting for admin
     | "blocked"       // 3 attempts failed
     | "no-access"     // app not approved / olympiad not active
     | "already-done"; // already submitted
@@ -49,10 +51,12 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
     const [capturing,   setCapturing]  = useState(false);
     const [countdown,   setCountdown]  = useState(0);
 
-    const videoRef   = useRef<HTMLVideoElement>(null);
-    const canvasRef  = useRef<HTMLCanvasElement>(null);
-    const streamRef  = useRef<MediaStream | null>(null);
-    const rafRef     = useRef<number>(0);
+    const videoRef         = useRef<HTMLVideoElement>(null);
+    const canvasRef        = useRef<HTMLCanvasElement>(null);
+    const streamRef        = useRef<MediaStream | null>(null);
+    const rafRef           = useRef<number>(0);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const recordedChunksRef = useRef<Blob[]>([]);
     const landmarkRef = useRef<import("@mediapipe/tasks-vision").FaceLandmarker | null>(null);
     const stableRef  = useRef(0);
     const cdRunRef   = useRef(false);
@@ -60,11 +64,13 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
     const blockedRef  = useRef(false); // set true after max attempts to stop RAF immediately
 
     // Quiz
-    const [answers,   setAnswers]   = useState<Record<number, string>>({});
-    const [timeLeft,  setTimeLeft]  = useState(0);
-    const [startedAt, setStartedAt] = useState(0);
+    const [answers,    setAnswers]    = useState<Record<number, string>>({});
+    const [timeLeft,   setTimeLeft]   = useState(0);
+    const [startedAt,  setStartedAt]  = useState(0);
     const [submitting, setSubmitting] = useState(false);
-    const [result,    setResult]    = useState<SubmitResult | null>(null);
+    const [result,     setResult]     = useState<SubmitResult | null>(null);
+    const [currentIdx, setCurrentIdx] = useState(0);
+    const [flagged,    setFlagged]    = useState<Set<number>>(new Set());
 
     // ── 1. Load olympiad + check access ──────────────────
     useEffect(() => {
@@ -142,12 +148,9 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         finally { setMpLoading(false); }
     }, [mpLoading]);
 
-    const startCamera = useCallback(async () => {
+    const startCamera = useCallback(async (withAudio = false) => {
         setCamError("");
-        try {
-            const s = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
-            });
+        const attachStream = async (s: MediaStream) => {
             streamRef.current = s;
             const video = videoRef.current;
             if (video) {
@@ -158,20 +161,73 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 });
                 await video.play().catch(() => {});
             }
-        } catch { setCamError("Камерага уруксат жок. Браузер жөндөөлөрүнөн уруксат бериңиз."); }
+        };
+        try {
+            const s = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                audio: withAudio,
+            });
+            await attachStream(s);
+        } catch (err) {
+            if (withAudio) {
+                // Fallback: video-only if microphone unavailable
+                console.warn("[REC] audio unavailable, falling back to video-only:", err);
+                try {
+                    const s = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                    });
+                    await attachStream(s);
+                } catch { setCamError("Камерага уруксат жок. Браузер жөндөөлөрүнөн уруксат бериңиз."); }
+            } else {
+                setCamError("Камерага уруксат жок. Браузер жөндөөлөрүнөн уруксат бериңиз.");
+            }
+        }
     }, []);
 
     const stopCamera = useCallback(() => {
         cancelAnimationFrame(rafRef.current);
+        const mr = mediaRecorderRef.current;
+        if (mr && mr.state !== "inactive") {
+            mr.ondataavailable = null;
+            mr.onstop = null;
+            try { mr.stop(); } catch {}
+        }
+        mediaRecorderRef.current = null;
+        recordedChunksRef.current = [];
         streamRef.current?.getTracks().forEach(t => t.stop());
         streamRef.current = null;
     }, []);
 
-    // Start camera when entering face-check / face-setup stage
+    // Start camera when entering face-check / face-setup / testing stage
     useEffect(() => {
         if (stage === "face-check" || stage === "face-setup") {
             startCamera();
             loadMediaPipe();
+        } else if (stage === "testing") {
+            startCamera(true).then(() => {
+                if (!streamRef.current || mediaRecorderRef.current) {
+                    console.warn("[REC] cannot start: stream=", !!streamRef.current, "alreadyRecording=", !!mediaRecorderRef.current);
+                    return;
+                }
+                const chunks: Blob[] = [];
+                recordedChunksRef.current = chunks;
+                try {
+                    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+                        ? "video/webm;codecs=vp8,opus"
+                        : MediaRecorder.isTypeSupported("video/webm")
+                        ? "video/webm"
+                        : "";
+                    console.log("[REC] starting MediaRecorder, mimeType:", mimeType || "browser default", "tracks:", streamRef.current.getTracks().map(t => t.kind));
+                    const mr = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : undefined);
+                    mr.ondataavailable = e => {
+                        console.log("[REC] chunk:", e.data.size, "bytes, total chunks:", chunks.length + 1);
+                        if (e.data.size > 0) chunks.push(e.data);
+                    };
+                    mr.start(10000); // collect in 10-second chunks
+                    mediaRecorderRef.current = mr;
+                    console.log("[REC] recording started ✓");
+                } catch (e) { console.error("[REC] MediaRecorder failed:", e); }
+            });
         } else {
             stopCamera();
         }
@@ -372,6 +428,20 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stage]);
 
+    const stopRecordingAndGetBlob = (): Promise<Blob | null> => new Promise(resolve => {
+        const mr = mediaRecorderRef.current;
+        if (!mr || mr.state === "inactive") {
+            const chunks = recordedChunksRef.current;
+            resolve(chunks.length > 0 ? new Blob(chunks, { type: "video/webm" }) : null);
+            return;
+        }
+        const allChunks = [...recordedChunksRef.current];
+        mr.ondataavailable = e => { if (e.data.size > 0) allChunks.push(e.data); };
+        mr.onstop = () => resolve(allChunks.length > 0 ? new Blob(allChunks, { type: "video/webm" }) : null);
+        mr.stop();
+        mediaRecorderRef.current = null;
+    });
+
     const handleSubmit = async (auto = false) => {
         if (submitting) return;
         if (!auto && stage !== "testing") return;
@@ -380,6 +450,8 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         const strAnswers: Record<string, string> = {};
         Object.entries(answers).forEach(([k, v]) => { strAnswers[k] = v; });
 
+        const videoBlob = await stopRecordingAndGetBlob();
+
         try {
             const res = await fetch(`${GO_API_URL}/api/olympiads/${id}/submit-test`, {
                 method: "POST",
@@ -387,7 +459,24 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 body: JSON.stringify({ answers: strAnswers, time_taken: timeTaken }),
             });
             const data = await res.json();
-            if (res.ok) { setResult(data); setStage("submitted"); }
+            if (res.ok) {
+                setResult(data);
+                setStage(data.has_open_questions ? "pending-review" : "submitted");
+                // Upload recording in background
+                if (videoBlob && data.result_id) {
+                    console.log("[REC] uploading video blob:", videoBlob.size, "bytes");
+                    const form = new FormData();
+                    form.append("video", videoBlob, "recording.webm");
+                    fetch(`${GO_API_URL}/api/test-results/${data.result_id}/video`, {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${getToken()}` },
+                        body: form,
+                    }).then(r => console.log("[REC] upload status:", r.status))
+                      .catch(e => console.error("[REC] upload error:", e));
+                } else {
+                    console.warn("[REC] no video blob or result_id", { videoBlob: !!videoBlob, result_id: data.result_id });
+                }
+            }
         } finally { setSubmitting(false); }
     };
 
@@ -503,6 +592,35 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                         </p>
                     </div>
 
+                    <a href={`/olympiads/${id}`} className="block w-full py-4 rounded-2xl font-black text-white text-center" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
+                        Аяктоо
+                    </a>
+                </div>
+            </div>
+        </div>
+    );
+
+    if (stage === "pending-review") return (
+        <div className="min-h-screen flex items-center justify-center pb-10 pt-20" style={{ background:"linear-gradient(145deg,#f0f4ff,#faf5ff)" }}>
+            <div className="bg-white rounded-3xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+                <div className="p-8 text-white text-center" style={{ background:"linear-gradient(135deg,#f59e0b,#f97316)" }}>
+                    <div className="text-5xl mb-3">⏳</div>
+                    <h2 className="text-2xl font-black mb-1">Тест тапшырылды!</h2>
+                    <p className="text-white/80 text-sm">{olympiad?.title}</p>
+                </div>
+                <div className="p-8 space-y-5">
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center space-y-2">
+                        <p className="text-3xl">📝</p>
+                        <p className="font-black text-amber-800 text-base">Натыйжа баалоону күтүүдө</p>
+                        <p className="text-sm text-amber-600 leading-relaxed">
+                            Сиздин жообуңузда ачык суроолор бар. Администратор текшергенден кийин жыйынтык белгилүү болот.
+                        </p>
+                    </div>
+                    <div className="bg-slate-50 rounded-2xl p-4 text-center">
+                        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Автоматтык упай</p>
+                        <p className="text-2xl font-black text-slate-700">{result?.score} <span className="text-base text-slate-400">/ {result?.max_score}</span></p>
+                        <p className="text-xs text-slate-400 mt-1">Ачык суроолор баалангандан кийин жаңыртылат</p>
+                    </div>
                     <a href={`/olympiads/${id}`} className="block w-full py-4 rounded-2xl font-black text-white text-center" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
                         Аяктоо
                     </a>
@@ -719,117 +837,283 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
 
     // ── Testing stage ─────────────────────────────────────
     if (stage === "testing") {
-        const urgent = timeLeft < 300; // < 5 min
+        const q = questions[currentIdx];
+        if (!q) return null;
+        let opts: string[] = [];
+        try { opts = JSON.parse(q.options || "[]"); } catch { opts = []; }
+        const isFlagged   = flagged.has(q.id);
+        const isAnswered  = answers[q.id] !== undefined;
+        const urgent      = timeLeft < 300;
+        const answeredCnt = Object.keys(answers).length;
+        const LETTERS     = ["А", "Б", "В", "Г", "Д", "Е"];
+
+        const toggleFlag = () => setFlagged(f => {
+            const n = new Set(f);
+            n.has(q.id) ? n.delete(q.id) : n.add(q.id);
+            return n;
+        });
+
+        const NavButton = ({ i }: { i: number }) => {
+            const qn = questions[i];
+            const ans = answers[qn.id] !== undefined;
+            const cur = i === currentIdx;
+            const flg = flagged.has(qn.id);
+            return (
+                <button
+                    onClick={() => setCurrentIdx(i)}
+                    className={`w-full aspect-square rounded-lg text-xs font-black transition-all ${
+                        cur ? "bg-indigo-600 text-white shadow" :
+                        flg ? "bg-amber-100 text-amber-700 border border-amber-300" :
+                        ans ? "bg-indigo-100 text-indigo-700" :
+                             "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    }`}
+                >{i + 1}</button>
+            );
+        };
+
         return (
-            <div className="min-h-screen pb-32" style={{ background:"linear-gradient(145deg,#f0f4ff,#faf5ff)" }}>
-                {/* Sticky top bar */}
-                <div className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                    <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
+
+                {/* ── DESKTOP HEADER ── */}
+                <header className="hidden lg:flex items-center gap-4 bg-white border-b border-gray-200 px-6 py-3 shadow-sm flex-shrink-0">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm flex-shrink-0">
+                            {olympiad?.title?.[0]?.toUpperCase()}
+                        </div>
                         <div className="min-w-0">
-                            <p className="text-xs text-slate-400 font-semibold truncate">{olympiad?.title}</p>
-                            <p className="text-sm font-black text-slate-800">{answeredCount}/{questions.length} жоопторулду</p>
-                        </div>
-
-                        {/* Progress */}
-                        <div className="flex-1 hidden sm:block">
-                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full transition-all duration-300"
-                                    style={{ width:`${progressPct}%`, background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }} />
-                            </div>
-                        </div>
-
-                        {/* Timer */}
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl font-black text-sm flex-shrink-0 ${urgent ? "bg-red-50 text-red-600 animate-pulse" : "bg-slate-100 text-slate-700"}`}>
-                            <span>{urgent ? "⏰" : "🕐"}</span>
-                            <span>{fmtTime(timeLeft)}</span>
+                            <p className="font-black text-gray-800 text-sm truncate">{olympiad?.title}</p>
+                            <p className="text-xs text-gray-400">{questions.length} суроо</p>
                         </div>
                     </div>
-                </div>
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm flex-shrink-0 ${urgent ? "bg-red-100 text-red-600 animate-pulse" : "bg-gray-100 text-gray-700"}`}>
+                        ⏱ {fmtTime(timeLeft)}
+                    </div>
+                </header>
 
-                {/* Questions */}
-                <div className="max-w-3xl mx-auto px-4 pt-8 space-y-6">
-                    {questions.map((q, idx) => {
-                        let opts: string[] = [];
-                        try { opts = JSON.parse(q.options || "[]"); } catch { opts = []; }
-                        const answered = answers[q.id] !== undefined;
+                {/* ── MOBILE HEADER ── */}
+                <header className="lg:hidden flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-3 px-4 py-3">
+                        <div className="font-black text-gray-800 text-sm whitespace-nowrap">
+                            Суроо {currentIdx + 1}/{questions.length}
+                        </div>
+                        <p className="flex-1 text-xs text-gray-400 font-semibold truncate">{olympiad?.title}</p>
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs flex-shrink-0 ${urgent ? "bg-red-100 text-red-600 animate-pulse" : "bg-gray-100 text-gray-700"}`}>
+                            ⏱ {fmtTime(timeLeft)}
+                        </div>
+                    </div>
+                    {/* Mobile horizontal navigator */}
+                    <div className="flex items-center gap-1.5 px-4 pb-2.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+                        {questions.map((_, i) => {
+                            const qn = questions[i];
+                            const ans = answers[qn.id] !== undefined;
+                            const cur = i === currentIdx;
+                            const flg = flagged.has(qn.id);
+                            return (
+                                <button key={i} onClick={() => setCurrentIdx(i)}
+                                    className={`w-8 h-8 rounded-lg text-xs font-black flex-shrink-0 transition-all ${
+                                        cur ? "bg-indigo-600 text-white" :
+                                        flg ? "bg-amber-100 text-amber-700 border border-amber-300" :
+                                        ans ? "bg-indigo-100 text-indigo-700" :
+                                             "bg-gray-100 text-gray-500"
+                                    }`}
+                                >{i + 1}</button>
+                            );
+                        })}
+                    </div>
+                </header>
 
-                        return (
-                            <div key={q.id} className={`bg-white rounded-3xl border-2 transition-all ${answered ? "border-violet-200" : "border-slate-100"} shadow-sm overflow-hidden`}>
-                                {/* Question header */}
-                                <div className="px-6 pt-5 pb-4">
-                                    <div className="flex items-start gap-3 mb-3">
-                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 text-white mt-0.5 ${answered ? "bg-violet-500" : "bg-slate-300"}`}>
-                                            {answered ? "✓" : idx + 1}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                                    {q.type === "multiple_choice" ? "Бир туура жооп" : "Ачык суроо"}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-violet-400">{q.points} упай</span>
-                                            </div>
-                                            <p className="text-slate-800 font-semibold text-sm leading-relaxed">{q.text}</p>
-                                        </div>
+                {/* ── MAIN ── */}
+                <div className="flex flex-1 overflow-hidden">
+
+                    {/* Question area */}
+                    <div className="flex-1 overflow-y-auto">
+                        <div className="max-w-2xl mx-auto px-4 lg:px-8 py-5 lg:py-8">
+
+                            {/* Question card */}
+                            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
+                                {/* Mobile camera overlay */}
+                                <div className="lg:hidden absolute top-3 right-3 z-10 w-20 h-14 rounded-xl overflow-hidden bg-black shadow-lg border-2 border-white">
+                                    <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                                    <div className="absolute top-1 right-1 flex items-center gap-0.5 bg-black/70 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                        REC
                                     </div>
-
-                                    {q.image_url && (
-                                        <img src={q.image_url} alt="question" className="w-full max-h-64 object-contain rounded-xl mb-3 bg-slate-50" />
-                                    )}
                                 </div>
 
-                                {/* Options or open */}
-                                <div className="px-6 pb-5">
-                                    {q.type === "multiple_choice" && opts.length > 0 ? (
+                                {/* Card header */}
+                                <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-black text-gray-800">
+                                            Суроо {currentIdx + 1}
+                                        </span>
+                                        <span className="text-sm text-gray-400">/ {questions.length}</span>
+                                        <span className="text-xs text-gray-400 ml-1">· {q.points} балл</span>
+                                    </div>
+                                    <button onClick={toggleFlag}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                            isFlagged ? "bg-amber-100 text-amber-600" : "bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-500"
+                                        }`}
+                                    >
+                                        🚩 {isFlagged ? "Белгиленген" : "Белгилөө"}
+                                    </button>
+                                </div>
+
+                                <div className="px-5 py-5">
+                                    <p className="text-base font-semibold text-gray-800 leading-relaxed mb-4">{q.text}</p>
+
+                                    {q.image_url && (
+                                        <img src={q.image_url} alt="" className="w-full max-h-56 object-contain rounded-xl mb-4 bg-gray-50" />
+                                    )}
+
+                                    {/* Options */}
+                                    {q.type === "multiple_choice" ? (
                                         <div className="space-y-2">
                                             {opts.map((opt, oi) => {
-                                                const letter = String.fromCharCode(65 + oi);
                                                 const selected = answers[q.id] === opt;
                                                 return (
-                                                    <button key={oi} onClick={() => setAnswers(a => ({ ...a, [q.id]: opt }))}
-                                                        className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 text-left transition-all ${selected ? "border-violet-400 bg-violet-50" : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"}`}>
-                                                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 transition-all ${selected ? "bg-violet-500 text-white" : "bg-slate-100 text-slate-500"}`}>
-                                                            {selected ? "✓" : letter}
+                                                    <button key={oi}
+                                                        onClick={() => setAnswers(a => ({ ...a, [q.id]: opt }))}
+                                                        className={`w-full flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${
+                                                            selected ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                                        }`}
+                                                    >
+                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0 ${
+                                                            selected ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600"
+                                                        }`}>
+                                                            {LETTERS[oi] ?? String.fromCharCode(65 + oi)}
                                                         </div>
-                                                        <span className={`text-sm font-semibold ${selected ? "text-violet-700" : "text-slate-700"}`}>{opt}</span>
+                                                        <span className={`text-sm font-semibold ${selected ? "text-indigo-800" : "text-gray-700"}`}>{opt}</span>
                                                     </button>
                                                 );
                                             })}
                                         </div>
                                     ) : (
                                         <textarea
-                                            rows={3}
+                                            rows={4}
                                             placeholder="Жообуңузду жазыңыз..."
                                             value={answers[q.id] || ""}
                                             onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
-                                            className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl text-sm text-slate-700 focus:outline-none focus:border-violet-400 resize-none placeholder:text-slate-300 font-medium"
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:border-indigo-400 resize-none placeholder:text-gray-300 font-medium"
                                         />
                                     )}
 
                                     {q.hint && (
-                                        <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
-                                            <span>💡</span> {q.hint}
-                                        </p>
+                                        <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">💡 {q.hint}</p>
                                     )}
                                 </div>
                             </div>
-                        );
-                    })}
+
+                            {/* Prev / Next */}
+                            <div className="flex items-center justify-between mt-4 gap-3">
+                                <button
+                                    onClick={() => setCurrentIdx(i => Math.max(0, i - 1))}
+                                    disabled={currentIdx === 0}
+                                    className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-all"
+                                >
+                                    ← Мурунку
+                                </button>
+                                <span className="text-xs text-gray-400 font-semibold hidden sm:block">
+                                    {answeredCnt}/{questions.length} жооп берилди
+                                </span>
+                                {currentIdx < questions.length - 1 ? (
+                                    <button
+                                        onClick={() => setCurrentIdx(i => i + 1)}
+                                        className="flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-bold text-white transition-all"
+                                    >
+                                        Кийинки →
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => handleSubmit(false)}
+                                        disabled={submitting}
+                                        className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 rounded-xl text-sm font-bold text-white disabled:opacity-50 transition-all"
+                                    >
+                                        {submitting ? "Жиберилүүдө..." : "Тапшыруу ✓"}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── DESKTOP SIDEBAR ── */}
+                    <aside className="hidden lg:flex flex-col w-72 border-l border-gray-200 bg-white flex-shrink-0 overflow-y-auto">
+                        {/* Camera */}
+                        <div className="p-4 border-b border-gray-100">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-black text-gray-500 uppercase tracking-wider">Камера</span>
+                                <span className="flex items-center gap-1 text-xs font-bold text-red-500">
+                                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> REC
+                                </span>
+                            </div>
+                            <div className="relative bg-black rounded-xl overflow-hidden" style={{ aspectRatio: "4/3" }}>
+                                <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                                <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                                    Студент
+                                </div>
+                                <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400" /> онлайн
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Navigator */}
+                        <div className="p-4 flex-1">
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs font-black text-gray-700 uppercase tracking-wider">Навигатор</span>
+                                <span className="text-xs text-gray-400">{answeredCnt} / {questions.length}</span>
+                            </div>
+                            <div className="grid grid-cols-5 gap-1.5">
+                                {questions.map((_, i) => <NavButton key={i} i={i} />)}
+                            </div>
+                            <div className="flex flex-col gap-1.5 mt-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded bg-indigo-100 flex-shrink-0" />
+                                    <span className="text-xs text-gray-500">жооп берилген</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded bg-indigo-600 flex-shrink-0" />
+                                    <span className="text-xs text-gray-500">учурдагы</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded bg-amber-100 border border-amber-300 flex-shrink-0" />
+                                    <span className="text-xs text-gray-500">белгиленген</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Submit */}
+                        <div className="p-4 border-t border-gray-100">
+                            <button
+                                onClick={() => handleSubmit(false)}
+                                disabled={submitting}
+                                className="w-full py-3.5 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white font-black rounded-xl text-sm transition-all"
+                            >
+                                {submitting ? "Жиберилүүдө..." : "Тестти аяктоо"}
+                            </button>
+                        </div>
+                    </aside>
                 </div>
 
-                {/* Submit bar */}
-                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 shadow-lg">
-                    <div className="max-w-3xl mx-auto flex items-center gap-4">
-                        <div className="flex-1 text-sm text-slate-500 font-medium">
-                            <span className="font-black text-slate-800">{answeredCount}</span> / {questions.length} жооп берилди
-                        </div>
-                        <button
-                            onClick={() => handleSubmit(false)}
-                            disabled={submitting}
-                            className="px-8 py-3.5 rounded-2xl font-black text-white disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                            style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                            {submitting ? "Жиберилүүдө..." : "Тапшыруу ✓"}
-                        </button>
-                    </div>
+                {/* ── MOBILE BOTTOM NAV ── */}
+                <div className="lg:hidden flex-shrink-0 bg-white border-t border-gray-200 px-4 py-3 flex items-center gap-3">
+                    <button
+                        onClick={() => setCurrentIdx(i => Math.max(0, i - 1))}
+                        disabled={currentIdx === 0}
+                        className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center font-black text-gray-600 disabled:opacity-40"
+                    >←</button>
+                    <button
+                        onClick={() => currentIdx < questions.length - 1
+                            ? setCurrentIdx(i => i + 1)
+                            : handleSubmit(false)
+                        }
+                        disabled={submitting}
+                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black rounded-xl text-sm transition-all"
+                    >
+                        {currentIdx < questions.length - 1
+                            ? "Кийинки →"
+                            : submitting ? "Жиберилүүдө..." : "Тапшыруу ✓"
+                        }
+                    </button>
                 </div>
             </div>
         );

@@ -2,6 +2,8 @@ import { Poppins } from 'next/font/google'
 import './globals.css'
 import Header from '@/app/components/Layout/Header'
 import Footer from '@/app/components/Layout/Footer'
+import Preloader from '@/app/components/Preloader'
+import RouteLoader from '@/app/components/RouteLoader'
 import { getSiteStructure } from '@/utils/apiData'
 const font = Poppins({
   subsets: ['latin'],
@@ -40,6 +42,8 @@ export default async function RootLayout({
   return (
     <html lang='en' suppressHydrationWarning>
       <body className={`${font.className}`}>
+        <Preloader />
+        <RouteLoader />
         {/* Передаем контакты в Header, если там нужен телефон */}
         <Header navData={navLinks} contactData={schoolInfo} />
 

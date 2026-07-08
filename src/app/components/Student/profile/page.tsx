@@ -12,6 +12,18 @@ const MD = motion.div as any
 
 interface UserInfo { id: number; email: string; role: string }
 
+interface MyTestResult {
+  id: number;
+  olympiad_id: number;
+  olympiad_title: string;
+  score: number;
+  max_score: number;
+  percentage: number;
+  time_taken: number;
+  admin_verified: boolean;
+  created_at: string;
+}
+
 interface MyApplication {
   ID: number
   CreatedAt: string
@@ -128,6 +140,9 @@ export default function ProfilePage() {
   const [mounted, setMounted] = useState(false)
   const [apps, setApps] = useState<MyApplication[]>([])
   const [appsLoading, setAppsLoading] = useState(false)
+  const [testResults, setTestResults] = useState<MyTestResult[]>([])
+  const [showAllApps, setShowAllApps] = useState(false)
+  const [showAllResults, setShowAllResults] = useState(false)
   const router = useRouter()
 
   useEffect(() => { setMounted(true) }, [])
@@ -149,9 +164,29 @@ export default function ProfilePage() {
       .then(d => setApps(Array.isArray(d) ? d : []))
       .catch(() => {})
       .finally(() => setAppsLoading(false))
+
+    // Fetch test results
+    fetch(`${GO_API_URL}/api/my-test-results`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setTestResults(Array.isArray(d) ? d : []))
+      .catch(() => {})
   }, [router])
 
   const handleLogout = () => { Cookies.remove('auth_token'); router.push('/') }
+
+  // Active olympiads (registration/active) + last 2 recently finished
+  const activeApps = apps.filter(a => a.olympiad_status === 'registration' || a.olympiad_status === 'active')
+  const recentFinished = apps
+    .filter(a => a.olympiad_status === 'finished')
+    .sort((a, b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime())
+    .slice(0, 2)
+  const defaultApps = activeApps.length > 0 ? [...activeApps, ...recentFinished] : recentFinished.slice(0, 3)
+  const visibleApps = showAllApps ? apps : defaultApps
+
+  // Last 3 test results
+  const visibleResults = showAllResults ? testResults : testResults.slice(0, 3)
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center bg-slate-50">
@@ -167,6 +202,7 @@ export default function ProfilePage() {
 
   const pendingCount  = apps.filter(a => a.status === 'pending').length
   const approvedCount = apps.filter(a => a.status === 'approved').length
+  const totalResults  = testResults.length
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-primary/5 pt-28 pb-16">
@@ -235,6 +271,17 @@ export default function ProfilePage() {
                   <p className="text-[10px] text-gray-400 font-medium">Каралууда</p>
                 </div>
               </div>
+              {totalResults > 0 && (
+                <div className="flex items-center gap-3 bg-indigo-50 p-3 rounded-2xl">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                    {mounted && <Icon icon="solar:chart-bold-duotone" className="text-indigo-500 text-lg" />}
+                  </div>
+                  <div>
+                    <p className="text-lg font-black text-midnight_text leading-none">{totalResults}</p>
+                    <p className="text-[10px] text-gray-400 font-medium">Тест өттүм</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Menu */}
@@ -268,7 +315,7 @@ export default function ProfilePage() {
             </div>
           </MD>
 
-          {/* Right — applications */}
+          {/* Right — applications + results */}
           <MD initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="md:col-span-2 space-y-4">
 
@@ -276,6 +323,9 @@ export default function ProfilePage() {
               <h2 className="text-base font-black text-midnight_text flex items-center gap-2">
                 {mounted && <Icon icon="solar:cup-star-bold-duotone" className="text-amber-500 text-xl" />}
                 Менин олимпиадаларым
+                {apps.length > visibleApps.length && (
+                  <span className="text-xs font-semibold text-gray-400">({visibleApps.length}/{apps.length})</span>
+                )}
               </h2>
               <Link href="/olympiads"
                 className="text-xs font-bold text-primary hover:text-secondary flex items-center gap-1 transition-colors">
@@ -303,7 +353,7 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {apps.map((app, i) => {
+                {visibleApps.map((app, i) => {
                   const sm = STATUS_META[app.status] || STATUS_META.pending
                   const started = !!(app.start_time && new Date(app.start_time).getTime() <= Date.now())
                   const deadline = app.start_time
@@ -398,6 +448,88 @@ export default function ProfilePage() {
                     </MD>
                   )
                 })}
+
+                {/* Show more / less apps */}
+                {apps.length > defaultApps.length && (
+                  <button onClick={() => setShowAllApps(v => !v)}
+                    className="w-full py-2.5 rounded-2xl border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors flex items-center justify-center gap-2">
+                    {mounted && <Icon icon={showAllApps ? "solar:alt-arrow-up-bold" : "solar:alt-arrow-down-bold"} width={14} />}
+                    {showAllApps ? 'Жашыруу' : `Дагы ${apps.length - defaultApps.length} олимпиаданы көрүү`}
+                  </button>
+                )}
+              </div>
+            )}
+            {/* Test Results section */}
+            {visibleResults.length > 0 && (
+              <div className="space-y-3 mt-2">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-black text-midnight_text flex items-center gap-2">
+                    {mounted && <Icon icon="solar:chart-bold-duotone" className="text-indigo-500 text-xl" />}
+                    Тест натыйжалары
+                  </h2>
+                </div>
+                {visibleResults.map((r, i) => {
+                  const pct = r.percentage;
+                  const pctColor = pct >= 80 ? '#22c55e' : pct >= 60 ? '#a855f7' : pct >= 40 ? '#f59e0b' : '#ef4444';
+                  const fmtTime = (s: number) => { const m = Math.floor(s / 60); return `${m} мин ${s % 60} сек`; };
+                  return (
+                    <MD key={r.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                      <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${pctColor}, #818cf8)` }} />
+                      <div className="p-4 flex items-center gap-4">
+                        {/* Score ring */}
+                        <div className="relative w-14 h-14 flex-shrink-0">
+                          <svg className="w-full h-full -rotate-90" viewBox="0 0 56 56">
+                            <circle cx="28" cy="28" r="22" fill="none" stroke="#f1f5f9" strokeWidth="5" />
+                            <circle cx="28" cy="28" r="22" fill="none"
+                              stroke={pctColor} strokeWidth="5"
+                              strokeDasharray={`${2 * Math.PI * 22}`}
+                              strokeDashoffset={`${2 * Math.PI * 22 * (1 - pct / 100)}`}
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs font-black text-slate-800">{Math.round(pct)}%</span>
+                          </div>
+                        </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-sm text-midnight_text truncate">{r.olympiad_title}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {r.score} / {r.max_score} балл · {fmtTime(r.time_taken)} · {r.created_at?.slice(0, 10)}
+                          </p>
+                        </div>
+                        {/* Status + detail link */}
+                        <div className="flex-shrink-0 flex flex-col items-end gap-2">
+                          {r.admin_verified ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-600 border border-emerald-200">
+                              {mounted && <Icon icon="solar:check-circle-bold-duotone" width={12} />}Тастыкталды
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-600 border border-amber-200">
+                              {mounted && <Icon icon="solar:clock-circle-bold-duotone" width={12} />}Текшерилүүдө
+                            </span>
+                          )}
+                          <Link href={`/my-results/${r.id}`}
+                            className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-500 hover:text-indigo-700 hover:underline underline-offset-2">
+                            Жооптор
+                            {mounted && <Icon icon="solar:arrow-right-up-linear" width={11} />}
+                          </Link>
+                        </div>
+                      </div>
+                    </MD>
+                  );
+                })}
+
+                {/* Show more / less results */}
+                {testResults.length > 3 && (
+                  <button onClick={() => setShowAllResults(v => !v)}
+                    className="w-full py-2.5 rounded-2xl border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors flex items-center justify-center gap-2">
+                    {mounted && <Icon icon={showAllResults ? "solar:alt-arrow-up-bold" : "solar:alt-arrow-down-bold"} width={14} />}
+                    {showAllResults ? 'Жашыруу' : `Дагы ${testResults.length - 3} натыйжаны көрүү`}
+                  </button>
+                )}
               </div>
             )}
           </MD>
