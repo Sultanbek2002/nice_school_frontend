@@ -48,7 +48,7 @@ function StatCard({ icon, value, suffix, label, color, bg, index, isInView }: {
       transition={{ duration: 0.6, delay: index * 0.12, ease: [0.22, 1, 0.36, 1] }}
       className="relative group"
     >
-      <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-primary/8 transition-all duration-500 hover:-translate-y-1 text-center">
+      <div className="glass-card rounded-3xl p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl text-center relative overflow-hidden">
         {/* Иконка */}
         <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl ${bg} mb-5 group-hover:scale-110 transition-transform duration-300`}>
           <Icon icon={icon} className={`text-3xl ${color}`} />
@@ -78,10 +78,8 @@ export default function Stats() {
 
   return (
     <section className="py-20 relative overflow-hidden">
-      {/* Фон */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-gray/50 to-transparent" />
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full bg-primary/5 blur-[100px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full bg-primary/8 blur-[100px]" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">

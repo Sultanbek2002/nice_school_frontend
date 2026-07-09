@@ -13,7 +13,7 @@ import { Metadata } from "next";
 import OlympiadComponent from "./components/componentsMenu/olympiad";
 
 export const metadata: Metadata = {
-  title: "Danek school",
+  title: "Nice school",
   icons: {
     icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTe6TIfD1x8ZfFg-S85x-0yDZDLrnFOFCbcSA&s', // путь относительно папки public
     shortcut: '/shortcut-static-icon.png',
@@ -59,7 +59,7 @@ export default async function Home() {
   // Если баннер активен, показываем его
   return (
     <main>
-      <Hero  bannerData={data.banner}/>
+      <Hero bannerData={data.banner} courses={allCourses} />
       <OlympiadComponent data={data.olympiads}/>
       <Companies />
       <Courses courses={topTenCourses} />

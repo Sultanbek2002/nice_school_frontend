@@ -259,7 +259,7 @@ export default function RatingPage() {
   return (
     <div className="min-h-screen bg-[#0a0f1e] pt-28 pb-20 relative overflow-hidden">
       {/* Background glows */}
-      <div className="absolute top-20 left-1/4 w-96 h-96 rounded-full opacity-10 blur-3xl pointer-events-none" style={{ background: '#6556ff' }} />
+      <div className="absolute top-20 left-1/4 w-96 h-96 rounded-full opacity-15 blur-3xl pointer-events-none" style={{ background: '#17a589' }} />
       <div className="absolute bottom-40 right-1/4 w-80 h-80 rounded-full opacity-10 blur-3xl pointer-events-none" style={{ background: '#FFD700' }} />
 
       <div className="container mx-auto px-4 max-w-5xl">
@@ -272,7 +272,7 @@ export default function RatingPage() {
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-3">
             Окуучулардын{' '}
-            <span style={{ background: 'linear-gradient(90deg,#FFD700,#6556ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <span style={{ background: 'linear-gradient(90deg,#FFD700,#17a589)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               Рейтинги
             </span>
           </h1>

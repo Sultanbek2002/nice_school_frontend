@@ -14,7 +14,7 @@ const Footer: React.FC<FooterProps> = ({ data }) => {
   const school = data || {};
 
   return (
-    <footer className='bg-deep-slate pt-16 border-t border-black/5'>
+    <footer className='pt-16 border-t border-primary/10' style={{ background: 'linear-gradient(180deg, #e4f2ea 0%, #daf0e4 100%)' }}>
       <div className='container mx-auto px-4'>
         <div className='grid grid-cols-1 sm:grid-cols-6 lg:gap-20 md:gap-24 sm:gap-12 gap-12 pb-10'>
 

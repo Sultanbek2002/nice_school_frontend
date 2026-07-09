@@ -37,9 +37,9 @@ export default async function TeacherDetailPage({ params }: { params: { slug: st
   }
 
   return (
-    <main className="min-h-screen pt-32 pb-20 bg-gray-50">
+    <main className="min-h-screen pt-32 pb-20">
       <div className="container mx-auto px-4">
-        <div className="bg-white rounded-3xl p-6 md:p-12 shadow-sm flex flex-col md:flex-row gap-12">
+        <div className="glass-card rounded-3xl p-6 md:p-12 flex flex-col md:flex-row gap-12">
           
           {/* Левая колонка: Фото */}
           <div className="w-full md:w-1/3">

@@ -69,8 +69,8 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
   return (
     <>
       <header
-        className={`fixed top-0 z-40 w-full transition-all duration-300 ${
-          sticky ? "bg-white shadow-md py-2" : "bg-transparent py-5"
+        className={`fixed top-0 z-40 w-full transition-all duration-300 glass-nav ${
+          sticky ? "py-2" : "py-4"
         }`}
       >
         <div className="container mx-auto px-4">
@@ -94,7 +94,7 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
                       <Icon icon="solar:alt-arrow-down-bold" width={16} />
                     </button>
 
-                    <div className="absolute top-full left-0 mt-2 bg-white shadow-lg rounded-lg min-w-[200px] py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                    <div className="absolute top-full left-0 mt-2 rounded-xl min-w-[200px] py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 glass-card">
                       {hiddenNavData.map((item, index) => (
                         <div key={index} className="px-4 py-2 hover:bg-gray-50">
                           <HeaderLink item={item} />
@@ -135,18 +135,18 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
 
                 <button
                   onClick={handleAccountClick}
-                  className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-blue-50 hover:bg-blue-100 transition-all hover:scale-105 border border-blue-200/50"
+                  className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20"
                   aria-label="Войти"
                 >
-                  <Icon icon="material-symbols:account-circle-outline" width={26} className="text-blue-500" />
+                  <Icon icon="material-symbols:account-circle-outline" width={26} className="text-primary" />
                 </button>
                 
                 <button
                   onClick={handleAccountClick}
-                  className="sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-blue-50 hover:bg-blue-100 transition-all hover:scale-105 border border-blue-200/50"
+                  className="sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20"
                   aria-label="Войти"
                 >
-                  <Icon icon="material-symbols:account-circle-outline" width={24} className="text-blue-500" />
+                  <Icon icon="material-symbols:account-circle-outline" width={24} className="text-primary" />
                 </button>
               </div>
 
@@ -159,81 +159,100 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
             </div>
           </div>
 
-          {/* Мобильное меню */}
-          <div
-            ref={mobileMenuRef}
-            className={`lg:hidden fixed top-0 right-0 h-full w-full max-w-[300px] bg-white shadow-2xl transform transition-transform duration-500 ease-in-out z-50 ${
-              navbarOpen ? "translate-x-0" : "translate-x-full"
-            }`}
-          >
-            <div className="flex items-center justify-between p-6 border-b">
-              <Logo />
-              <button onClick={() => setNavbarOpen(false)} className="text-gray-400">
-                <Icon icon="solar:close-square-broken" width={32} />
-              </button>
-            </div>
-
-            <nav className="flex flex-col p-6 space-y-5 overflow-y-auto max-h-[calc(100vh-200px)]">
-              {visibleNavData.map((item, index) => (
-                <MobileHeaderLink key={index} item={item} />
-              ))}
-
-              {hasMoreItems && (
-                <button
-                  onClick={() => {
-                    if (visibleItems === combinedNavData.length) {
-                      hideExtraItems()
-                    } else {
-                      showAllItems()
-                    }
-                  }}
-                  className="flex items-center justify-center gap-2 text-primary font-medium py-2 px-4 border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors"
-                >
-                  <span>{visibleItems === combinedNavData.length ? 'Скрыть' : 'Показать еще'}</span>
-                  <Icon
-                    icon={visibleItems === combinedNavData.length ? "solar:alt-arrow-up-bold" : "solar:alt-arrow-down-bold"}
-                    width={18}
-                  />
-                </button>
-              )}
-
-              {visibleItems === combinedNavData.length && hiddenNavData.map((item, index) => (
-                <MobileHeaderLink key={`hidden-${index}`} item={item} />
-              ))}
-
-              <div className="pt-8 border-t mt-4 space-y-4">
-                <Link
-                  href="/#contact"
-                  className="flex items-center justify-center bg-primary text-white w-full py-4 rounded-2xl font-bold"
-                  onClick={() => setNavbarOpen(false)}
-                >
-                  Жазылуу
-                </Link>
-
-                <div className="flex justify-center pt-2">
-                  <button
-                    onClick={() => {
-                      handleAccountClick()
-                      setNavbarOpen(false)
-                    }}
-                    className="flex items-center justify-center w-14 h-14 rounded-full bg-blue-50 hover:bg-blue-100 transition-all hover:scale-105 border border-blue-200/50"
-                    aria-label="Войти"
-                  >
-                    <Icon icon="material-symbols:account-circle-outline" width={32} className="text-blue-500" />
-                  </button>
-                </div>
-
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[2px] mb-6 text-center mt-4">Биздин соцтармактар</p>
-                <div className="flex justify-center gap-8">
-                  <Link href={contactData?.instagram || "#"} target="_blank"><Icon icon="skill-icons:instagram" width={35} /></Link>
-                  <Link href={whatsappLink} target="_blank"><Icon icon="logos:whatsapp-icon" width={35} /></Link>
-                  <Link href={contactData?.telegram || "#"} target="_blank"><Icon icon="logos:telegram" width={35} /></Link>
-                </div>
-              </div>
-            </nav>
-          </div>
         </div>
       </header>
+
+      {/* Overlay — закрывает меню по клику на фон */}
+      {navbarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+          onClick={() => setNavbarOpen(false)}
+        />
+      )}
+
+      {/* Мобильное меню */}
+      <div
+        ref={mobileMenuRef}
+        className={`lg:hidden fixed top-0 right-0 h-full w-full max-w-[300px] shadow-2xl transform transition-transform duration-500 ease-in-out z-50 ${
+          navbarOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{
+          background: "rgba(242,249,246,0.97)",
+          backdropFilter: "blur(20px) saturate(150%)",
+          WebkitBackdropFilter: "blur(20px) saturate(150%)",
+          borderLeft: "1px solid rgba(23,165,137,0.15)",
+        }}
+      >
+        {/* Шапка меню — только кнопка закрытия */}
+        <div className="flex items-center justify-end p-5 border-b border-primary/10">
+          <button
+            onClick={() => setNavbarOpen(false)}
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+          >
+            <Icon icon="solar:close-bold" width={20} className="text-primary" />
+          </button>
+        </div>
+
+        <nav className="flex flex-col p-6 space-y-2 overflow-y-auto max-h-[calc(100vh-80px)]">
+          {visibleNavData.map((item, index) => (
+            <div key={index} onClick={() => setNavbarOpen(false)}>
+              <MobileHeaderLink item={item} />
+            </div>
+          ))}
+
+          {hasMoreItems && (
+            <button
+              onClick={() => {
+                if (visibleItems === combinedNavData.length) {
+                  hideExtraItems()
+                } else {
+                  showAllItems()
+                }
+              }}
+              className="flex items-center justify-center gap-2 text-primary font-medium py-2 px-4 border border-primary/30 rounded-xl hover:bg-primary/10 transition-colors text-sm"
+            >
+              <span>{visibleItems === combinedNavData.length ? 'Скрыть' : 'Показать еще'}</span>
+              <Icon
+                icon={visibleItems === combinedNavData.length ? "solar:alt-arrow-up-bold" : "solar:alt-arrow-down-bold"}
+                width={16}
+              />
+            </button>
+          )}
+
+          {visibleItems === combinedNavData.length && hiddenNavData.map((item, index) => (
+            <div key={`hidden-${index}`} onClick={() => setNavbarOpen(false)}>
+              <MobileHeaderLink item={item} />
+            </div>
+          ))}
+
+          <div className="pt-6 border-t border-primary/10 mt-4 space-y-3">
+            <Link
+              href="/#contact"
+              className="flex items-center justify-center bg-primary text-white w-full py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-primary/20"
+              onClick={() => setNavbarOpen(false)}
+            >
+              Жазылуу
+            </Link>
+
+            <button
+              onClick={() => { handleAccountClick(); setNavbarOpen(false) }}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-primary/20 bg-primary/5 text-primary font-bold text-sm hover:bg-primary/10 transition-colors"
+            >
+              <Icon icon="material-symbols:account-circle-outline" width={22} />
+              Кабинет
+            </button>
+
+            <div className="pt-2">
+              <p className="text-[10px] font-black text-primary/50 uppercase tracking-[2px] mb-3 text-center">Биздин соцтармактар</p>
+              <div className="flex justify-center gap-6">
+                <Link href={contactData?.instagram || "#"} target="_blank"><Icon icon="skill-icons:instagram" width={30} /></Link>
+                <Link href={whatsappLink} target="_blank"><Icon icon="logos:whatsapp-icon" width={30} /></Link>
+                <Link href={contactData?.telegram || "#"} target="_blank"><Icon icon="logos:telegram" width={30} /></Link>
+              </div>
+            </div>
+          </div>
+        </nav>
+      </div>
 
       {/* Модальное окно логина */}
       {isLoginModalOpen && (

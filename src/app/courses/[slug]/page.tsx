@@ -27,7 +27,7 @@ export default async function CourseDetailPage({ params }: { params: { slug: str
   }
 
   return (
-    <main className="min-h-screen pt-28 pb-20 bg-white">
+    <main className="min-h-screen pt-28 pb-20">
       <div className="container mx-auto px-4">
         
         {/* ВЕРХНЯЯ ЧАСТЬ: Шапка курса */}

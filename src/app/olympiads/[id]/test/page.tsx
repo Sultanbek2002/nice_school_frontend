@@ -18,6 +18,7 @@ interface SubmitResult {
 
 type Stage =
     | "loading"       // fetching olympiad + app info
+    | "permission"    // ask user to allow camera + mic before face stages
     | "face-setup"    // first-time / re-registration face scan (no stored descriptor)
     | "face-check"    // camera verification (up to 3 attempts)
     | "testing"       // timer + questions
@@ -52,11 +53,14 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
     const [countdown,   setCountdown]  = useState(0);
 
     const videoRef         = useRef<HTMLVideoElement>(null);
+    const mobileVideoRef   = useRef<HTMLVideoElement>(null); // mobile overlay — separate ref needed (same ref = last wins)
     const canvasRef        = useRef<HTMLCanvasElement>(null);
     const streamRef        = useRef<MediaStream | null>(null);
     const rafRef           = useRef<number>(0);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const nextStageRef     = useRef<"face-check" | "face-setup">("face-check");
     const recordedChunksRef = useRef<Blob[]>([]);
+    const recordedMimeRef  = useRef<string>("video/webm");
     const landmarkRef = useRef<import("@mediapipe/tasks-vision").FaceLandmarker | null>(null);
     const stableRef  = useRef(0);
     const cdRunRef   = useRef(false);
@@ -119,7 +123,9 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 setStage("no-access");
                 return;
             }
-            setStage(app.face_embeddings ? "face-check" : "face-setup");
+            const target = app.face_embeddings ? "face-check" : "face-setup";
+            nextStageRef.current = target;
+            setStage("permission");
         }).catch(() => {
             setNoAccessMsg("Маалыматтарды жүктөөдө ката кетти. Баракты кайра жүктөңүз.");
             setStage("no-access");
@@ -150,18 +156,31 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
 
     const startCamera = useCallback(async (withAudio = false) => {
         setCamError("");
-        const attachStream = async (s: MediaStream) => {
-            streamRef.current = s;
-            const video = videoRef.current;
-            if (video) {
+        const attachToVideo = async (s: MediaStream) => {
+            const attachOne = async (video: HTMLVideoElement | null) => {
+                if (!video || video.srcObject === s) return;
                 video.srcObject = s;
                 await new Promise<void>(resolve => {
                     if (video.readyState >= 1) { resolve(); return; }
                     video.onloadedmetadata = () => resolve();
                 });
                 await video.play().catch(() => {});
-            }
+            };
+            // Attach to both desktop (videoRef) and mobile overlay (mobileVideoRef)
+            await Promise.all([
+                attachOne(videoRef.current),
+                attachOne(mobileVideoRef.current),
+            ]);
         };
+        const attachStream = async (s: MediaStream) => {
+            streamRef.current = s;
+            await attachToVideo(s);
+        };
+        // Reuse existing stream from permission grant (avoids second getUserMedia call on iOS)
+        if (streamRef.current) {
+            await attachToVideo(streamRef.current);
+            return;
+        }
         try {
             const s = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
@@ -170,7 +189,6 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
             await attachStream(s);
         } catch (err) {
             if (withAudio) {
-                // Fallback: video-only if microphone unavailable
                 console.warn("[REC] audio unavailable, falling back to video-only:", err);
                 try {
                     const s = await navigator.mediaDevices.getUserMedia({
@@ -198,6 +216,38 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         streamRef.current = null;
     }, []);
 
+    // Called directly from button tap (user gesture) — iOS requires getUserMedia in user gesture
+    const requestPermissions = useCallback(async () => {
+        try {
+            // Request camera + mic in one call — keeps stream alive, no second getUserMedia needed
+            const s = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                audio: true,
+            });
+            streamRef.current = s; // store — startCamera() will reuse it without calling getUserMedia again
+            setStage(nextStageRef.current);
+        } catch {
+            // Fallback: camera only (mic might be blocked on some devices)
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                });
+                streamRef.current = s;
+                setStage(nextStageRef.current);
+            } catch {
+                setCamError("Камерага уруксат берилген жок. Браузер жөндөөлөрүнөн уруксат бериңиз.");
+                setStage(nextStageRef.current);
+            }
+        }
+    }, []);
+
+    // Stop camera only on component unmount (NOT on stage changes between camera stages)
+    // Stopping on cleanup kills the stream before testing stage can reuse it
+    useEffect(() => {
+        return () => stopCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // Start camera when entering face-check / face-setup / testing stage
     useEffect(() => {
         if (stage === "face-check" || stage === "face-setup") {
@@ -212,26 +262,36 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 const chunks: Blob[] = [];
                 recordedChunksRef.current = chunks;
                 try {
+                    // iOS Safari supports mp4, desktop Chrome supports webm
                     const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
                         ? "video/webm;codecs=vp8,opus"
                         : MediaRecorder.isTypeSupported("video/webm")
                         ? "video/webm"
+                        : MediaRecorder.isTypeSupported("video/mp4")
+                        ? "video/mp4"
                         : "";
-                    console.log("[REC] starting MediaRecorder, mimeType:", mimeType || "browser default", "tracks:", streamRef.current.getTracks().map(t => t.kind));
+                    const actualMime = mimeType || "video/webm";
+                    recordedMimeRef.current = actualMime;
+                    console.log("[REC] starting MediaRecorder, mimeType:", actualMime, "tracks:", streamRef.current.getTracks().map(t => t.kind));
                     const mr = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : undefined);
                     mr.ondataavailable = e => {
-                        console.log("[REC] chunk:", e.data.size, "bytes, total chunks:", chunks.length + 1);
                         if (e.data.size > 0) chunks.push(e.data);
                     };
-                    mr.start(10000); // collect in 10-second chunks
+                    // iOS Safari may not support timeslice — try with it, fall back to no-timeslice
+                    try {
+                        mr.start(10000);
+                    } catch {
+                        mr.start(); // no timeslice — all data delivered on stop
+                    }
                     mediaRecorderRef.current = mr;
-                    console.log("[REC] recording started ✓");
+                    console.log("[REC] recording started ✓, state:", mr.state);
                 } catch (e) { console.error("[REC] MediaRecorder failed:", e); }
             });
-        } else {
+        } else if (stage !== "permission") {
+            // Final stages (submitted, blocked, no-access) — stop camera
             stopCamera();
         }
-        return () => stopCamera();
+        // No cleanup return here — would kill stream when transitioning face-check → testing
     }, [stage, startCamera, stopCamera, loadMediaPipe]);
 
     // RAF loop — face detection for auto-capture
@@ -430,14 +490,15 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
 
     const stopRecordingAndGetBlob = (): Promise<Blob | null> => new Promise(resolve => {
         const mr = mediaRecorderRef.current;
+        const mime = recordedMimeRef.current || "video/webm";
         if (!mr || mr.state === "inactive") {
             const chunks = recordedChunksRef.current;
-            resolve(chunks.length > 0 ? new Blob(chunks, { type: "video/webm" }) : null);
+            resolve(chunks.length > 0 ? new Blob(chunks, { type: mime }) : null);
             return;
         }
         const allChunks = [...recordedChunksRef.current];
         mr.ondataavailable = e => { if (e.data.size > 0) allChunks.push(e.data); };
-        mr.onstop = () => resolve(allChunks.length > 0 ? new Blob(allChunks, { type: "video/webm" }) : null);
+        mr.onstop = () => resolve(allChunks.length > 0 ? new Blob(allChunks, { type: mime }) : null);
         mr.stop();
         mediaRecorderRef.current = null;
     });
@@ -463,14 +524,18 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 setResult(data);
                 setStage(data.has_open_questions ? "pending-review" : "submitted");
                 // Upload recording in background
-                if (videoBlob && data.result_id) {
-                    console.log("[REC] uploading video blob:", videoBlob.size, "bytes");
-                    const form = new FormData();
-                    form.append("video", videoBlob, "recording.webm");
-                    fetch(`${GO_API_URL}/api/test-results/${data.result_id}/video`, {
+                if (videoBlob && videoBlob.size > 0 && data.result_id) {
+                    const ext = videoBlob.type.includes("mp4") ? "mp4" : "webm";
+                    console.log("[REC] uploading video blob:", videoBlob.size, "bytes, type:", videoBlob.type, "ext:", ext);
+                    // Use dedicated streaming API route to avoid Next.js proxy body size limit
+                    fetch(`/api/upload-video/${data.result_id}`, {
                         method: "POST",
-                        headers: { Authorization: `Bearer ${getToken()}` },
-                        body: form,
+                        headers: {
+                            Authorization: `Bearer ${getToken()}`,
+                            "Content-Type": videoBlob.type || "video/mp4",
+                            "X-Filename": `recording.${ext}`,
+                        },
+                        body: videoBlob,
                     }).then(r => console.log("[REC] upload status:", r.status))
                       .catch(e => console.error("[REC] upload error:", e));
                 } else {
@@ -623,6 +688,55 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                     </div>
                     <a href={`/olympiads/${id}`} className="block w-full py-4 rounded-2xl font-black text-white text-center" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
                         Аяктоо
+                    </a>
+                </div>
+            </div>
+        </div>
+    );
+
+    // ── Permission prompt ─────────────────────────────────
+    if (stage === "permission") return (
+        <div className="min-h-screen flex items-center justify-center pb-10 pt-20 px-4" style={{ background:"linear-gradient(145deg,#f0f4ff,#faf5ff)" }}>
+            <div className="bg-white rounded-3xl shadow-xl max-w-sm w-full overflow-hidden">
+                <div className="p-6 text-white text-center" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
+                    <div className="text-5xl mb-3">📷</div>
+                    <h2 className="text-xl font-black mb-1">Уруксат керек</h2>
+                    <p className="text-white/80 text-sm">{olympiad?.title}</p>
+                </div>
+                <div className="p-6 space-y-4">
+                    <p className="text-sm text-slate-600 text-center leading-relaxed">
+                        Тестке кирүү үчүн <strong>камера</strong> жана <strong>микрофон</strong> уруксаты зарыл
+                    </p>
+                    <div className="space-y-2.5">
+                        {[
+                            { icon:"📷", title:"Камера", desc:"Жүзүңүздү верификациялоо жана тест учурунда жазуу үчүн" },
+                            { icon:"🎙️", title:"Микрофон", desc:"Академиялык чынчылдыкты камсыз кылуу үчүн" },
+                            { icon:"🛡️", title:"Коопсуздук", desc:"Маалыматтар шифрленген форматта сакталат" },
+                        ].map(({ icon, title, desc }) => (
+                            <div key={title} className="flex items-start gap-3 bg-slate-50 rounded-2xl p-3.5">
+                                <span className="text-2xl flex-shrink-0">{icon}</span>
+                                <div>
+                                    <p className="text-sm font-black text-slate-700">{title}</p>
+                                    <p className="text-xs text-slate-400 mt-0.5 leading-snug">{desc}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3">
+                        <p className="text-xs text-amber-700 font-semibold text-center">
+                            ⚠️ Браузер уруксат сурайт — <strong>"Уруксат берүү"</strong> дегенди басыңыз
+                        </p>
+                    </div>
+                    <button
+                        onClick={requestPermissions}
+                        className="w-full py-4 rounded-2xl font-black text-white text-base transition-transform active:scale-[0.98]"
+                        style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)", boxShadow:"0 10px 30px rgba(124,58,237,0.3)" }}
+                    >
+                        📷 Уруксат берүү жана улантуу
+                    </button>
+                    <a href={`/olympiads/${id}`}
+                        className="block text-center text-xs text-slate-400 hover:text-slate-600 font-semibold py-1">
+                        ← Артка кайтуу
                     </a>
                 </div>
             </div>
@@ -933,7 +1047,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
                                 {/* Mobile camera overlay */}
                                 <div className="lg:hidden absolute top-3 right-3 z-10 w-20 h-14 rounded-xl overflow-hidden bg-black shadow-lg border-2 border-white">
-                                    <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                                    <video ref={mobileVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                                     <div className="absolute top-1 right-1 flex items-center gap-0.5 bg-black/70 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
                                         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                                         REC
@@ -993,7 +1107,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                                             placeholder="Жообуңузду жазыңыз..."
                                             value={answers[q.id] || ""}
                                             onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
-                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:border-indigo-400 resize-none placeholder:text-gray-300 font-medium"
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base text-gray-700 focus:outline-none focus:border-indigo-400 resize-none placeholder:text-gray-300 font-medium"
                                         />
                                     )}
 

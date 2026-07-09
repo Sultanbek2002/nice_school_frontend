@@ -62,6 +62,11 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
     const [appStatus, setAppStatus] = useState<string | null>(null);
     const [userEmail, setUserEmail] = useState("");
 
+    // Results / leaderboard
+    type ResultRow = { rank: number; fio: string; school: string; class_name: string; score: number; max_score: number; percentage: number; time_taken: number };
+    const [results, setResults] = useState<ResultRow[]>([]);
+    const [resultsLoading, setResultsLoading] = useState(false);
+
     const [modalView, setModalView] = useState<ModalView | null>(null);
 
     // Auth
@@ -105,6 +110,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
     const [mpReady,        setMpReady]        = useState(false);
     const [mpLoading,      setMpLoading]      = useState(false);
     const [autoCapturing,  setAutoCapturing]  = useState(false);
+    const [camPermission,  setCamPermission]  = useState<"prompt" | "requesting" | "granted" | "denied">("prompt");
 
     useEffect(() => {
         setMounted(true);
@@ -114,7 +120,18 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
     useEffect(() => {
         fetch(`${GO_API_URL}/api/olympiads/${id}`)
             .then(r => r.ok ? r.json() : null)
-            .then(d => { if (d) setOlympiad(d); })
+            .then(d => {
+                if (d) {
+                    setOlympiad(d);
+                    if (d.status === "finished") {
+                        setResultsLoading(true);
+                        fetch(`${GO_API_URL}/api/olympiads/${id}/results`)
+                            .then(r => r.ok ? r.json() : null)
+                            .then(res => { if (res?.results) setResults(res.results); })
+                            .finally(() => setResultsLoading(false));
+                    }
+                }
+            })
             .finally(() => setLoading(false));
     }, [id]);
 
@@ -311,19 +328,31 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
         setPoseResult(null);
     }, [facePhaseIdx]);
 
-    // Camera + MediaPipe lifecycle
+    // Attach stream to video element after permission granted (stream is in ref, video renders after state change)
     useEffect(() => {
-        if (modalView === "form" && formStep === 3) {
-            setFacePhaseIdx(0);
-            setCapturedFaces({});
-            setCountdown(0);
-            startCamera();
-            loadMediaPipe();
-        } else {
+        if (camPermission !== "granted" || !streamRef.current) return;
+        const video = videoRef.current;
+        if (!video || video.srcObject) return;
+        video.srcObject = streamRef.current;
+        video.play().catch(() => {});
+    }, [camPermission]);
+
+    // Camera + MediaPipe lifecycle: restart if user went back then returned
+    useEffect(() => {
+        if (modalView === "form" && formStep === 3 && camPermission === "granted") {
+            if (!streamRef.current) {
+                // Stream was stopped (back navigation), restart without permission prompt
+                setFacePhaseIdx(0);
+                setCapturedFaces({});
+                setCountdown(0);
+                startCamera();
+                loadMediaPipe();
+            }
+        } else if (!(modalView === "form" && formStep === 3)) {
             stopCamera();
         }
         return () => { stopCamera(); };
-    }, [modalView, formStep, startCamera, stopCamera, loadMediaPipe]);
+    }, [modalView, formStep, camPermission, startCamera, stopCamera, loadMediaPipe]);
 
     const allFacesCaptured = FACE_PHASES.every(p => capturedFaces[p.key]);
 
@@ -455,7 +484,28 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
         else { setAuthEmail(""); setAuthPassword(""); setAuthConfirm(""); setAuthError(""); setOtpCode(""); setAuthTab("register"); setAuthStep("credentials"); setModalView("auth"); }
     };
 
-    const closeModal = () => { stopCamera(); setModalView(null); };
+    const closeModal = () => { stopCamera(); setModalView(null); setCamPermission("prompt"); }
+
+    // Called directly from user gesture (button tap) — iOS requires getUserMedia inside user gesture
+    const requestAndStartCamera = useCallback(async () => {
+        setCamPermission("requesting");
+        setCameraError("");
+        try {
+            const s = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+            });
+            streamRef.current = s;
+            // Set state → React renders video element → srcObject useEffect attaches stream
+            setCamPermission("granted");
+            setFacePhaseIdx(0);
+            setCapturedFaces({});
+            setCountdown(0);
+            loadMediaPipe();
+        } catch {
+            streamRef.current = null;
+            setCamPermission("denied");
+        }
+    }, [loadMediaPipe]);
 
     const handleCertSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
@@ -602,7 +652,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                         </div>
                         <h1 className="text-3xl md:text-5xl font-black text-slate-900 leading-tight">{olympiad.title}</h1>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                            <div className="flex items-center gap-4 glass-card p-4 rounded-2xl">
                                 <div className="p-3 rounded-xl" style={{ background:"rgba(124,58,237,0.08)" }}>{mounted && <Icon icon="solar:calendar-date-bold-duotone" width={22} style={{ color:"#7c3aed" }} />}</div>
                                 <div>
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Өткөрүлүүчү күнү</p>
@@ -611,7 +661,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                            <div className="flex items-center gap-4 glass-card p-4 rounded-2xl">
                                 <div className="p-3 rounded-xl" style={{ background:"rgba(239,68,68,0.07)" }}>{mounted && <Icon icon="solar:map-point-bold-duotone" width={22} className="text-rose-500" />}</div>
                                 <div className="min-w-0"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Өтүүчү орду</p><p className="text-sm font-black text-slate-800 truncate">{olympiad.location || "Дареги такталууда"}</p></div>
                             </div>
@@ -638,7 +688,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 border-t border-slate-200/60 pt-12">
                     <div className="lg:col-span-2 space-y-8">
-                        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <div className="glass-card p-8 rounded-[2rem]">
                             <h3 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">{mounted && <Icon icon="solar:info-circle-bold-duotone" className="text-violet-500" width={22} />}Олимпиада тууралуу</h3>
                             <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">{olympiad.description || "Бул олимпиада боюнча толук маалымат жакында жарыяланат."}</p>
                         </div>
@@ -655,7 +705,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                             </div>
                         </div>
                     </div>
-                    <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+                    <div className="glass-card rounded-[2rem] p-8">
                         <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">{mounted && <Icon icon="solar:shield-check-bold-duotone" className="text-violet-500" width={22} />}Негизги эрежелер</h4>
                         <div className="space-y-3">
                             {["Олимпиада башталган убакыттан кечигүүнү мүмкүн эмес.", "Катышуучу калем жана блокнот ала келиши керек.", "Жыйынтыктар 3 жумушчу күндүн ичинде жарыяланат."].map((rule, i) => (
@@ -670,15 +720,117 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                         </div>
                     </div>
                 </div>
+
+                {/* ══════════════ RESULTS SECTION ══════════════ */}
+                {olympiad.status === "finished" && (
+                    <div className="mt-14 border-t border-slate-200/60 pt-12">
+                        <div className="flex items-center gap-3 mb-8">
+                            {mounted && <Icon icon="solar:cup-star-bold-duotone" width={32} className="text-amber-500" />}
+                            <div>
+                                <h2 className="text-2xl md:text-3xl font-black text-slate-900">Жыйынтыктар жана жеңүүчүлөр</h2>
+                                <p className="text-sm text-slate-400 font-medium mt-0.5">Катышуучулардын акыркы рейтинги</p>
+                            </div>
+                        </div>
+
+                        {resultsLoading ? (
+                            <div className="flex items-center justify-center py-16">
+                                <div className="animate-spin w-10 h-10 border-2 border-violet-400 border-t-transparent rounded-full" />
+                            </div>
+                        ) : results.length === 0 ? (
+                            <div className="glass-card rounded-[2rem] p-10 text-center">
+                                <div className="text-5xl mb-3">📊</div>
+                                <p className="text-slate-500 font-bold">Жыйынтыктар азырынча жарыяланган жок</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Top 3 Podium */}
+                                {results.length >= 1 && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+                                        {[
+                                            { data: results[0], place: 1, emoji: "🥇", grad: "from-yellow-400 to-amber-500", bg: "from-yellow-50 to-amber-50", border: "border-yellow-300", shadow: "shadow-yellow-200/60", size: "md:order-2" },
+                                            { data: results[1], place: 2, emoji: "🥈", grad: "from-slate-400 to-slate-500", bg: "from-slate-50 to-gray-100",  border: "border-slate-300",  shadow: "shadow-slate-200/60",  size: "md:order-1" },
+                                            { data: results[2], place: 3, emoji: "🥉", grad: "from-orange-400 to-amber-500", bg: "from-orange-50 to-amber-50", border: "border-orange-300", shadow: "shadow-orange-200/60", size: "md:order-3" },
+                                        ].filter(p => p.data).map(({ data, place, emoji, grad, bg, border, shadow, size }) => (
+                                            <div key={place} className={`relative bg-gradient-to-br ${bg} border-2 ${border} rounded-[2rem] p-6 text-center shadow-xl ${shadow} ${size} ${place === 1 ? "md:scale-105 md:-mt-3" : ""}`}>
+                                                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${grad} flex items-center justify-center text-2xl mx-auto mb-3 shadow-lg`}>
+                                                    {emoji}
+                                                </div>
+                                                <div className="absolute top-4 right-4 text-xs font-black text-white px-2 py-0.5 rounded-full" style={{ background: `linear-gradient(135deg,#7c3aed,#0ea5e9)` }}>
+                                                    #{place}
+                                                </div>
+                                                <h3 className="font-black text-slate-800 text-base leading-tight">{data.fio}</h3>
+                                                <p className="text-xs text-slate-500 font-medium mt-1">{data.school}</p>
+                                                <p className="text-xs text-slate-400 font-medium">{data.class_name}</p>
+                                                <div className="mt-4 pt-4 border-t border-white/60">
+                                                    <div className="text-3xl font-black text-slate-800">{data.percentage}<span className="text-lg text-slate-400">%</span></div>
+                                                    <p className="text-xs text-slate-500 font-bold mt-0.5">{data.score} / {data.max_score} упай</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Full leaderboard table */}
+                                <div className="glass-card rounded-[2rem] overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-slate-200/60 flex items-center gap-2">
+                                        {mounted && <Icon icon="solar:list-bold-duotone" className="text-violet-500" width={20} />}
+                                        <h4 className="font-black text-slate-800 text-sm">Толук рейтинг</h4>
+                                        <span className="ml-auto text-xs text-slate-400 font-bold">{results.length} катышуучу</span>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="bg-slate-50/80 text-left">
+                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider w-12">#</th>
+                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider">Катышуучу</th>
+                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider hidden sm:table-cell">Мектеп / Класс</th>
+                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right">Упай</th>
+                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right">%</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {results.map((r) => (
+                                                    <tr key={r.rank} className={`transition-colors hover:bg-violet-50/30 ${r.rank <= 3 ? "bg-amber-50/30" : ""}`}>
+                                                        <td className="px-4 py-3 font-black text-center">
+                                                            {r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : (
+                                                                <span className="text-slate-400 text-xs">{r.rank}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <p className="font-black text-slate-800 text-sm">{r.fio}</p>
+                                                        </td>
+                                                        <td className="px-4 py-3 hidden sm:table-cell">
+                                                            <p className="text-xs text-slate-600 font-semibold">{r.school}</p>
+                                                            <p className="text-xs text-slate-400">{r.class_name}</p>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <span className="font-black text-slate-800">{r.score}</span>
+                                                            <span className="text-slate-400 text-xs">/{r.max_score}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-black ${r.rank === 1 ? "bg-yellow-100 text-yellow-700" : r.rank === 2 ? "bg-slate-100 text-slate-600" : r.rank === 3 ? "bg-orange-100 text-orange-700" : "bg-violet-50 text-violet-600"}`}>
+                                                                {r.percentage}%
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* ══════════════ MODAL ══════════════ */}
             {modalView && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl w-full max-w-lg max-h-[95vh] overflow-y-auto">
+                    <div className="glass-card rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl w-full max-w-lg max-h-[95vh] overflow-y-auto">
 
                         {/* Header */}
-                        <div className="p-5 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white rounded-t-[2.5rem] z-10">
+                        <div className="p-5 border-b border-white/40 flex items-center justify-between sticky top-0 glass-nav rounded-t-[2.5rem] z-10">
                             <div>
                                 <h2 className="text-lg font-black text-slate-800">
                                     {modalView === "auth" && authStep === "otp" && "Email верификациясы"}
@@ -825,6 +977,80 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                     {/* ── STEP 3: FACE CAPTURE (MediaPipe) ── */}
                                     {formStep === 3 && (
                                         <div className="space-y-3">
+
+                                            {/* ── PERMISSION PROMPT ── */}
+                                            {camPermission !== "granted" && (
+                                                <div className="py-4">
+                                                    {camPermission === "denied" ? (
+                                                        <div className="space-y-4">
+                                                            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-center">
+                                                                <div className="text-5xl mb-3">🚫</div>
+                                                                <p className="text-sm font-black text-red-700 mb-1">Камерага уруксат берилген жок</p>
+                                                                <p className="text-xs text-red-500 leading-relaxed">
+                                                                    Браузердин дарек тилкесинин жанындагы 🔒 же 📷 белгисин басыңыз → Камера → Уруксат берүү
+                                                                </p>
+                                                            </div>
+                                                            <button onClick={requestAndStartCamera}
+                                                                className="w-full py-3.5 rounded-2xl font-black text-white text-sm"
+                                                                style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
+                                                                Кайра аракет кылуу
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setFormStep(hasExistingProfile ? 1 : 2); setHasExistingProfile(false); }}
+                                                                className="w-full py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">
+                                                                ← Артка
+                                                            </button>
+                                                        </div>
+                                                    ) : camPermission === "requesting" ? (
+                                                        <div className="bg-violet-50 border border-violet-200 rounded-2xl p-8 text-center">
+                                                            <div className="animate-spin w-10 h-10 border-2 border-violet-400 border-t-transparent rounded-full mx-auto mb-4" />
+                                                            <p className="text-sm font-bold text-violet-700">Уруксат сурануудa...</p>
+                                                            <p className="text-xs text-violet-400 mt-1">Браузердин сурамжылоосуна "Уруксат берүү" басыңыз</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-5">
+                                                            <div className="text-center">
+                                                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4"
+                                                                    style={{ background:"linear-gradient(135deg,rgba(124,58,237,0.1),rgba(14,165,233,0.1))" }}>
+                                                                    <span className="text-4xl">📷</span>
+                                                                </div>
+                                                                <h3 className="text-base font-black text-slate-800 mb-2">Камерага уруксат керек</h3>
+                                                                <p className="text-sm text-slate-500 leading-relaxed">
+                                                                    Жүз верификациясы үчүн камераңызга уруксат берүү зарыл
+                                                                </p>
+                                                            </div>
+                                                            <div className="space-y-2.5">
+                                                                {[
+                                                                    { icon:"🛡️", title:"Коопсуздук", desc:"Жүзүңүз олимпиадага кирүүдө гана колдонулат" },
+                                                                    { icon:"🔒", title:"Купуялык", desc:"Сүрөтүңүз шифрленип сакталат" },
+                                                                    { icon:"✅", title:"Бир жолу", desc:"Биринчи катталганда жасалат" },
+                                                                ].map(({ icon, title, desc }) => (
+                                                                    <div key={title} className="flex items-start gap-3 bg-slate-50 rounded-xl p-3">
+                                                                        <span className="text-xl flex-shrink-0">{icon}</span>
+                                                                        <div>
+                                                                            <p className="text-xs font-black text-slate-700">{title}</p>
+                                                                            <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            <button onClick={requestAndStartCamera}
+                                                                className="w-full py-4 rounded-2xl font-black text-white text-base shadow-lg transition-transform active:scale-[0.98]"
+                                                                style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)", boxShadow:"0 10px 30px rgba(124,58,237,0.3)" }}>
+                                                                📷 Камерага уруксат берүү
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setFormStep(hasExistingProfile ? 1 : 2); setHasExistingProfile(false); }}
+                                                                className="w-full py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">
+                                                                ← Артка
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Only show face capture UI when permission is granted */}
+                                            {camPermission === "granted" && <>
 
                                             {/* Phase tabs */}
                                             <div className="flex gap-2 mb-1">
@@ -1004,6 +1230,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                     {submitting ? (facesUploading ? "Жүктөлүүдө..." : "Жиберилүүдө...") : "Жиберүү ✓"}
                                                 </button>
                                             </div>
+                                            </> /* end camPermission === "granted" */}
                                         </div>
                                     )}
                                 </div>

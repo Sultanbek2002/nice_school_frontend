@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Icon } from '@iconify/react'
 import { motion, useInView } from 'framer-motion'
+import { fixImageUrl } from '@/utils/apiData'
 import Slider from 'react-slick'
 import 'slick-carousel/slick/slick.css'
 import 'slick-carousel/slick/slick-theme.css'
@@ -128,12 +129,12 @@ const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
                   className="px-3 h-full"
                 >
                   <TiltCard className="h-full">
-                    <div className="bg-white group p-3 shadow-sm hover:shadow-2xl hover:shadow-primary/10 rounded-[2rem] h-full border border-slate-100 transition-all duration-500 flex flex-col">
+                    <div className="glass-card group p-3 hover:shadow-2xl hover:shadow-primary/15 rounded-[2rem] h-full transition-all duration-500 flex flex-col hover:-translate-y-1">
 
                       {/* Изображение */}
                       <div className="relative h-60 w-full rounded-[1.5rem] overflow-hidden">
                         <Image
-                          src={item.mainImage || '/images/courses/placeholder.png'}
+                          src={fixImageUrl(item.mainImage)}
                           alt={item.title}
                           fill
                           className="object-cover transition-transform duration-700 group-hover:scale-110"
@@ -196,7 +197,7 @@ const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
                         {/* Кнопка с shimmer */}
                         <Link
                           href={detailUrl}
-                          className="relative mt-auto w-full py-3.5 bg-slate-50 border border-slate-100 text-primary font-bold rounded-2xl text-center group-hover:bg-primary group-hover:text-white group-hover:border-primary group-hover:shadow-lg group-hover:shadow-primary/20 transition-all duration-400 block text-sm overflow-hidden"
+                          className="relative mt-auto w-full py-3.5 bg-primary/5 border border-primary/20 text-primary font-bold rounded-2xl text-center group-hover:bg-primary group-hover:text-white group-hover:border-primary group-hover:shadow-lg group-hover:shadow-primary/20 transition-all duration-400 block text-sm overflow-hidden"
                         >
                           <span className="relative z-10">Толук маалымат</span>
                           <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />
@@ -212,8 +213,8 @@ const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
       </div>
 
       <style jsx global>{`
-        .course-slider .slick-dots li button:before { color: #6556ff; font-size: 10px; }
-        .course-slider .slick-dots li.slick-active button:before { color: #6556ff; opacity: 1; }
+        .course-slider .slick-dots li button:before { color: #17a589; font-size: 10px; }
+        .course-slider .slick-dots li.slick-active button:before { color: #17a589; opacity: 1; }
         .course-slider .slick-list { padding-bottom: 24px; overflow: visible; }
         .course-slider .slick-track { display: flex; align-items: stretch; }
         .course-slider .slick-slide > div { height: 100%; }

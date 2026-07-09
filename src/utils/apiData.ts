@@ -21,7 +21,18 @@
 //   };
 // }
 // Типизация данных
-export const GO_API_URL = 'http://localhost:8080'
+// Server-side: direct HTTP (no mixed-content issue, server-to-server)
+// Client-side: relative /go-backend proxy → Next.js rewrites to HTTP backend
+const BACKEND_DIRECT = process.env.BACKEND_URL || 'http://172.20.10.5:8080'
+export const GO_API_URL = typeof window === 'undefined' ? BACKEND_DIRECT : '/go-backend'
+
+// Normalizes any stored backend image URL (old IPs, localhost) to the current backend URL
+export function fixImageUrl(url: string, fallback = '/images/courses/placeholder.png'): string {
+  if (!url) return fallback
+  return url
+    .replace(/http:\/\/[\d.]+:8080/, BACKEND_DIRECT)
+    .replace('http://localhost:8080', BACKEND_DIRECT)
+}
 
 // 1. Интерфейсы для новых полей
 export interface Banner {

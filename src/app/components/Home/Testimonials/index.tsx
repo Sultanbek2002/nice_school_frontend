@@ -101,7 +101,7 @@ const Testimonial = () => {
                 <div key={i}>
                   <div
                     className={
-                      'bg-white border border-black/10 shadow-md rounded-2xl m-3 p-5 mt-20 relative'
+                      'glass-card rounded-2xl m-3 p-5 mt-20 relative'
                     }>
                     <div className='absolute top-[-45px]'>
                       <Image

@@ -58,7 +58,7 @@ export default function Signin({ onClose }: SigninProps) {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="bg-white rounded-3xl shadow-xl shadow-primary/8 border border-slate-100 p-8 md:p-10"
+          className="glass-card rounded-3xl p-8 md:p-10"
         >
           {/* Логотип / иконка */}
           <div className="text-center mb-8">

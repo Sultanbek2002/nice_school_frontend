@@ -17,11 +17,11 @@ const COMPONENTS_MAP: Record<string, React.FC<any>> = {
   best_students: BestStudents
 };
 
-export default async function DynamicPage({ params }: { params: { slug: string } }) {
+export default async function DynamicPage({ params }: { params: Promise<{ slug: string }> }) {
   // 1. Получаем объект ответа
   const response: ApiResponse = await getSiteStructure();
-  
-  const currentPath = `/${params.slug}`;
+  const { slug } = await params;
+  const currentPath = `/${slug}`;
   
   // 2. Ищем страницу внутри массива response.structure
   const currentPage = response.structure.find(page => page.link === currentPath);
@@ -35,7 +35,7 @@ export default async function DynamicPage({ params }: { params: { slug: string }
   }
 
   return (
-    <main className="min-h-screen pt-20 lg:pt-28 pb-10 bg-slate-gray"> 
+    <main className="min-h-screen pt-20 lg:pt-28 pb-10">
       <div className="container mx-auto px-4 mb-8">
         {/* Заголовок страницы */}
         <h1 className="text-3xl md:text-4xl font-bold text-dark">

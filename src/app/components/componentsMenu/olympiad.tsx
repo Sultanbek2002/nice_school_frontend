@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Icon } from '@iconify/react'
 import { motion, useInView } from 'framer-motion'
+import { fixImageUrl } from '@/utils/apiData'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const MD = motion.div as any
@@ -113,13 +114,13 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                 transition={{ duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
               >
                 <TiltCard className="h-full">
-                  <div className="group bg-white shadow-sm hover:shadow-2xl hover:shadow-primary/10 rounded-[2.5rem] overflow-hidden border border-slate-100 transition-all duration-500 flex flex-col h-full relative">
+                  <div className="group glass-card hover:shadow-2xl hover:shadow-primary/15 rounded-[2.5rem] overflow-hidden transition-all duration-500 flex flex-col h-full relative hover:-translate-y-1">
 
                     {/* Изображение */}
                     <div className="p-3 pb-0">
                       <div className="relative h-52 w-full rounded-[2.1rem] overflow-hidden">
                         <Image
-                          src={item.image_url || '/images/courses/placeholder.png'}
+                          src={fixImageUrl(item.image_url)}
                           alt={item.title}
                           fill
                           className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -161,7 +162,7 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                       </div>
 
                       {/* Дата и место */}
-                      <div className="space-y-3 pt-4 border-t border-slate-50">
+                      <div className="space-y-3 pt-4 border-t border-primary/10">
                         <div className="flex items-center gap-2.5 text-slate-600">
                           {mounted && <Icon icon="solar:calendar-date-bold-duotone" className="text-primary text-xl flex-shrink-0" />}
                           <span className="text-xs font-bold tracking-tight">{item.date}</span>
@@ -178,7 +179,7 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                       {item.file_url && (
                         <button
                           onClick={() => openPDF(item.file_url)}
-                          className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-500 transition-colors border border-slate-100 cursor-pointer"
+                          className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-primary/5 hover:bg-primary/10 rounded-xl text-xs font-bold text-primary transition-colors border border-primary/15 cursor-pointer"
                         >
                           {mounted && <Icon icon="solar:document-download-bold-duotone" width={16} className="text-emerald-500" />}
                           Олимпиаданын Жобосу (.pdf)

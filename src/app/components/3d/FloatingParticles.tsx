@@ -29,7 +29,7 @@ function ParticleField() {
     <Points ref={ref} positions={positions} stride={3} frustumCulled={false}>
       <PointMaterial
         transparent
-        color="#6556ff"
+        color="#17a589"
         size={0.06}
         sizeAttenuation
         depthWrite={false}
@@ -53,7 +53,7 @@ function FloatingSphere() {
     <mesh ref={meshRef} position={[3.5, 0, 0]}>
       <icosahedronGeometry args={[1.2, 1]} />
       <meshStandardMaterial
-        color="#6556ff"
+        color="#17a589"
         wireframe
         transparent
         opacity={0.25}
@@ -75,7 +75,7 @@ function SmallOrb({ position }: { position: [number, number, number] }) {
   return (
     <mesh ref={ref} position={position}>
       <sphereGeometry args={[0.08, 8, 8]} />
-      <meshStandardMaterial color="#1a21bc" emissive="#1a21bc" emissiveIntensity={0.5} />
+      <meshStandardMaterial color="#0b6f5d" emissive="#0b6f5d" emissiveIntensity={0.5} />
     </mesh>
   )
 }
@@ -93,8 +93,8 @@ export default function FloatingParticles() {
       gl={{ antialias: true, alpha: true }}
     >
       <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1} color="#6556ff" />
-      <pointLight position={[-10, -10, -5]} intensity={0.5} color="#1a21bc" />
+      <pointLight position={[10, 10, 10]} intensity={1} color="#17a589" />
+      <pointLight position={[-10, -10, -5]} intensity={0.5} color="#0b6f5d" />
       <ParticleField />
       <FloatingSphere />
       {orbs.map((pos, i) => (

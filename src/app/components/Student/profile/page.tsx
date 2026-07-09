@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Cookies from 'js-cookie'
 import { Icon } from '@iconify/react'
 import { motion } from 'framer-motion'
-import { GO_API_URL } from '@/utils/apiData'
+import { GO_API_URL, fixImageUrl } from '@/utils/apiData'
 
 const MD = motion.div as any
 
@@ -189,7 +189,7 @@ export default function ProfilePage() {
   const visibleResults = showAllResults ? testResults : testResults.slice(0, 3)
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center bg-slate-50">
+    <div className="flex h-screen items-center justify-center">
       <div className="text-center">
         <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin mx-auto" />
         <p className="mt-4 text-gray-400 text-sm font-medium">Жүктөлүүдө...</p>
@@ -205,12 +205,12 @@ export default function ProfilePage() {
   const totalResults  = testResults.length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-primary/5 pt-28 pb-16">
+    <div className="min-h-screen pt-28 pb-16">
       <div className="container mx-auto px-4 max-w-4xl">
 
         {/* Profile card */}
         <MD initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-6">
+          className="relative glass-card rounded-3xl overflow-hidden mb-6">
           <div className="h-28 bg-gradient-to-r from-primary via-secondary to-primary/70 relative">
             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
           </div>
@@ -218,7 +218,7 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-10 mb-4">
               <MD initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
                 className="w-20 h-20 rounded-2xl bg-white shadow-lg border-4 border-white flex items-center justify-center text-2xl font-black text-white"
-                style={{ background: 'linear-gradient(135deg, #6556ff, #1a21bc)' }}>
+                style={{ background: 'linear-gradient(140deg, #17a589, #123a5e)' }}>
                 {getAvatar(user?.email || '')}
               </MD>
               <button onClick={handleLogout}
@@ -242,7 +242,7 @@ export default function ProfilePage() {
             className="md:col-span-1 space-y-3">
 
             {/* Stats */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 space-y-2">
+            <div className="glass-card rounded-3xl p-4 space-y-2">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">Статистика</p>
               <div className="flex items-center gap-3 bg-amber-50 p-3 rounded-2xl">
                 <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
@@ -285,7 +285,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Menu */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+            <div className="glass-card rounded-3xl p-4">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Меню</p>
               <nav className="space-y-1">
                 {menuItems.map((item, i) => (
@@ -300,7 +300,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Account info */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+            <div className="glass-card rounded-3xl p-4">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Аккаунт</p>
               <div className="space-y-1">
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50">
@@ -371,7 +371,7 @@ export default function ProfilePage() {
                         {app.image_url && (
                           <div className="w-24 h-24 flex-shrink-0 relative">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={app.image_url} alt={app.olympiad_title} className="w-full h-full object-cover" />
+                            <img src={fixImageUrl(app.image_url)} alt={app.olympiad_title} className="w-full h-full object-cover" />
                           </div>
                         )}
                         <div className="flex-1 p-4 min-w-0">

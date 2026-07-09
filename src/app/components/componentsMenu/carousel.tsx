@@ -2,6 +2,7 @@
 
 import React from 'react'
 import Image from 'next/image'
+import { fixImageUrl } from '@/utils/apiData'
 import Slider from 'react-slick'
 import 'slick-carousel/slick/slick.css'
 import 'slick-carousel/slick/slick-theme.css'
@@ -62,7 +63,7 @@ const Carousel: React.FC<SliderProps> = ({ data }) => {
                                 <div className="flex flex-col items-center justify-center gap-2">
                                     <div className="relative w-[100px] h-[100px] rounded-full border-2 border-gray-100 p-2 overflow-hidden bg-white shadow-inner">
                                         <Image
-                                            src={item.url}
+                                            src={fixImageUrl(item.url)}
                                             alt={item.title || "slide"}
                                             fill
                                             // 2. Класс 'object-cover' критичен: он заставляет картинку 
