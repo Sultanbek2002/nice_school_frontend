@@ -131,7 +131,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [] }) => {
       {filtered.length > 0 ? (
         <>
           <p style={{ padding: '12px 16px 4px', fontSize: 10, fontWeight: 900, color: '#17a589', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            Табылды: {filtered.length} курс
+            Найдено: {filtered.length} курс(ов)
           </p>
           {filtered.map((course, i) => (
             <Link
@@ -150,7 +150,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [] }) => {
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                   <Icon icon="solar:clock-circle-bold" style={{ color: '#17a589', fontSize: 12, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: '#9ca3af' }}>{course.duration} ай</span>
+                  <span style={{ fontSize: 11, color: '#9ca3af' }}>{course.duration} мес.</span>
                   {course.skills && <><span style={{ color: '#d1d5db' }}>·</span><span style={{ fontSize: 11, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course.skills}</span></>}
                 </div>
               </div>
@@ -161,7 +161,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [] }) => {
       ) : (
         <div style={{ padding: '20px 16px', textAlign: 'center' }}>
           <Icon icon="solar:sad-circle-bold" style={{ fontSize: 32, color: '#d1d5db', display: 'block', margin: '0 auto 8px' }} />
-          <p style={{ fontSize: 13, color: '#9ca3af', fontWeight: 500 }}>Курс табылган жок</p>
+          <p style={{ fontSize: 13, color: '#9ca3af', fontWeight: 500 }}>Курсы не найдены</p>
         </div>
       )}
     </div>,
@@ -234,7 +234,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [] }) => {
                     value={query}
                     onChange={e => { setQuery(e.target.value); setOpen(true) }}
                     onFocus={() => setOpen(true)}
-                    placeholder="Курсту издөө..."
+                    placeholder="Поиск курсов..."
                     className="relative py-4 md:py-5 pl-6 md:pl-8 pr-16 md:pr-20 text-base md:text-lg w-full text-midnight_text rounded-full border border-white/70 focus:outline-none focus:border-primary duration-300 transition-all"
                     style={{ background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(18px)' }}
                   />

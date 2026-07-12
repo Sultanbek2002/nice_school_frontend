@@ -26,6 +26,12 @@
 const BACKEND_DIRECT = process.env.BACKEND_URL || 'http://172.20.10.5:8080'
 export const GO_API_URL = typeof window === 'undefined' ? BACKEND_DIRECT : '/go-backend'
 
+// GameQuiz WebSocket connections go straight to the Go backend rather than through
+// the /go-backend Next.js rewrite, which is HTTP-oriented and not guaranteed to
+// proxy the WS upgrade handshake in every hosting setup. Override with
+// NEXT_PUBLIC_GAME_WS_URL in production.
+export const GAME_WS_URL = process.env.NEXT_PUBLIC_GAME_WS_URL || BACKEND_DIRECT.replace(/^http/, 'ws')
+
 // Normalizes any stored backend image URL (old IPs, localhost) to the current backend URL
 export function fixImageUrl(url: string, fallback = '/images/courses/placeholder.png'): string {
   if (!url) return fallback
@@ -78,7 +84,7 @@ export interface ApiResponse {
 // 3. Исправленная функция
 export async function getSiteStructure(): Promise<ApiResponse> {
   const res = await fetch(`${GO_API_URL}/api/site-structure`, {
-    next: { revalidate: 60 } 
+    cache: 'no-store'
   });
 
   if (!res.ok) throw new Error("Failed to fetch site structure");

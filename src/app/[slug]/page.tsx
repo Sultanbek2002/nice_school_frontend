@@ -6,15 +6,20 @@ import Teachers from "@/app/components/componentsMenu/teachers";
 import CourseComponent from "../components/componentsMenu/courses";
 import Subtitle from "../components/componentsMenu/subheader";
 import BestStudents from "../components/componentsMenu/beststudent";
+import NewsGrid from "../components/componentsMenu/newsgrid";
+import PhotoGallery from "../components/componentsMenu/photogallery";
+import EventsGrid from "../components/componentsMenu/eventsgrid";
 
-// Карта компонентов для динамических страницa
 const COMPONENTS_MAP: Record<string, React.FC<any>> = {
   text: TextBlock,
   courses_grid: CourseComponent,
   slider: Carousel,
   teachers_grid: Teachers,
   subtitle: Subtitle,
-  best_students: BestStudents
+  best_students: BestStudents,
+  news_grid: NewsGrid,
+  photo_gallery: PhotoGallery,
+  events_grid: EventsGrid,
 };
 
 export default async function DynamicPage({ params }: { params: Promise<{ slug: string }> }) {

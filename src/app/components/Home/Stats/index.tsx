@@ -29,10 +29,10 @@ function useCounter(target: number, isInView: boolean, duration = 2000) {
 }
 
 const stats = [
-  { icon: 'solar:users-group-rounded-bold', value: 1200, suffix: '+', label: 'Студент', color: 'text-primary', bg: 'bg-primary/10' },
-  { icon: 'solar:book-bold', value: 50, suffix: '+', label: 'Курс', color: 'text-secondary', bg: 'bg-secondary/10' },
-  { icon: 'solar:diploma-bold', value: 15, suffix: '+', label: 'Мугалим', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-  { icon: 'solar:star-bold', value: 98, suffix: '%', label: 'Канааттануу', color: 'text-amber-500', bg: 'bg-amber-50' },
+  { icon: 'solar:users-group-rounded-bold', value: 1200, suffix: '+', label: 'Студентов', color: 'text-primary', bg: 'bg-primary/10' },
+  { icon: 'solar:book-bold', value: 50, suffix: '+', label: 'Курсов', color: 'text-secondary', bg: 'bg-secondary/10' },
+  { icon: 'solar:diploma-bold', value: 15, suffix: '+', label: 'Учителей', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  { icon: 'solar:star-bold', value: 98, suffix: '%', label: 'Довольны обучением', color: 'text-amber-500', bg: 'bg-amber-50' },
 ]
 
 function StatCard({ icon, value, suffix, label, color, bg, index, isInView }: {
@@ -93,10 +93,10 @@ export default function Stats() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/8 text-primary rounded-full text-xs font-black tracking-widest uppercase border border-primary/20 mb-4">
             <Icon icon="solar:chart-bold" width={14} />
-            Биздин жетишкендиктер
+            Наши достижения
           </div>
           <h2 className="text-midnight_text text-3xl md:text-4xl font-black">
-            Санда айтсак
+            В цифрах
           </h2>
         </MD>
 

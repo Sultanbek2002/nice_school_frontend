@@ -85,13 +85,13 @@ function Podium3D({ top3 }: { top3: Student[] }) {
                   #{medal.place}
                 </div>
                 <div className="text-white font-bold text-base mt-2 leading-tight">{student.fio}</div>
-                <div className="text-white/60 text-sm mt-1">{student.class} класс</div>
+                <div className="text-white/60 text-sm mt-1">{student.class}-й класс</div>
                 <div
                   className="mt-4 text-3xl font-black"
                   style={{ color: medal.color, textShadow: `0 0 20px ${medal.color}` }}
                 >
                   {student.score}
-                  <span className="text-sm font-medium ml-1 opacity-60">балл</span>
+                  <span className="text-sm font-medium ml-1 opacity-60">балл(ов)</span>
                 </div>
               </div>
             </div>
@@ -271,13 +271,13 @@ export default function RatingPage() {
             Nice International School
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-3">
-            Окуучулардын{' '}
+            Рейтинг{' '}
             <span style={{ background: 'linear-gradient(90deg,#FFD700,#17a589)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Рейтинги
+              учеников
             </span>
           </h1>
           <p className="text-white/40 text-base max-w-md mx-auto">
-            Мыкты окуучулар жана алардын жетишкендиктери
+            Лучшие ученики и их достижения
           </p>
         </MD>
 
@@ -288,7 +288,7 @@ export default function RatingPage() {
             onClick={() => setActiveClass('all')}
             className={`px-4 py-2 rounded-full text-sm font-bold border transition-all ${activeClass === 'all' ? 'bg-white text-[#0a0f1e] border-white' : 'border-white/20 text-white/60 hover:border-white/50 hover:text-white'}`}
           >
-            Баары
+            Все
           </button>
           {classes.map(c => (
             <button
@@ -302,9 +302,9 @@ export default function RatingPage() {
         </MD>
 
         {loading ? (
-          <div className="text-center py-20 text-white/40">Жүктөлүүдө...</div>
+          <div className="text-center py-20 text-white/40">Загрузка...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 text-white/40">Окуучулар жок</div>
+          <div className="text-center py-20 text-white/40">Ученики не найдены</div>
         ) : (
           <>
             {/* 3D Podium */}
@@ -313,7 +313,7 @@ export default function RatingPage() {
                 className="mb-12 rounded-3xl p-6 md:p-10"
                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}
               >
-                <h2 className="text-center text-white/50 text-xs font-black uppercase tracking-[4px] mb-8">Топ 3 · Призёрлор</h2>
+                <h2 className="text-center text-white/50 text-xs font-black uppercase tracking-[4px] mb-8">Топ 3 · Призёры</h2>
                 <Podium3D top3={top3} />
               </MD>
             )}
@@ -327,7 +327,7 @@ export default function RatingPage() {
               <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                 <h2 className="text-white font-black text-lg flex items-center gap-2">
                   <Icon icon="solar:chart-bold-duotone" className="text-purple-400 text-xl" />
-                  {activeClass === 'all' ? 'Жалпы рейтинг' : `${activeClass} класс рейтинги`}
+                  {activeClass === 'all' ? 'Общий рейтинг' : `Рейтинг ${activeClass} класса`}
                 </h2>
                 <div className="flex gap-2 p-1 rounded-xl bg-white/5 border border-white/10">
                   <button
@@ -335,14 +335,14 @@ export default function RatingPage() {
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition ${view === 'bar' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'}`}
                   >
                     <Icon icon="solar:chart-2-bold-duotone" />
-                    Тилкелүү
+                    Столбчатая
                   </button>
                   <button
                     onClick={() => setView('pie')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition ${view === 'pie' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'}`}
                   >
                     <Icon icon="solar:pie-chart-bold-duotone" />
-                    Тегерек
+                    Круговая
                   </button>
                 </div>
               </div>
@@ -365,9 +365,9 @@ export default function RatingPage() {
             <MD initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
               className="mt-6 grid grid-cols-3 gap-4">
               {[
-                { icon: 'solar:users-group-rounded-bold-duotone', label: 'Окуучулар', value: filtered.length },
-                { icon: 'solar:cup-bold-duotone', label: 'Жалпы балл', value: filtered.reduce((a, s) => a + s.score, 0) },
-                { icon: 'solar:star-bold-duotone', label: 'Орточо балл', value: filtered.length ? Math.round(filtered.reduce((a, s) => a + s.score, 0) / filtered.length) : 0 },
+                { icon: 'solar:users-group-rounded-bold-duotone', label: 'Учеников', value: filtered.length },
+                { icon: 'solar:cup-bold-duotone', label: 'Всего баллов', value: filtered.reduce((a, s) => a + s.score, 0) },
+                { icon: 'solar:star-bold-duotone', label: 'Средний балл', value: filtered.length ? Math.round(filtered.reduce((a, s) => a + s.score, 0) / filtered.length) : 0 },
               ].map((item, i) => (
                 <div key={i} className="rounded-2xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
                   <Icon icon={item.icon} className="text-2xl text-purple-400 mx-auto mb-1" />

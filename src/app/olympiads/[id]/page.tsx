@@ -4,6 +4,7 @@ import Image from "next/image";
 import Cookies from "js-cookie";
 import { Icon } from "@iconify/react";
 import { GO_API_URL } from "@/utils/apiData";
+import { RelatedOlympiadCard, RelatedSectionBlock } from "@/app/components/RelatedSection";
 
 interface Olympiad {
     ID: number; title: string; description: string; subject: string; date: string;
@@ -29,9 +30,9 @@ function getToken() { return Cookies.get("auth_token") || null; }
 function saveToken(t: string) { Cookies.set("auth_token", t, { expires: 7, path: "/" }); }
 
 const FACE_PHASES = [
-    { key: "front", label: "Алдыга карата туруңуз", dirIcon: null,   hint: "Жүзүңүздү тике кармаңыз", yawMin: -0.12, yawMax: 0.12 },
-    { key: "left",  label: "Солго 45° буруңуз",     dirIcon: "left",  hint: "Башыңызды акырын солго буруңуз", yawMin: -0.55, yawMax: -0.22 },
-    { key: "right", label: "Оңго 45° буруңуз",      dirIcon: "right", hint: "Башыңызды акырын оңго буруңуз", yawMin: 0.22,  yawMax: 0.55 },
+    { key: "front", label: "Смотрите прямо", dirIcon: null,   hint: "Держите лицо прямо", yawMin: -0.12, yawMax: 0.12 },
+    { key: "left",  label: "Поверните влево 45°",     dirIcon: "left",  hint: "Медленно поверните голову влево", yawMin: -0.55, yawMax: -0.22 },
+    { key: "right", label: "Поверните вправо 45°",      dirIcon: "right", hint: "Медленно поверните голову вправо", yawMin: 0.22,  yawMax: 0.55 },
 ] as const;
 type FaceKey = "front" | "left" | "right";
 
@@ -66,6 +67,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
     type ResultRow = { rank: number; fio: string; school: string; class_name: string; score: number; max_score: number; percentage: number; time_taken: number };
     const [results, setResults] = useState<ResultRow[]>([]);
     const [resultsLoading, setResultsLoading] = useState(false);
+    const [otherOlympiads, setOtherOlympiads] = useState<Olympiad[]>([]);
 
     const [modalView, setModalView] = useState<ModalView | null>(null);
 
@@ -118,21 +120,24 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
     }, []);
 
     useEffect(() => {
-        fetch(`${GO_API_URL}/api/olympiads/${id}`)
-            .then(r => r.ok ? r.json() : null)
-            .then(d => {
-                if (d) {
-                    setOlympiad(d);
-                    if (d.status === "finished") {
-                        setResultsLoading(true);
-                        fetch(`${GO_API_URL}/api/olympiads/${id}/results`)
-                            .then(r => r.ok ? r.json() : null)
-                            .then(res => { if (res?.results) setResults(res.results); })
-                            .finally(() => setResultsLoading(false));
-                    }
+        Promise.all([
+            fetch(`${GO_API_URL}/api/olympiads/${id}`).then(r => r.ok ? r.json() : null),
+            fetch(`${GO_API_URL}/api/olympiads`).then(r => r.ok ? r.json() : []),
+        ]).then(([d, all]) => {
+            if (d) {
+                setOlympiad(d);
+                if (d.status === "finished") {
+                    setResultsLoading(true);
+                    fetch(`${GO_API_URL}/api/olympiads/${id}/results`)
+                        .then(r => r.ok ? r.json() : null)
+                        .then(res => { if (res?.results) setResults(res.results); })
+                        .finally(() => setResultsLoading(false));
                 }
-            })
-            .finally(() => setLoading(false));
+            }
+            if (Array.isArray(all)) {
+                setOtherOlympiads(all.filter((o: Olympiad) => o.ID !== Number(id)).slice(0, 4));
+            }
+        }).finally(() => setLoading(false));
     }, [id]);
 
     useEffect(() => {
@@ -167,7 +172,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
             setMpReady(true);
         } catch (e) {
             console.error("MediaPipe load failed", e);
-            setCameraError("MediaPipe жүктөлүүдө ката. Интернет туташуусун текшериңиз.");
+            setCameraError("Ошибка загрузки MediaPipe. Проверьте подключение к интернету.");
         } finally {
             setMpLoading(false);
         }
@@ -192,7 +197,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                 await video.play().catch(() => {});
             }
         } catch {
-            setCameraError("Камерага уруксат жок. Браузердин жөндөөлөрүнөн уруксат бериңиз.");
+            setCameraError("Нет доступа к камере. Разрешите в настройках браузера.");
         }
     }, []);
 
@@ -386,25 +391,25 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
     // ── Auth ────────────────────────────────────────────────
     const handleAuth = async () => {
         setAuthError("");
-        if (!authEmail.trim()) { setAuthError("Email киргизиңиз"); return; }
+        if (!authEmail.trim()) { setAuthError("Введите Email"); return; }
 
         // LOGIN — direct, no OTP
         if (authTab === "login") {
-            if (!authPassword || authPassword.length < 6) { setAuthError("Пароль минимум 6 белги"); return; }
+            if (!authPassword || authPassword.length < 6) { setAuthError("Пароль минимум 6 символов"); return; }
             setAuthLoading(true);
             try {
                 const res  = await fetch(`${GO_API_URL}/api/login`, { method: "POST", headers: { "Content-Type": "application/json" },
                                                 body: JSON.stringify({ email: authEmail.trim().toLowerCase(), password: authPassword }) });
                 const data = await res.json();
                 if (res.ok && data.token) { saveToken(data.token); setUserEmail(data.user?.email || authEmail); openForm(data.token); }
-                else setAuthError(data.error || "Email же пароль туура эмес");
+                else setAuthError(data.error || "Неверный Email или пароль");
             } finally { setAuthLoading(false); }
             return;
         }
 
         // REGISTER — send OTP first
-        if (!authPassword || authPassword.length < 6) { setAuthError("Пароль минимум 6 белги"); return; }
-        if (authPassword !== authConfirm) { setAuthError("Паролдор дал келбейт"); return; }
+        if (!authPassword || authPassword.length < 6) { setAuthError("Пароль минимум 6 символов"); return; }
+        if (authPassword !== authConfirm) { setAuthError("Пароли не совпадают"); return; }
         setAuthLoading(true);
         try {
             const res  = await fetch(`${GO_API_URL}/api/quick-auth`, { method: "POST", headers: { "Content-Type": "application/json" },
@@ -415,20 +420,20 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                 setOtpCode("");
                 setAuthStep("otp");
             } else {
-                setAuthError(data.error || "Ката кетти");
+                setAuthError(data.error || "Произошла ошибка");
             }
         } finally { setAuthLoading(false); }
     };
 
     const handleOtpVerify = async () => {
         setAuthError("");
-        if (otpCode.length < 4) { setAuthError("Кодду туура киргизиңиз"); return; }
+        if (otpCode.length < 4) { setAuthError("Введите правильный код"); return; }
         setAuthLoading(true);
         try {
             const res  = await fetch(`${GO_API_URL}/api/quick-verify`, { method: "POST", headers: { "Content-Type": "application/json" },
                                             body: JSON.stringify({ email: authEmail.trim().toLowerCase(), code: otpCode }) });
             const data = await res.json();
-            if (!res.ok) { setAuthError(data.error || "Код туура эмес"); return; }
+            if (!res.ok) { setAuthError(data.error || "Неверный код"); return; }
 
             const token = data.token;
             // If new user, set their password
@@ -517,10 +522,10 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
     const goNextStep = async () => {
         setFormError("");
         if (formStep === 1) {
-            if (!form.fio.trim())       { setFormError("ФИОну толтуруңуз"); return; }
-            if (!form.school.trim())    { setFormError("Мектепти толтуруңуз"); return; }
-            if (!form.class_name.trim()){ setFormError("Классты толтуруңуз"); return; }
-            if (!form.birth_date)       { setFormError("Туулган күндү тандаңыз"); return; }
+            if (!form.fio.trim())       { setFormError("Заполните ФИО"); return; }
+            if (!form.school.trim())    { setFormError("Заполните школу"); return; }
+            if (!form.class_name.trim()){ setFormError("Заполните класс"); return; }
+            if (!form.birth_date)       { setFormError("Выберите дату рождения"); return; }
             setFormStep(2);
         } else if (formStep === 2) {
             if (certFile) {
@@ -535,14 +540,14 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
     };
 
     const handleSubmit = async () => {
-        if (!allFacesCaptured) { setFormError("Үч тараптан сүрөт тартыңыз"); return; }
+        if (!allFacesCaptured) { setFormError("Сфотографируйтесь с трёх сторон"); return; }
         setSubmitting(true); setFacesUploading(true);
         try {
             // Extract 128-float face descriptor from front face
             const descriptor = await extractFaceDescriptor(capturedFaces.front!);
             setFacesUploading(false);
             if (!descriptor) {
-                setFormError("Жүзүңүз аныкталган жок. Жарык жерде, камерага жакыныраак туруп кайра аракет кылыңыз.");
+                setFormError("Лицо не распознано. Встаньте ближе в хорошо освещённом месте.");
                 return;
             }
             const token = getToken();
@@ -557,7 +562,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
             });
             const data = await res.json();
             if (res.ok) { stopCamera(); setModalView("done"); setAppStatus("pending"); }
-            else setFormError(data.error || "Ката кетти");
+            else setFormError(data.error || "Произошла ошибка");
         } finally { setSubmitting(false); setFacesUploading(false); }
     };
 
@@ -574,33 +579,33 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
     };
 
     const poseLabel = (p: PoseResult | null) => {
-        if (!p) return "Камера алдына туруңуз...";
-        if (!p.faceDetected) return "Жүзүңүз табылган жок — жакыныраак туруңуз";
-        if (p.brightness < 50) return "Өтө бүдөмүк — жарык жакка ооңуз";
-        if (p.brightness > 230) return "Өтө жарык — арка жакка ооңуз";
-        if (p.angleOk) return "Туура! Туруп туруңуз...";
+        if (!p) return "Встаньте перед камерой...";
+        if (!p.faceDetected) return "Лицо не найдено — подойдите ближе";
+        if (p.brightness < 50) return "Слишком темно — встаньте к свету";
+        if (p.brightness > 230) return "Слишком ярко — отойдите назад";
+        if (p.angleOk) return "Верно! Не двигайтесь...";
         const phase = FACE_PHASES[facePhaseIdx];
-        if (phase.dirIcon === "left")  return "Башыңызды солго буруңуз ←";
-        if (phase.dirIcon === "right") return "Башыңызды оңго буруңуз →";
-        return "Жүзүңүздү тике кармаңыз";
+        if (phase.dirIcon === "left")  return "Поверните голову влево ←";
+        if (phase.dirIcon === "right") return "Поверните голову вправо →";
+        return "Держите лицо прямо";
     };
 
     // Yaw visual bar: -1..+1 maps to 0..100%
     const yawPercent = (yaw: number) => Math.round(Math.min(100, Math.max(0, (yaw + 1) / 2 * 100)));
 
     // ── Render helpers ──────────────────────────────────────
-    if (loading) return <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(145deg,#f0f4ff,#faf5ff)" }}><p className="text-slate-400 font-bold animate-pulse">Жүктөлүүдө...</p></div>;
-    if (!olympiad) return <div className="min-h-screen flex items-center justify-center"><p className="text-2xl font-black text-slate-700">Олимпиада табылган жок</p></div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(145deg,#f0f4ff,#faf5ff)" }}><p className="text-slate-400 font-bold animate-pulse">Загрузка...</p></div>;
+    if (!olympiad) return <div className="min-h-screen flex items-center justify-center"><p className="text-2xl font-black text-slate-700">Олимпиада не найдена</p></div>;
 
     const isOnline = olympiad.format === "Онлайн";
     const prizes = [
-        { label: "1-Орун", emoji: "🥇", value: olympiad.prize_1, fallback: "Алтын медаль & Баалуу белек", bg: "from-yellow-50 to-amber-50", border: "border-yellow-300", text: "text-yellow-700" },
-        { label: "2-Орун", emoji: "🥈", value: olympiad.prize_2, fallback: "Күмүш медаль & Диплом",       bg: "from-slate-50 to-gray-100",  border: "border-slate-300",  text: "text-slate-600"  },
-        { label: "3-Орун", emoji: "🥉", value: olympiad.prize_3, fallback: "Коло медаль & Сертификат",   bg: "from-orange-50 to-amber-50", border: "border-orange-300", text: "text-orange-700" },
+        { label: "1 место", emoji: "🥇", value: olympiad.prize_1, fallback: "Золотая медаль & Ценный подарок", bg: "from-yellow-50 to-amber-50", border: "border-yellow-300", text: "text-yellow-700" },
+        { label: "2 место", emoji: "🥈", value: olympiad.prize_2, fallback: "Серебряная медаль & Диплом",       bg: "from-slate-50 to-gray-100",  border: "border-slate-300",  text: "text-slate-600"  },
+        { label: "3 место", emoji: "🥉", value: olympiad.prize_3, fallback: "Бронзовая медаль & Сертификат",   bg: "from-orange-50 to-amber-50", border: "border-orange-300", text: "text-orange-700" },
     ];
 
     const statusBanner = appStatus && (() => {
-        const m = { pending: { bg: "bg-amber-50 border-amber-200 text-amber-700", icon: "solar:clock-circle-bold-duotone", msg: "Өтүнүчүңүз жиберилди. Администратор текшерет." }, approved: { bg: "bg-green-50 border-green-200 text-green-700", icon: "solar:check-circle-bold-duotone", msg: "Өтүнүчүңүз бекитилди!" }, rejected: { bg: "bg-red-50 border-red-200 text-red-700", icon: "solar:close-circle-bold-duotone", msg: "Өтүнүчүңүз четке кагылды." } }[appStatus];
+        const m = { pending: { bg: "bg-amber-50 border-amber-200 text-amber-700", icon: "solar:clock-circle-bold-duotone", msg: "Ваша заявка отправлена. Администратор проверит." }, approved: { bg: "bg-green-50 border-green-200 text-green-700", icon: "solar:check-circle-bold-duotone", msg: "Ваша заявка одобрена!" }, rejected: { bg: "bg-red-50 border-red-200 text-red-700", icon: "solar:close-circle-bold-duotone", msg: "Ваша заявка отклонена." } }[appStatus];
         if (!m) return null;
         return <div className={`flex items-center gap-3 p-4 rounded-2xl border text-sm font-bold ${m.bg}`}>{mounted && <Icon icon={m.icon} width={22} className="flex-shrink-0" />}{m.msg}</div>;
     })();
@@ -633,7 +638,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
             <div className="relative z-10 pt-32 container mx-auto px-4">
                 <a href="/olympiads" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-violet-600 transition-colors mb-8 group">
                     {mounted && <Icon icon="solar:arrow-left-bold-duotone" width={18} className="group-hover:-translate-x-1 transition-transform" />}
-                    Олимпиадаларга кайтуу
+                    Назад к олимпиадам
                 </a>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start mb-14">
@@ -648,38 +653,38 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                             <span className="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5" style={{ background: isOnline?"rgba(139,92,246,0.1)":"rgba(14,165,233,0.1)", color: isOnline?"#7c3aed":"#0284c7", border:`1.5px solid ${isOnline?"rgba(139,92,246,0.3)":"rgba(14,165,233,0.3)"}` }}>
                                 <span className="h-2 w-2 rounded-full animate-pulse" style={{ background: isOnline?"#8b5cf6":"#0ea5e9" }} />{olympiad.format}
                             </span>
-                            {olympiad.status === "registration" && <span className="px-4 py-1.5 bg-blue-50 border border-blue-200 text-blue-600 rounded-full text-xs font-black uppercase tracking-wider animate-pulse">Катышуу ачык</span>}
+                            {olympiad.status === "registration" && <span className="px-4 py-1.5 bg-blue-50 border border-blue-200 text-blue-600 rounded-full text-xs font-black uppercase tracking-wider animate-pulse">Запись открыта</span>}
                         </div>
                         <h1 className="text-3xl md:text-5xl font-black text-slate-900 leading-tight">{olympiad.title}</h1>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex items-center gap-4 glass-card p-4 rounded-2xl">
                                 <div className="p-3 rounded-xl" style={{ background:"rgba(124,58,237,0.08)" }}>{mounted && <Icon icon="solar:calendar-date-bold-duotone" width={22} style={{ color:"#7c3aed" }} />}</div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Өткөрүлүүчү күнү</p>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Дата проведения</p>
                                     <p className="text-sm font-black text-slate-800">
-                                        {olympiad.start_time ? fmtDateTime(olympiad.start_time) : (olympiad.date || "Такталууда")}
+                                        {olympiad.start_time ? fmtDateTime(olympiad.start_time) : (olympiad.date || "Уточняется")}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4 glass-card p-4 rounded-2xl">
                                 <div className="p-3 rounded-xl" style={{ background:"rgba(239,68,68,0.07)" }}>{mounted && <Icon icon="solar:map-point-bold-duotone" width={22} className="text-rose-500" />}</div>
-                                <div className="min-w-0"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Өтүүчү орду</p><p className="text-sm font-black text-slate-800 truncate">{olympiad.location || "Дареги такталууда"}</p></div>
+                                <div className="min-w-0"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Место проведения</p><p className="text-sm font-black text-slate-800 truncate">{olympiad.location || "Адрес уточняется"}</p></div>
                             </div>
                         </div>
                         {statusBanner}
                         <div className="flex flex-col sm:flex-row gap-4 pt-2">
                             {olympiad.status !== "registration" ? (
                                 <div className="flex-1 px-8 py-4 bg-slate-100 text-slate-400 font-black rounded-2xl text-sm text-center cursor-not-allowed">
-                                    {olympiad.status === "active" ? "Каттоо аяктады" : olympiad.status === "finished" ? "Олимпиада аяктады" : "Каттоо ачылган жок"}
+                                    {olympiad.status === "active" ? "Регистрация закрыта" : olympiad.status === "finished" ? "Олимпиада завершена" : "Регистрация не открыта"}
                                 </div>
                             ) : !appStatus ? (
                                 <button onClick={handleOpen} className="flex-1 px-8 py-4 font-black rounded-2xl text-white text-sm shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)", boxShadow:"0 10px 30px rgba(124,58,237,0.3)" }}>
-                                    Олимпиадага катышуу
+                                    Участвовать в олимпиаде
                                 </button>
                             ) : null}
                             {olympiad.file_url && (
                                 <a href={olympiad.file_url} target="_blank" rel="noopener noreferrer" className="px-6 py-4 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-2xl hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 text-sm shadow-sm">
-                                    {mounted && <Icon icon="solar:document-download-bold" className="text-emerald-500" width={20} />} Жобону алуу
+                                    {mounted && <Icon icon="solar:document-download-bold" className="text-emerald-500" width={20} />} Скачать положение
                                 </a>
                             )}
                         </div>
@@ -690,7 +695,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                     <div className="lg:col-span-2 space-y-8">
                         <div className="glass-card p-8 rounded-[2rem]">
                             <h3 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">{mounted && <Icon icon="solar:info-circle-bold-duotone" className="text-violet-500" width={22} />}Олимпиада тууралуу</h3>
-                            <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">{olympiad.description || "Бул олимпиада боюнча толук маалымат жакында жарыяланат."}</p>
+                            <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">{olympiad.description || "Подробная информация об олимпиаде скоро появится."}</p>
                         </div>
                         <div className="p-8 rounded-[2rem] border border-amber-200" style={{ background:"linear-gradient(135deg,#fffbeb,#fff7ed)" }}>
                             <h3 className="text-xl font-black text-amber-700 mb-6 flex items-center gap-2">{mounted && <Icon icon="solar:cup-bold-duotone" width={24} className="text-amber-500" />}Жеңүүчүлөргө сыйлыктар</h3>
@@ -708,7 +713,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                     <div className="glass-card rounded-[2rem] p-8">
                         <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">{mounted && <Icon icon="solar:shield-check-bold-duotone" className="text-violet-500" width={22} />}Негизги эрежелер</h4>
                         <div className="space-y-3">
-                            {["Олимпиада башталган убакыттан кечигүүнү мүмкүн эмес.", "Катышуучу калем жана блокнот ала келиши керек.", "Жыйынтыктар 3 жумушчу күндүн ичинде жарыяланат."].map((rule, i) => (
+                            {["Опоздание после начала олимпиады недопустимо.", "Участник должен принести ручку и блокнот.", "Результаты будут опубликованы в течение 3 рабочих дней."].map((rule, i) => (
                                 <div key={i} className="flex items-start gap-3 bg-slate-50 p-4 rounded-2xl">
                                     <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-black text-white mt-0.5" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>{i + 1}</div>
                                     <p className="text-xs font-semibold text-slate-600">{rule}</p>
@@ -716,7 +721,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                             ))}
                         </div>
                         <div className="mt-6 p-5 rounded-2xl text-white text-center" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)", boxShadow:"0 8px 24px rgba(124,58,237,0.25)" }}>
-                            <p className="text-xs font-bold leading-snug">Ар бир катышуучуга QR-коддуу санариптик Сертификат ыйгарылат</p>
+                            <p className="text-xs font-bold leading-snug">Каждому участнику выдаётся цифровой сертификат с QR-кодом</p>
                         </div>
                     </div>
                 </div>
@@ -727,8 +732,8 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                         <div className="flex items-center gap-3 mb-8">
                             {mounted && <Icon icon="solar:cup-star-bold-duotone" width={32} className="text-amber-500" />}
                             <div>
-                                <h2 className="text-2xl md:text-3xl font-black text-slate-900">Жыйынтыктар жана жеңүүчүлөр</h2>
-                                <p className="text-sm text-slate-400 font-medium mt-0.5">Катышуучулардын акыркы рейтинги</p>
+                                <h2 className="text-2xl md:text-3xl font-black text-slate-900">Результаты и победители</h2>
+                                <p className="text-sm text-slate-400 font-medium mt-0.5">Итоговый рейтинг участников</p>
                             </div>
                         </div>
 
@@ -739,7 +744,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                         ) : results.length === 0 ? (
                             <div className="glass-card rounded-[2rem] p-10 text-center">
                                 <div className="text-5xl mb-3">📊</div>
-                                <p className="text-slate-500 font-bold">Жыйынтыктар азырынча жарыяланган жок</p>
+                                <p className="text-slate-500 font-bold">Результаты ещё не опубликованы</p>
                             </div>
                         ) : (
                             <>
@@ -763,7 +768,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                 <p className="text-xs text-slate-400 font-medium">{data.class_name}</p>
                                                 <div className="mt-4 pt-4 border-t border-white/60">
                                                     <div className="text-3xl font-black text-slate-800">{data.percentage}<span className="text-lg text-slate-400">%</span></div>
-                                                    <p className="text-xs text-slate-500 font-bold mt-0.5">{data.score} / {data.max_score} упай</p>
+                                                    <p className="text-xs text-slate-500 font-bold mt-0.5">{data.score} / {data.max_score} баллов</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -774,17 +779,17 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                 <div className="glass-card rounded-[2rem] overflow-hidden">
                                     <div className="px-6 py-4 border-b border-slate-200/60 flex items-center gap-2">
                                         {mounted && <Icon icon="solar:list-bold-duotone" className="text-violet-500" width={20} />}
-                                        <h4 className="font-black text-slate-800 text-sm">Толук рейтинг</h4>
-                                        <span className="ml-auto text-xs text-slate-400 font-bold">{results.length} катышуучу</span>
+                                        <h4 className="font-black text-slate-800 text-sm">Полный рейтинг</h4>
+                                        <span className="ml-auto text-xs text-slate-400 font-bold">{results.length} участников</span>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-sm">
                                             <thead>
                                                 <tr className="bg-slate-50/80 text-left">
                                                     <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider w-12">#</th>
-                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider">Катышуучу</th>
-                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider hidden sm:table-cell">Мектеп / Класс</th>
-                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right">Упай</th>
+                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider">Участник</th>
+                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider hidden sm:table-cell">Школа / Класс</th>
+                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right">Баллы</th>
                                                     <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right">%</th>
                                                 </tr>
                                             </thead>
@@ -822,6 +827,15 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                         )}
                     </div>
                 )}
+
+                {/* ── RELATED OLYMPIADS ── */}
+                {otherOlympiads.length > 0 && (
+                    <RelatedSectionBlock title="Другие олимпиады">
+                        {otherOlympiads.map((o) => (
+                            <RelatedOlympiadCard key={o.ID} olympiad={o} />
+                        ))}
+                    </RelatedSectionBlock>
+                )}
             </div>
 
             {/* ══════════════ MODAL ══════════════ */}
@@ -833,12 +847,12 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                         <div className="p-5 border-b border-white/40 flex items-center justify-between sticky top-0 glass-nav rounded-t-[2.5rem] z-10">
                             <div>
                                 <h2 className="text-lg font-black text-slate-800">
-                                    {modalView === "auth" && authStep === "otp" && "Email верификациясы"}
-                                    {modalView === "auth" && authStep === "credentials" && (authTab === "register" ? "Каттоо" : "Кирүү")}
-                                    {modalView === "form" && formStep === 1 && "Жеке маалымат"}
-                                    {modalView === "form" && formStep === 2 && "Мектеп справкасы"}
-                                    {modalView === "form" && formStep === 3 && "Жүз верификациясы"}
-                                    {modalView === "done" && "Өтүнүч жиберилди"}
+                                    {modalView === "auth" && authStep === "otp" && "Email верификация"}
+                                    {modalView === "auth" && authStep === "credentials" && (authTab === "register" ? "Регистрация" : "Вход")}
+                                    {modalView === "form" && formStep === 1 && "Личные данные"}
+                                    {modalView === "form" && formStep === 2 && "Справка из школы"}
+                                    {modalView === "form" && formStep === 3 && "Верификация лица"}
+                                    {modalView === "done" && "Заявка отправлена"}
                                 </h2>
                                 {modalView === "form" && <p className="text-xs text-violet-600 font-bold truncate max-w-xs">{userEmail}</p>}
                             </div>
@@ -856,7 +870,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                             {(["register","login"] as AuthTab[]).map(tab => (
                                                 <button key={tab} onClick={() => { setAuthTab(tab); setAuthError(""); setAuthStep("credentials"); }}
                                                     className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-all ${authTab === tab ? "bg-white shadow text-violet-600" : "text-slate-500 hover:text-slate-700"}`}>
-                                                    {tab === "register" ? "Катталуу" : "Кирүү"}
+                                                    {tab === "register" ? "Регистрация" : "Войти"}
                                                 </button>
                                             ))}
                                         </div>
@@ -868,19 +882,19 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                             <div><label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Email</label>
                                                 <input type="email" autoFocus className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder="email@example.com" value={authEmail} onChange={e => { setAuthEmail(e.target.value); setAuthError(""); }} /></div>
                                             <div><label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Пароль</label>
-                                                <input type="password" className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder="Минимум 6 белги" value={authPassword} onChange={e => { setAuthPassword(e.target.value); setAuthError(""); }} /></div>
+                                                <input type="password" className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder="Минимум 6 символов" value={authPassword} onChange={e => { setAuthPassword(e.target.value); setAuthError(""); }} /></div>
                                             {authTab === "register" && (
-                                                <div><label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Паролду кайталаңыз</label>
-                                                    <input type="password" className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder="Жогорудагы пароль" value={authConfirm} onChange={e => { setAuthConfirm(e.target.value); setAuthError(""); }} onKeyDown={e => e.key === "Enter" && handleAuth()} /></div>
+                                                <div><label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Повторите пароль</label>
+                                                    <input type="password" className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder="Повторите пароль" value={authConfirm} onChange={e => { setAuthConfirm(e.target.value); setAuthError(""); }} onKeyDown={e => e.key === "Enter" && handleAuth()} /></div>
                                             )}
                                             {authError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{authError}</p>}
                                             <button onClick={handleAuth} disabled={authLoading} className="w-full py-4 rounded-2xl font-black text-white mt-1 disabled:opacity-60" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                                                {authLoading ? "Жүктөлүүдө..." : authTab === "register" ? "Emailге код жиберүү →" : "Кирүү жана уланткыла →"}
+                                                {authLoading ? "Загрузка..." : authTab === "register" ? "Отправить код на Email →" : "Войти и продолжить →"}
                                             </button>
                                             {authTab === "register" ? (
-                                                <p className="text-center text-xs text-slate-400 pt-1">Мурда аккаунт ачкансызбы?{" "}<button onClick={() => { setAuthTab("login"); setAuthError(""); }} className="text-violet-600 font-bold hover:underline">Кирүү</button></p>
+                                                <p className="text-center text-xs text-slate-400 pt-1">Уже есть аккаунт?{" "}<button onClick={() => { setAuthTab("login"); setAuthError(""); }} className="text-violet-600 font-bold hover:underline">Войти</button></p>
                                             ) : (
-                                                <p className="text-center text-xs text-slate-400 pt-1">Аккаунтуңуз жок беле?{" "}<button onClick={() => { setAuthTab("register"); setAuthError(""); }} className="text-violet-600 font-bold hover:underline">Катталуу</button></p>
+                                                <p className="text-center text-xs text-slate-400 pt-1">Нет аккаунта?{" "}<button onClick={() => { setAuthTab("register"); setAuthError(""); }} className="text-violet-600 font-bold hover:underline">Зарегистрироваться</button></p>
                                             )}
                                         </div>
                                     )}
@@ -890,9 +904,9 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                         <div className="space-y-4">
                                             <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 text-center">
                                                 <p className="text-2xl mb-2">📧</p>
-                                                <p className="text-sm font-black text-violet-700">Код жиберилди!</p>
+                                                <p className="text-sm font-black text-violet-700">Код отправлен!</p>
                                                 <p className="text-xs text-violet-500 mt-1">
-                                                    <span className="font-bold">{authEmail}</span> дарегиңизге 6 орундуу код жиберилди
+                                                    <span className="font-bold">{authEmail}</span> отправлен 6-значный код
                                                 </p>
                                             </div>
                                             <div>
@@ -911,10 +925,10 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                             </div>
                                             {authError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{authError}</p>}
                                             <button onClick={handleOtpVerify} disabled={authLoading || otpCode.length < 4} className="w-full py-4 rounded-2xl font-black text-white disabled:opacity-60" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                                                {authLoading ? "Текшерилүүдө..." : "Ырастоо жана уланткыла →"}
+                                                {authLoading ? "Проверка..." : "Подтвердить и продолжить →"}
                                             </button>
                                             <button onClick={() => { setAuthStep("credentials"); setAuthError(""); setOtpCode(""); }} className="w-full py-2 text-xs font-bold text-slate-400 hover:text-slate-600">
-                                                ← Артка
+                                                ← Назад
                                             </button>
                                         </div>
                                     )}
@@ -929,9 +943,9 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                         <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
                                             <span className="text-lg flex-shrink-0">👤</span>
                                             <div>
-                                                <p className="text-xs font-black text-violet-700 mb-0.5">Маалыматтарыңыз автоматтык толтурулду</p>
+                                                <p className="text-xs font-black text-violet-700 mb-0.5">Данные заполнены автоматически</p>
                                                 <p className="text-xs text-violet-500 font-medium">{form.fio} · {form.school} · {form.class_name}</p>
-                                                <button onClick={() => { setHasExistingProfile(false); setFormStep(1); }} className="text-[10px] text-violet-400 hover:text-violet-600 underline mt-0.5">Маалыматтарды өзгөртүү</button>
+                                                <button onClick={() => { setHasExistingProfile(false); setFormStep(1); }} className="text-[10px] text-violet-400 hover:text-violet-600 underline mt-0.5">Изменить данные</button>
                                             </div>
                                         </div>
                                     ) : (
@@ -941,14 +955,14 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                     {/* STEP 1 */}
                                     {formStep === 1 && (
                                         <div className="space-y-4">
-                                            {[{ f:"fio", l:"Толук ФИО *", p:"Дүйшөматов Бекзат Серикович" }, { f:"school", l:"Мектеп *", p:"№65 орто мектеп, Бишкек" }, { f:"class_name", l:"Класс *", p:"10-А" }, { f:"phone", l:"Телефон", p:"+996 700 123 456" }].map(({ f, l, p }) => (
+                                            {[{ f:"fio", l:"Полное ФИО *", p:"Иванов Иван Иванович" }, { f:"school", l:"Школа *", p:"Школа №65, Бишкек" }, { f:"class_name", l:"Класс *", p:"10-А" }, { f:"phone", l:"Телефон", p:"+996 700 123 456" }].map(({ f, l, p }) => (
                                                 <div key={f}><label className="block text-xs font-bold text-slate-500 mb-1.5">{l}</label>
                                                     <input type="text" className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300" placeholder={p} value={form[f as keyof RegForm]} onChange={e => { setForm(prev => ({ ...prev, [f]: e.target.value })); setFormError(""); }} /></div>
                                             ))}
-                                            <div><label className="block text-xs font-bold text-slate-500 mb-1.5">Туулган күн *</label>
+                                            <div><label className="block text-xs font-bold text-slate-500 mb-1.5">Дата рождения *</label>
                                                 <input type="date" className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400" value={form.birth_date} max={new Date().toISOString().split("T")[0]} onChange={e => { setForm(prev => ({ ...prev, birth_date: e.target.value })); setFormError(""); }} /></div>
                                             {formError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{formError}</p>}
-                                            <button onClick={goNextStep} className="w-full py-4 rounded-2xl font-black text-white" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>Кийинки →</button>
+                                            <button onClick={goNextStep} className="w-full py-4 rounded-2xl font-black text-white" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>Далее →</button>
                                         </div>
                                     )}
 
@@ -956,20 +970,20 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                     {formStep === 2 && (
                                         <div className="space-y-4">
                                             <div>
-                                                <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-1">Мектеп справкасы</p>
-                                                <p className="text-xs text-slate-400 mb-3">Мектептин мөөрү жана директордун колтамгасы болушу керек (фото же PDF)</p>
+                                                <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-1">Справка из школы</p>
+                                                <p className="text-xs text-slate-400 mb-3">Нужна печать школы и подпись директора (фото или PDF)</p>
                                             </div>
                                             <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-violet-400 hover:bg-violet-50/30 transition-all">
                                                 {certPreview ? <img src={certPreview} alt="cert" className="max-h-48 mx-auto rounded-xl object-contain" />
                                                     : certFile ? <><p className="text-4xl mb-2">📄</p><p className="text-sm font-bold text-slate-600">{certFile.name}</p></>
-                                                    : <><p className="text-4xl mb-3">📎</p><p className="text-sm font-bold text-slate-600">Документти жүктөө</p><p className="text-xs text-slate-400 mt-1">PNG, JPG же PDF • макс. 10 MB</p></>}
+                                                    : <><p className="text-4xl mb-3">📎</p><p className="text-sm font-bold text-slate-600">Загрузить документ</p><p className="text-xs text-slate-400 mt-1">PNG, JPG или PDF • макс. 10 МБ</p></>}
                                                 <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleCertSelect} />
                                             </div>
-                                            {certFile && <button onClick={() => { setCertFile(null); setCertPreview(null); }} className="text-xs text-red-500 font-bold hover:underline">✕ Файлды жок кылуу</button>}
+                                            {certFile && <button onClick={() => { setCertFile(null); setCertPreview(null); }} className="text-xs text-red-500 font-bold hover:underline">✕ Удалить файл</button>}
                                             {formError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{formError}</p>}
                                             <div className="flex gap-3">
-                                                <button onClick={() => setFormStep(1)} className="px-5 py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">← Артка</button>
-                                                <button onClick={goNextStep} disabled={uploading} className="flex-1 py-3 rounded-2xl font-black text-white disabled:opacity-60" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>{uploading ? "Жүктөлүүдө..." : "Кийинки →"}</button>
+                                                <button onClick={() => setFormStep(1)} className="px-5 py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">← Назад</button>
+                                                <button onClick={goNextStep} disabled={uploading} className="flex-1 py-3 rounded-2xl font-black text-white disabled:opacity-60" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>{uploading ? "Загрузка..." : "Далее →"}</button>
                                             </div>
                                         </div>
                                     )}
@@ -985,27 +999,27 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                         <div className="space-y-4">
                                                             <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-center">
                                                                 <div className="text-5xl mb-3">🚫</div>
-                                                                <p className="text-sm font-black text-red-700 mb-1">Камерага уруксат берилген жок</p>
+                                                                <p className="text-sm font-black text-red-700 mb-1">Доступ к камере запрещён</p>
                                                                 <p className="text-xs text-red-500 leading-relaxed">
-                                                                    Браузердин дарек тилкесинин жанындагы 🔒 же 📷 белгисин басыңыз → Камера → Уруксат берүү
+                                                                    Нажмите 🔒 или 📷 в адресной строке браузера → Камера → Разрешить
                                                                 </p>
                                                             </div>
                                                             <button onClick={requestAndStartCamera}
                                                                 className="w-full py-3.5 rounded-2xl font-black text-white text-sm"
                                                                 style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                                                                Кайра аракет кылуу
+                                                                Попробовать снова
                                                             </button>
                                                             <button
                                                                 onClick={() => { setFormStep(hasExistingProfile ? 1 : 2); setHasExistingProfile(false); }}
                                                                 className="w-full py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">
-                                                                ← Артка
+                                                                ← Назад
                                                             </button>
                                                         </div>
                                                     ) : camPermission === "requesting" ? (
                                                         <div className="bg-violet-50 border border-violet-200 rounded-2xl p-8 text-center">
                                                             <div className="animate-spin w-10 h-10 border-2 border-violet-400 border-t-transparent rounded-full mx-auto mb-4" />
                                                             <p className="text-sm font-bold text-violet-700">Уруксат сурануудa...</p>
-                                                            <p className="text-xs text-violet-400 mt-1">Браузердин сурамжылоосуна "Уруксат берүү" басыңыз</p>
+                                                            <p className="text-xs text-violet-400 mt-1">Нажмите 'Разрешить' в запросе браузера</p>
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-5">
@@ -1014,16 +1028,16 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                                     style={{ background:"linear-gradient(135deg,rgba(124,58,237,0.1),rgba(14,165,233,0.1))" }}>
                                                                     <span className="text-4xl">📷</span>
                                                                 </div>
-                                                                <h3 className="text-base font-black text-slate-800 mb-2">Камерага уруксат керек</h3>
+                                                                <h3 className="text-base font-black text-slate-800 mb-2">Нужен доступ к камере</h3>
                                                                 <p className="text-sm text-slate-500 leading-relaxed">
-                                                                    Жүз верификациясы үчүн камераңызга уруксат берүү зарыл
+                                                                    Для верификации лица необходим доступ к камере
                                                                 </p>
                                                             </div>
                                                             <div className="space-y-2.5">
                                                                 {[
-                                                                    { icon:"🛡️", title:"Коопсуздук", desc:"Жүзүңүз олимпиадага кирүүдө гана колдонулат" },
-                                                                    { icon:"🔒", title:"Купуялык", desc:"Сүрөтүңүз шифрленип сакталат" },
-                                                                    { icon:"✅", title:"Бир жолу", desc:"Биринчи катталганда жасалат" },
+                                                                    { icon:"🛡️", title:"Безопасность", desc:"Ваше лицо используется только для входа в олимпиаду" },
+                                                                    { icon:"🔒", title:"Конфиденциальность", desc:"Ваше фото хранится в зашифрованном виде" },
+                                                                    { icon:"✅", title:"Однократно", desc:"Делается только при первой регистрации" },
                                                                 ].map(({ icon, title, desc }) => (
                                                                     <div key={title} className="flex items-start gap-3 bg-slate-50 rounded-xl p-3">
                                                                         <span className="text-xl flex-shrink-0">{icon}</span>
@@ -1037,12 +1051,12 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                             <button onClick={requestAndStartCamera}
                                                                 className="w-full py-4 rounded-2xl font-black text-white text-base shadow-lg transition-transform active:scale-[0.98]"
                                                                 style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)", boxShadow:"0 10px 30px rgba(124,58,237,0.3)" }}>
-                                                                📷 Камерага уруксат берүү
+                                                                📷 Разрешить доступ к камере
                                                             </button>
                                                             <button
                                                                 onClick={() => { setFormStep(hasExistingProfile ? 1 : 2); setHasExistingProfile(false); }}
                                                                 className="w-full py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">
-                                                                ← Артка
+                                                                ← Назад
                                                             </button>
                                                         </div>
                                                     )}
@@ -1057,7 +1071,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                 {FACE_PHASES.map((p, i) => (
                                                     <div key={p.key} className={`flex-1 py-2 rounded-xl text-xs font-black text-center transition-all border ${capturedFaces[p.key] ? "bg-emerald-50 border-emerald-300 text-emerald-600" : i === facePhaseIdx ? "border-violet-300 text-violet-700" : "bg-slate-50 border-slate-200 text-slate-400"}`}
                                                         style={i === facePhaseIdx && !capturedFaces[p.key] ? { background:"rgba(124,58,237,0.06)" } : {}}>
-                                                        {capturedFaces[p.key] ? "✓ " : ""}{p.key === "front" ? "Алды" : p.key === "left" ? "Сол" : "Оң"}
+                                                        {capturedFaces[p.key] ? "✓ " : ""}{p.key === "front" ? "Прямо" : p.key === "left" ? "Влево" : "Вправо"}
                                                     </div>
                                                 ))}
                                             </div>
@@ -1066,7 +1080,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                             {mpLoading && !cameraError && (
                                                 <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 text-center">
                                                     <div className="animate-spin w-6 h-6 border-2 border-violet-400 border-t-transparent rounded-full mx-auto mb-2" />
-                                                    <p className="text-xs font-bold text-violet-600">AI модели жүктөлүүдө...</p>
+                                                    <p className="text-xs font-bold text-violet-600">Загрузка AI модели...</p>
                                                 </div>
                                             )}
 
@@ -1074,7 +1088,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                 <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
                                                     <p className="text-4xl mb-3">📷</p>
                                                     <p className="text-sm font-bold text-red-600">{cameraError}</p>
-                                                    <button onClick={() => { startCamera(); loadMediaPipe(); }} className="mt-4 px-5 py-2 bg-red-500 text-white rounded-xl font-bold text-sm">Кайра аракет</button>
+                                                    <button onClick={() => { startCamera(); loadMediaPipe(); }} className="mt-4 px-5 py-2 bg-red-500 text-white rounded-xl font-bold text-sm">Попробовать снова</button>
                                                 </div>
                                             ) : (
                                                 <>
@@ -1139,7 +1153,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                         {countdown > 0 && (
                                                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                                                 <div className="flex flex-col items-center gap-2">
-                                                                    {autoCapturing && <p className="text-white text-xs font-bold bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm">Жүзүңүздү кармап туруңуз</p>}
+                                                                    {autoCapturing && <p className="text-white text-xs font-bold bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm">Держите лицо</p>}
                                                                     <span className="font-black text-white drop-shadow-2xl" style={{ fontSize:"5rem", lineHeight:1, textShadow:"0 0 20px rgba(0,0,0,0.8)" }}>{countdown}</span>
                                                                 </div>
                                                             </div>
@@ -1155,7 +1169,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                         {/* Top instruction */}
                                                         <div className="absolute top-3 left-0 right-0 flex justify-center pointer-events-none">
                                                             <div className="bg-black/50 backdrop-blur-sm text-white text-xs font-bold px-4 py-2 rounded-full">
-                                                                {capturedFaces[currentPhase.key] ? "✓ Сүрөт тартылды!" : currentPhase.label}
+                                                                {capturedFaces[currentPhase.key] ? "✓ Фото сделано!" : currentPhase.label}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1166,9 +1180,9 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                             style={{ background: poseResult.angleOk ? "#f0fdf4" : "#f8fafc", borderColor: ovalColor + "60" }}>
                                                             <div className="grid grid-cols-3 gap-1.5">
                                                                 {[
-                                                                    { ok: poseResult.faceDetected, label: "Жүз табылды" },
-                                                                    { ok: poseResult.lightingOk,   label: "Жарык жакшы" },
-                                                                    { ok: poseResult.angleOk,      label: "Туура бурч" },
+                                                                    { ok: poseResult.faceDetected, label: "Лицо найдено" },
+                                                                    { ok: poseResult.lightingOk,   label: "Освещение хорошее" },
+                                                                    { ok: poseResult.angleOk,      label: "Правильный угол" },
                                                                 ].map(({ ok, label }) => (
                                                                     <div key={label} className={`flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-bold ${ok ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
                                                                         <span>{ok ? "✓" : "○"}</span><span>{label}</span>
@@ -1176,7 +1190,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                                 ))}
                                                             </div>
                                                             {poseResult.angleOk && countdown === 0 && (
-                                                                <p className="text-[10px] text-center font-bold text-violet-600 animate-pulse">Автоматтык тартылат — туруп туруңуз...</p>
+                                                                <p className="text-[10px] text-center font-bold text-violet-600 animate-pulse">Автосъёмка — не двигайтесь...</p>
                                                             )}
                                                         </div>
                                                     )}
@@ -1197,7 +1211,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                             ? <img src={capturedFaces[p.key]} alt={p.key} className="w-full h-full object-cover" />
                                                             : <div className={`w-full h-full flex flex-col items-center justify-center gap-1 ${i === facePhaseIdx ? "bg-violet-50" : "bg-slate-50"}`}>
                                                                 <span className="text-lg">{i === facePhaseIdx ? "📷" : "⬜"}</span>
-                                                                <span className="text-[9px] font-bold text-slate-400">{p.key === "front" ? "Алды" : p.key === "left" ? "Сол" : "Оң"}</span>
+                                                                <span className="text-[9px] font-bold text-slate-400">{p.key === "front" ? "Прямо" : p.key === "left" ? "Влево" : "Вправо"}</span>
                                                               </div>}
                                                     </div>
                                                 ))}
@@ -1209,7 +1223,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                     <button onClick={() => { stableRef.current = 0; countdownRunningRef.current = true; setCountdown(3); }}
                                                         className="flex-1 py-3 rounded-2xl font-black text-white"
                                                         style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                                                        📸 Кол менен тартуу
+                                                        📸 Снять вручную
                                                     </button>
                                                     {Object.keys(capturedFaces).length > 0 && (
                                                         <button onClick={() => { setCapturedFaces({}); setFacePhaseIdx(0); setCountdown(0); stableRef.current = 0; countdownRunningRef.current = false; setAutoCapturing(false); }}
@@ -1223,11 +1237,11 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                             {formError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{formError}</p>}
 
                                             <div className="flex gap-3">
-                                                <button onClick={() => { stopCamera(); setFormStep(hasExistingProfile ? 1 : 2); setHasExistingProfile(false); }} className="px-5 py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">← Артка</button>
+                                                <button onClick={() => { stopCamera(); setFormStep(hasExistingProfile ? 1 : 2); setHasExistingProfile(false); }} className="px-5 py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">← Назад</button>
                                                 <button onClick={handleSubmit} disabled={submitting || !allFacesCaptured}
                                                     className="flex-1 py-3 rounded-2xl font-black text-white disabled:opacity-40 transition-all"
                                                     style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                                                    {submitting ? (facesUploading ? "Жүктөлүүдө..." : "Жиберилүүдө...") : "Жиберүү ✓"}
+                                                    {submitting ? (facesUploading ? "Загрузка..." : "Отправка...") : "Отправить ✓"}
                                                 </button>
                                             </div>
                                             </> /* end camPermission === "granted" */}
@@ -1240,17 +1254,17 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                             {modalView === "done" && (
                                 <div className="text-center py-8">
                                     <div className="text-6xl mb-4">🎉</div>
-                                    <h3 className="text-xl font-black text-slate-800 mb-2">Өтүнүч жиберилди!</h3>
-                                    <p className="text-sm text-slate-500 leading-relaxed mb-6">Администратор маалыматтарыңызды жана жүз фотолоруңузду текшерет. Жооп <span className="font-bold text-slate-700">{userEmail}</span> дарегине жиберилет.</p>
+                                    <h3 className="text-xl font-black text-slate-800 mb-2">Заявка отправлена!</h3>
+                                    <p className="text-sm text-slate-500 leading-relaxed mb-6">Администратор проверит ваши данные и фото. Ответ придёт на <span className="font-bold text-slate-700">{userEmail}</span> адрес:</p>
                                     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-left mb-6">
-                                        <p className="text-xs font-black text-amber-600 uppercase tracking-wider mb-2">Кийинки кадамдар:</p>
+                                        <p className="text-xs font-black text-amber-600 uppercase tracking-wider mb-2">Следующие шаги:</p>
                                         <ul className="text-sm text-amber-700 font-semibold space-y-1.5">
-                                            <li className="flex gap-2"><span>1.</span> Администратор маалыматтарыңызды текшерет</li>
-                                            <li className="flex gap-2"><span>2.</span> Мектеп справкаңыз жана жүз фотолоруңуз каралат</li>
-                                            <li className="flex gap-2"><span>3.</span> Бекитүү тууралуу кабарланасыз</li>
+                                            <li className="flex gap-2"><span>1.</span> Администратор проверит ваши данные</li>
+                                            <li className="flex gap-2"><span>2.</span> Будет проверена ваша справка из школы и фото лица</li>
+                                            <li className="flex gap-2"><span>3.</span> Вы получите уведомление о подтверждении</li>
                                         </ul>
                                     </div>
-                                    <button onClick={closeModal} className="w-full py-4 rounded-2xl font-black text-white" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>Жабуу</button>
+                                    <button onClick={closeModal} className="w-full py-4 rounded-2xl font-black text-white" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>Закрыть</button>
                                 </div>
                             )}
                         </div>

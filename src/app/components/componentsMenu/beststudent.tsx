@@ -52,7 +52,7 @@ const BestStudents: React.FC<BestStudentsProps> = ({ data }) => {
                 
                 {/* Возраст */}
                 <div className='absolute -right-2 bottom-2 bg-white text-midnight_text text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md border border-gray-100'>
-                  {item.age} жаш
+                  {item.age} лет
                 </div>
               </div>
 
@@ -69,7 +69,7 @@ const BestStudents: React.FC<BestStudentsProps> = ({ data }) => {
                 
                 <div className="flex justify-center">
                   <span className="text-[10px] font-black bg-gray-50 text-gray-400 px-4 py-1.5 rounded-xl uppercase border border-gray-100">
-                    {item.grade}-классдын окуучусу
+                    Ученик {item.grade} класса
                   </span>
                 </div>
 

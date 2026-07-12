@@ -7,7 +7,7 @@ import HeaderLink from './Navigation/HeaderLink'
 import MobileHeaderLink from './Navigation/MobileHeaderLink'
 import Link from 'next/link'
 import { HeaderType } from '@/app/types/menu'
-import Signin from '../../Auth/SignIn/page'
+import Signin from '../../Auth/SignIn/Signin'
 import Cookies from 'js-cookie'
 import { useRouter } from 'next/navigation'
 
@@ -38,7 +38,10 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
   const fixedMenus: HeaderType[] = [
     { label: "Рейтинг", href: "/rating" },
     { label: "Олимпиада", href: "/olympiads" },
-    { label: "Оюндар", href: "/games" },
+    { label: "Ресурсы", href: "/resources" },
+    { label: "Игры", href: "/games" },
+
+    
   ];
   // 2. Бэкендден келген меню менен туруктуу менюларды бириктирүү
   const baseNavData = navData || [];
@@ -130,7 +133,7 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
                   href="/#contact"
                   className="hidden sm:block bg-primary text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-primary/20 hover:bg-secondary transition-all active:scale-95 text-center"
                 >
-                  Жазылуу
+                  Записаться
                 </Link>
 
                 <button
@@ -231,7 +234,7 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
               className="flex items-center justify-center bg-primary text-white w-full py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-primary/20"
               onClick={() => setNavbarOpen(false)}
             >
-              Жазылуу
+              Записаться
             </Link>
 
             <button
@@ -239,11 +242,11 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
               className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-primary/20 bg-primary/5 text-primary font-bold text-sm hover:bg-primary/10 transition-colors"
             >
               <Icon icon="material-symbols:account-circle-outline" width={22} />
-              Кабинет
+              Личный кабинет
             </button>
 
             <div className="pt-2">
-              <p className="text-[10px] font-black text-primary/50 uppercase tracking-[2px] mb-3 text-center">Биздин соцтармактар</p>
+              <p className="text-[10px] font-black text-primary/50 uppercase tracking-[2px] mb-3 text-center">Наши соцсети</p>
               <div className="flex justify-center gap-6">
                 <Link href={contactData?.instagram || "#"} target="_blank"><Icon icon="skill-icons:instagram" width={30} /></Link>
                 <Link href={whatsappLink} target="_blank"><Icon icon="logos:whatsapp-icon" width={30} /></Link>

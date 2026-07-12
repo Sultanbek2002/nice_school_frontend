@@ -5,6 +5,7 @@ import Courses from "@/app/components/Home/Courses";
 import Mentor from "@/app/components/Home/Mentor";
 import Testimonial from "@/app/components/Home/Testimonials";
 import ContactForm from "@/app/components/ContactForm";
+import SchoolMap from "@/app/components/SchoolMap";
 import Newsletter from "@/app/components/Home/Newsletter";
 import Stats from "@/app/components/Home/Stats";
 import { getSiteStructure } from '@/utils/apiData';
@@ -67,7 +68,7 @@ export default async function Home() {
       <Mentor  teachers={topTenTeachers}/>
       <Testimonial />
       <ContactForm/>
-     
+      <SchoolMap />
     </main>
   );
 }

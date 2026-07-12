@@ -168,7 +168,7 @@ const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
 export default function OlympiadsPage() {
   const [olympiads, setOlympiads] = useState<Olympiad[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSubject, setActiveSubject] = useState("Баары");
+  const [activeSubject, setActiveSubject] = useState("Все");
   const [mounted, setMounted] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -182,10 +182,10 @@ export default function OlympiadsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const subjects = ["Баары", ...Array.from(new Set(olympiads.map((o) => o.subject).filter(Boolean)))];
+  const subjects = ["Все", ...Array.from(new Set(olympiads.map((o) => o.subject).filter(Boolean)))];
 
   const filtered = olympiads.filter((o) => {
-    const matchSub = activeSubject === "Баары" || o.subject === activeSubject;
+    const matchSub = activeSubject === "Все" || o.subject === activeSubject;
     const matchSearch = !search || o.title.toLowerCase().includes(search.toLowerCase()) || o.subject.toLowerCase().includes(search.toLowerCase());
     return matchSub && matchSearch;
   });
@@ -243,7 +243,7 @@ export default function OlympiadsPage() {
             style={{ background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(6,182,212,0.1))", border: "1.5px solid rgba(124,58,237,0.25)", color: "#7c3aed" }}
           >
             {mounted && <Icon icon="solar:cup-bold-duotone" width={16} />}
-            Найс Эл Аралык Мектеби
+            NICE International School
           </div>
 
           <h1
@@ -254,15 +254,15 @@ export default function OlympiadsPage() {
           </h1>
 
           <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed text-slate-500">
-            Билимиңди сынап көр, жеңүүчүлөрдүн катарына кош — мектептик олимпиадаларга катышып, өзүңдү далилде!
+            Проверь свои знания, стань победителем — участвуй в школьных олимпиадах!
           </p>
 
           {/* Stats row */}
           {!loading && olympiads.length > 0 && (
             <div className="flex justify-center gap-8 pt-4">
               {[
-                { label: "Олимпиада", value: olympiads.length, color: "#7c3aed", bg: "rgba(124,58,237,0.08)" },
-                { label: "Предмет", value: subjects.length - 1, color: "#0ea5e9", bg: "rgba(14,165,233,0.08)" },
+                { label: "Олимпиад", value: olympiads.length, color: "#7c3aed", bg: "rgba(124,58,237,0.08)" },
+                { label: "Предметов", value: subjects.length - 1, color: "#0ea5e9", bg: "rgba(14,165,233,0.08)" },
                 { label: "Онлайн", value: olympiads.filter(o => o.format === "Онлайн").length, color: "#10b981", bg: "rgba(16,185,129,0.08)" },
               ].map((stat) => (
                 <div key={stat.label} className="text-center px-6 py-4 rounded-2xl shadow-sm" style={{ background: stat.bg, border: `1.5px solid ${stat.color}22` }}>
@@ -287,7 +287,7 @@ export default function OlympiadsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Олимпиада издөө..."
+              placeholder="Поиск олимпиад..."
               className="w-full pl-11 pr-4 py-3 rounded-2xl text-sm font-medium outline-none text-slate-700 placeholder-slate-400"
               style={{
                 background: "rgba(255,255,255,0.85)",
@@ -302,7 +302,7 @@ export default function OlympiadsPage() {
           <div className="flex flex-wrap justify-center gap-3">
             {subjects.map((subj) => {
               const isActive = activeSubject === subj;
-              const color = subj === "Баары" ? "#7c3aed" : subjectColor(subj);
+              const color = subj === "Все" ? "#7c3aed" : subjectColor(subj);
               return (
                 <button
                   key={subj}
@@ -316,14 +316,14 @@ export default function OlympiadsPage() {
                     transform: isActive ? "translateY(-3px) scale(1.03)" : "none",
                   }}
                 >
-                  {mounted && subj !== "Баары" && <Icon icon={subjectIcon(subj)} width={14} />}
-                  {subj === "Баары" && mounted && <Icon icon="solar:widget-bold-duotone" width={14} />}
+                  {mounted && subj !== "Все" && <Icon icon={subjectIcon(subj)} width={14} />}
+                  {subj === "Все" && mounted && <Icon icon="solar:widget-bold-duotone" width={14} />}
                   {subj}
                   <span
                     className="px-1.5 py-0.5 rounded-lg text-xs font-black"
                     style={{ background: isActive ? "rgba(255,255,255,0.25)" : `${color}18`, color: isActive ? "#fff" : color }}
                   >
-                    {subj === "Баары" ? olympiads.length : olympiads.filter(o => o.subject === subj).length}
+                    {subj === "Все" ? olympiads.length : olympiads.filter(o => o.subject === subj).length}
                   </span>
                 </button>
               );
@@ -335,7 +335,7 @@ export default function OlympiadsPage() {
         {loading && (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
             <div className="w-12 h-12 rounded-full border-3 border-transparent" style={{ borderTopColor: "#7c3aed", borderWidth: "3px", animation: "spin-slow 1s linear infinite" }} />
-            <p className="text-sm font-bold text-slate-400">Жүктөлүүдө...</p>
+            <p className="text-sm font-bold text-slate-400">Загрузка...</p>
           </div>
         )}
 
@@ -343,8 +343,8 @@ export default function OlympiadsPage() {
         {!loading && filtered.length === 0 && (
           <div className="text-center py-32 space-y-3">
             <div className="text-6xl">🔍</div>
-            <p className="text-xl font-black text-slate-700">Эч нерсе табылган жок</p>
-            <p className="text-sm text-slate-400">Башка предмет же издөө аркылуу текшерип кор</p>
+            <p className="text-xl font-black text-slate-700">Ничего не найдено</p>
+            <p className="text-sm text-slate-400">Попробуйте другой предмет или поиск</p>
           </div>
         )}
 
@@ -415,17 +415,17 @@ export default function OlympiadsPage() {
                       <div className="space-y-2 pt-3 border-t border-slate-100">
                         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
                           {mounted && <Icon icon="solar:calendar-date-bold-duotone" width={14} style={{ color }} />}
-                          {item.start_time ? fmtDate(item.start_time) : (item.date || "Күнү такталууда")}
+                          {item.start_time ? fmtDate(item.start_time) : (item.date || "Дата уточняется")}
                         </div>
                         {item.time_limit > 0 && (
                           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
                             {mounted && <Icon icon="solar:clock-circle-bold-duotone" width={14} style={{ color }} />}
-                            Тест: {item.time_limit} мүнөт
+                            Тест: {item.time_limit} мин
                           </div>
                         )}
                         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 truncate">
                           {mounted && <Icon icon="solar:map-point-bold-duotone" width={14} className="text-rose-400 flex-shrink-0" />}
-                          <span className="truncate">{item.location || "Дареги такталууда"}</span>
+                          <span className="truncate">{item.location || "Адрес уточняется"}</span>
                         </div>
                       </div>
 
@@ -448,7 +448,7 @@ export default function OlympiadsPage() {
                         >
                           <span className="relative z-10 flex items-center gap-1.5">
                             {mounted && <Icon icon="solar:arrow-right-bold-duotone" width={14} />}
-                            Катышуу жана Маалымат
+                            Участвовать и Подробнее
                           </span>
                           <span
                             className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"
@@ -476,16 +476,16 @@ export default function OlympiadsPage() {
               }}
             >
               <div className="text-4xl">🏆</div>
-              <h3 className="text-2xl font-black text-slate-800">Катышууга даярсыңбы?</h3>
+              <h3 className="text-2xl font-black text-slate-800">Готовы участвовать?</h3>
               <p className="text-sm max-w-sm text-center text-slate-500">
-                Мектептин ар бир окуучусу олимпиадага катышып, өз билимин далилдей алат.
+                Каждый ученик школы может участвовать в олимпиаде и доказать свои знания.
               </p>
               <Link
                 href="/#contact"
                 className="px-8 py-3 rounded-2xl text-sm font-black text-white transition-all hover:scale-105"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #0ea5e9)", boxShadow: "0 10px 30px rgba(124,58,237,0.35)" }}
               >
-                Мектепке жазылуу
+                Записаться в школу
               </Link>
             </div>
           </div>

@@ -90,13 +90,13 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/8 text-primary rounded-full text-xs font-black tracking-widest uppercase border border-primary/20">
             {mounted && <Icon icon="solar:cup-bold-duotone" width={16} />}
-            Мектептик Олимпиадалар
+            Школьные олимпиады
           </div>
           <h2 className="text-3xl md:text-4xl font-black text-midnight_text tracking-tight">
-            Өз билимиңди сынап көр!
+            Проверь свои знания!
           </h2>
           <p className="text-gray-500 text-sm leading-relaxed">
-            Төмөндөгү активдүү олимпиадаларга катышып, интеллектуалдык деңгээлиңизди көтөрүңүз жана баалуу сыйлыктарга ээ болуңуз.
+            Участвуй в олимпиадах, повышай интеллектуальный уровень и выигрывай ценные призы.
           </p>
         </MD>
 
@@ -157,7 +157,7 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                           {item.title}
                         </h4>
                         <p className="text-xs text-gray-400 mt-2.5 line-clamp-2 leading-relaxed">
-                          {item.description || 'Бул олимпиада боюнча кошумча маалымат берилген эмес.'}
+                          {item.description || 'Дополнительная информация об этой олимпиаде скоро появится.'}
                         </p>
                       </div>
 
@@ -170,7 +170,7 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                         <div className="flex items-center gap-2.5 text-slate-600 truncate">
                           {mounted && <Icon icon="solar:map-point-bold-duotone" className="text-rose-500 text-xl flex-shrink-0" />}
                           <span className="text-xs font-medium truncate" title={item.location}>
-                            {item.location || 'Дареги такталууда'}
+                            {item.location || 'Адрес уточняется'}
                           </span>
                         </div>
                       </div>
@@ -182,7 +182,7 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                           className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-primary/5 hover:bg-primary/10 rounded-xl text-xs font-bold text-primary transition-colors border border-primary/15 cursor-pointer"
                         >
                           {mounted && <Icon icon="solar:document-download-bold-duotone" width={16} className="text-emerald-500" />}
-                          Олимпиаданын Жобосу (.pdf)
+                          Положение об олимпиаде (.pdf)
                         </button>
                       )}
 
@@ -191,7 +191,7 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                         href={detailUrl}
                         className="relative mt-5 w-full py-3.5 bg-primary text-white font-black rounded-2xl text-center shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:bg-secondary transition-all duration-300 block text-sm active:scale-[0.98] overflow-hidden group/btn"
                       >
-                        <span className="relative z-10">Катышуу жана Маалымат</span>
+                        <span className="relative z-10">Участвовать и Подробнее</span>
                         <span className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />
                       </Link>
                     </div>

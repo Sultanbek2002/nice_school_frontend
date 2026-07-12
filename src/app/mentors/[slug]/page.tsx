@@ -1,10 +1,12 @@
 import React from "react";
 import Image from "next/image";
 import { ApiResponse, getSiteStructure } from "@/utils/apiData";
+import { RelatedTeacherCard, RelatedSectionBlock } from "@/app/components/RelatedSection";
 
-export default async function TeacherDetailPage({ params }: { params: { slug: string } }) {
-  const response: ApiResponse = await getSiteStructure();
-  
+export default async function TeacherDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const response = await getSiteStructure();
+
   // 1. Ищем учителей во всех блоках всех страниц
   let allTeachers: any[] = [];
   response.structure.forEach((page: any) => {
@@ -12,28 +14,21 @@ export default async function TeacherDetailPage({ params }: { params: { slug: st
       if (block.type === 'teachers_grid') {
         try {
           const parsed = JSON.parse(block.content || "[]");
-          
-          // ПРОВЕРКА: добавляем только если это массив
-          if (Array.isArray(parsed)) {
-            allTeachers = [...allTeachers, ...parsed];
-          } else if (parsed && typeof parsed === 'object') {
-            // Если это вдруг одиночный объект, превращаем в массив и добавляем
-            allTeachers.push(parsed);
-          }
-        } catch (e) {
-          console.error("Ошибка парсинга блока контента:", e);
-        }
+          if (Array.isArray(parsed)) allTeachers = [...allTeachers, ...parsed];
+          else if (parsed && typeof parsed === 'object') allTeachers.push(parsed);
+        } catch {}
       }
     });
   });
 
   // 2. Находим нужного учителя по slug
-  const teacher = allTeachers.find(t => 
-    encodeURIComponent(t.fullName.toLowerCase().replace(/\s+/g, '-')) === params.slug
+  const teacher = allTeachers.find(t =>
+    encodeURIComponent(t.fullName.toLowerCase().replace(/\s+/g, '-')) === slug
   );
+  const otherTeachers = allTeachers.filter(t => encodeURIComponent(t.fullName.toLowerCase().replace(/\s+/g, '-')) !== slug).slice(0, 4);
 
   if (!teacher) {
-    return <div className="pt-40 text-center">Мугалим табылган жок</div>;
+    return <div className="pt-40 text-center">Учитель не найден</div>;
   }
 
   return (
@@ -62,26 +57,26 @@ export default async function TeacherDetailPage({ params }: { params: { slug: st
 
             <div className="flex gap-4">
               <div className="bg-primary/5 px-4 py-2 rounded-xl">
-                <span className="block text-xs text-gray-500 uppercase font-bold">Тажрыйба</span>
-                <span className="text-lg font-bold">{teacher.experience} жыл</span>
+                <span className="block text-xs text-gray-500 uppercase font-bold">Опыт</span>
+                <span className="text-lg font-bold">{teacher.experience} лет</span>
               </div>
               <div className="bg-primary/5 px-4 py-2 rounded-xl">
-                <span className="block text-xs text-gray-500 uppercase font-bold">Жашы</span>
-                <span className="text-lg font-bold">{teacher.age} жаш</span>
+                <span className="block text-xs text-gray-500 uppercase font-bold">Возраст</span>
+                <span className="text-lg font-bold">{teacher.age} лет</span>
               </div>
             </div>
 
             <div>
               <h3 className="text-xl font-bold mb-3 text-midnight_text">Биография</h3>
               <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                {teacher.bio || "Маалымат жок"}
+                {teacher.bio || "Нет информации"}
               </p>
             </div>
 
             {/* Блок сертификатов */}
             {teacher.certificates && teacher.certificates.length > 0 && (
               <div className="pt-6 border-t border-gray-100">
-                <h3 className="text-xl font-bold mb-4 text-midnight_text">Сертификаттар</h3>
+                <h3 className="text-xl font-bold mb-4 text-midnight_text">Сертификаты</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {teacher.certificates.map((cert: string, idx: number) => (
                     <div key={idx} className="relative aspect-video rounded-lg overflow-hidden border border-gray-200 hover:scale-105 transition-transform cursor-zoom-in">
@@ -93,6 +88,12 @@ export default async function TeacherDetailPage({ params }: { params: { slug: st
             )}
           </div>
         </div>
+        {/* ── RELATED ── */}
+        {otherTeachers.length > 0 && (
+          <RelatedSectionBlock title="Другие учителя">
+            {otherTeachers.map((t, i) => <RelatedTeacherCard key={i} teacher={t} />)}
+          </RelatedSectionBlock>
+        )}
       </div>
     </main>
   );

@@ -7,6 +7,10 @@ const nextConfig = {
         source: '/go-backend/:path*',
         destination: `${backendUrl}/:path*`,
       },
+      {
+        source: '/uploads/:path*',
+        destination: `${backendUrl}/uploads/:path*`,
+      },
     ]
   },
   images: {

@@ -54,7 +54,7 @@ const Carousel: React.FC<SliderProps> = ({ data }) => {
         <section className='text-center py-10 overflow-hidden'>
             <div className='container mx-auto px-4'>
                 <h6 className='text-midnight_text capitalize mb-5 opacity-60'>
-                    Биздин өнөктөштөр жана жетишкендиктер
+                    Наши партнёры и достижения
                 </h6>
                 <div className='py-7 border-b border-t border-gray-100'>
                     <Slider {...settings}>
