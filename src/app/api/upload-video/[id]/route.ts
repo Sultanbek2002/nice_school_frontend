@@ -7,7 +7,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const backendUrl = process.env.BACKEND_URL || 'http://172.20.10.5:8080'
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
 
   try {
     const response = await fetch(`${backendUrl}/api/test-results/${id}/video`, {

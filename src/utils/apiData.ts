@@ -23,7 +23,7 @@
 // Типизация данных
 // Server-side: direct HTTP (no mixed-content issue, server-to-server)
 // Client-side: relative /go-backend proxy → Next.js rewrites to HTTP backend
-const BACKEND_DIRECT = process.env.BACKEND_URL || 'http://172.20.10.5:8080'
+const BACKEND_DIRECT = process.env.BACKEND_URL || 'http://localhost:8080'
 export const GO_API_URL = typeof window === 'undefined' ? BACKEND_DIRECT : '/go-backend'
 
 // GameQuiz WebSocket connections go straight to the Go backend rather than through
@@ -35,9 +35,10 @@ export const GAME_WS_URL = process.env.NEXT_PUBLIC_GAME_WS_URL || BACKEND_DIRECT
 // Normalizes any stored backend image URL (old IPs, localhost) to the current backend URL
 export function fixImageUrl(url: string, fallback = '/images/courses/placeholder.png'): string {
   if (!url) return fallback
+  // Use relative /uploads/ path so images go through Next.js proxy (IP-independent)
+  const match = url.match(/(\/uploads\/.+)/)
+  if (match) return match[1]
   return url
-    .replace(/http:\/\/[\d.]+:8080/, BACKEND_DIRECT)
-    .replace('http://localhost:8080', BACKEND_DIRECT)
 }
 
 // 1. Интерфейсы для новых полей
