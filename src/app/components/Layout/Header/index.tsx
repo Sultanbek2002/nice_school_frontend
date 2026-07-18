@@ -110,33 +110,8 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
               </div>
             </nav>
 
-            <div className="flex items-center gap-3 md:gap-6 flex-shrink-0">
-              <div className="hidden md:flex items-center gap-4 border-r border-gray-200 pr-4">
-                {contactData?.instagram && (
-                  <Link href={contactData.instagram} target="_blank" className="text-midnight_text hover:text-primary transition-all hover:-translate-y-1">
-                    <Icon icon="skill-icons:instagram" width={28} />
-                  </Link>
-                )}
-                {contactData?.whatsapp && (
-                  <Link href={whatsappLink} target="_blank" className="text-midnight_text hover:text-primary transition-all hover:-translate-y-1">
-                    <Icon icon="logos:whatsapp-icon" width={28} />
-                  </Link>
-                )}
-                {contactData?.telegram && (
-                  <Link href={contactData.telegram} target="_blank" className="text-midnight_text hover:text-primary transition-all hover:-translate-y-1">
-                    <Icon icon="logos:telegram" width={28} />
-                  </Link>
-                )}
-              </div>
-
+            <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
               <div className="flex items-center gap-2">
-                <Link
-                  href="/#contact"
-                  className="hidden sm:block bg-primary text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-primary/20 hover:bg-secondary transition-all active:scale-95 text-center"
-                >
-                  Записаться
-                </Link>
-
                 <button
                   onClick={handleAccountClick}
                   className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20"
@@ -144,7 +119,7 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
                 >
                   <Icon icon="material-symbols:account-circle-outline" width={26} className="text-primary" />
                 </button>
-                
+
                 <button
                   onClick={handleAccountClick}
                   className="sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20"

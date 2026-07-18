@@ -26,6 +26,11 @@ interface HeroProps {
     is_active: boolean
   } | null
   courses?: any[]
+  contactData?: {
+    instagram?: string
+    whatsapp?: string
+    telegram?: string
+  } | null
 }
 
 const fadeUp = {
@@ -42,7 +47,7 @@ function getCourseSlug(title: string): string {
   return encodeURIComponent(title.toLowerCase().trim().replace(/\s+/g, '-'))
 }
 
-const Hero: React.FC<HeroProps> = ({ bannerData, courses = [] }) => {
+const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) => {
   const [mounted, setMounted] = useState(false)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -271,12 +276,12 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [] }) => {
             </MD>
           </div>
 
-          {/* Блок с фото */}
+          {/* Блок с фото + соцсети справа */}
           <MD
             initial={{ opacity: 0, scale: 0.85, x: 40 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-            className="col-span-12 lg:col-span-6 flex justify-center relative order-1 lg:order-2"
+            className="col-span-12 lg:col-span-6 flex items-center justify-center gap-4 relative order-1 lg:order-2"
           >
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[90%] rounded-[3rem] bg-primary/10 blur-[60px] pointer-events-none" />
 
@@ -332,6 +337,52 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [] }) => {
               <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-3/4 h-12 pointer-events-none"
                 style={{ background: 'radial-gradient(ellipse, rgba(23,165,137,0.3), transparent 70%)', filter: 'blur(8px)' }}
               />
+            </div>
+
+            {/* ── Соцсети + Контакты — только desktop ── */}
+            <div className="hidden lg:flex flex-col items-center gap-3 self-center flex-shrink-0">
+              {contactData?.instagram && (
+                <Link
+                  href={contactData.instagram}
+                  target="_blank"
+                  className="group flex items-center justify-center w-10 h-10 rounded-2xl glass-card hover:-translate-y-1 transition-all duration-300"
+                  aria-label="Instagram"
+                >
+                  <Icon icon="skill-icons:instagram" width={22} className="group-hover:scale-110 transition-transform" />
+                </Link>
+              )}
+              {contactData?.whatsapp && (
+                <Link
+                  href={`https://wa.me/${(contactData.whatsapp || '').replace(/\D/g, '')}`}
+                  target="_blank"
+                  className="group flex items-center justify-center w-10 h-10 rounded-2xl glass-card hover:-translate-y-1 transition-all duration-300"
+                  aria-label="WhatsApp"
+                >
+                  <Icon icon="logos:whatsapp-icon" width={22} className="group-hover:scale-110 transition-transform" />
+                </Link>
+              )}
+              {contactData?.telegram && (
+                <Link
+                  href={contactData.telegram}
+                  target="_blank"
+                  className="group flex items-center justify-center w-10 h-10 rounded-2xl glass-card hover:-translate-y-1 transition-all duration-300"
+                  aria-label="Telegram"
+                >
+                  <Icon icon="logos:telegram" width={22} className="group-hover:scale-110 transition-transform" />
+                </Link>
+              )}
+
+              {/* Разделитель */}
+              <div className="w-px h-8 rounded-full bg-primary/20" />
+
+              {/* Кнопка Контакты — вертикальный текст */}
+              <Link
+                href="/#contact"
+                className="flex items-center justify-center px-2.5 py-4 rounded-2xl bg-primary text-white text-[11px] font-black tracking-[0.18em] uppercase shadow-lg shadow-primary/30 hover:bg-secondary hover:-translate-y-1 transition-all duration-300"
+                style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+              >
+                Контакты
+              </Link>
             </div>
           </MD>
 

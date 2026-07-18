@@ -60,7 +60,7 @@ export default async function Home() {
   // Если баннер активен, показываем его
   return (
     <main>
-      <Hero bannerData={data.banner} courses={allCourses} />
+      <Hero bannerData={data.banner} courses={allCourses} contactData={data.school_info} />
       <OlympiadComponent data={data.olympiads}/>
       <Companies />
       <Courses courses={topTenCourses} />
