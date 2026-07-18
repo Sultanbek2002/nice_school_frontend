@@ -378,8 +378,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
               {/* Кнопка Контакты — вертикальный текст */}
               <Link
                 href="/#contact"
-                className="flex items-center justify-center px-2.5 py-4 rounded-2xl bg-primary text-white text-[11px] font-black tracking-[0.18em] uppercase shadow-lg shadow-primary/30 hover:bg-secondary hover:-translate-y-1 transition-all duration-300"
-                style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                className="px-4 py-2.5 rounded-2xl bg-primary text-white text-xs font-black tracking-wide uppercase shadow-lg shadow-primary/30 hover:bg-secondary hover:-translate-y-1 transition-all duration-300 text-center whitespace-nowrap"
               >
                 Контакты
               </Link>
