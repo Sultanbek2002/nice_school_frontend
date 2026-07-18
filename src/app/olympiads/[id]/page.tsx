@@ -361,6 +361,36 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
 
     const allFacesCaptured = FACE_PHASES.every(p => capturedFaces[p.key]);
 
+    // ── face-api.js: preload models in background ──────────────
+    const faceApiLoadedRef = useRef(false);
+    const faceApiLoadingRef = useRef(false);
+
+    const preloadFaceApi = useCallback(async () => {
+        if (faceApiLoadedRef.current || faceApiLoadingRef.current) return;
+        faceApiLoadingRef.current = true;
+        try {
+            const faceapi = await import("@vladmandic/face-api");
+            const MODEL_URL = "/face-models";
+            if (!faceapi.nets.ssdMobilenetv1.isLoaded) {
+                await Promise.all([
+                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+                ]);
+            }
+            faceApiLoadedRef.current = true;
+        } catch (e) {
+            console.warn("face-api preload failed", e);
+        } finally {
+            faceApiLoadingRef.current = false;
+        }
+    }, []);
+
+    // Start preloading face-api models as soon as step 3 is entered
+    useEffect(() => {
+        if (formStep === 3) preloadFaceApi();
+    }, [formStep, preloadFaceApi]);
+
     // ── face-api.js: extract 128-float descriptor from front face ──
     const extractFaceDescriptor = useCallback(async (dataUrl: string): Promise<number[] | null> => {
         try {

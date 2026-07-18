@@ -40,6 +40,7 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
     { label: "Олимпиада", href: "/olympiads" },
     { label: "Ресурсы", href: "/resources" },
     { label: "Игры", href: "/games" },
+    { label: "Тур по школе", href: "/school-tour" },
 
     
   ];
