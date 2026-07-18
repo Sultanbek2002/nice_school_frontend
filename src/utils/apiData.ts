@@ -57,6 +57,10 @@ export interface SchoolInfo {
   instagram: string;
   facebook: string;
   phones: string;
+  students_count?: number;
+  courses_count?: number;
+  teachers_count?: number;
+  satisfaction_rate?: number;
 }
 
 export interface Block {

@@ -53,18 +53,25 @@ export default async function Home() {
     });
   });
 
-  // Берем по 10 штук для главной
   const topTenTeachers = allTeachers.slice(0, 10);
   const topTenCourses = allCourses.slice(0, 10);
-  
-  // Если баннер активен, показываем его
+
+  // Только активные/открытые олимпиады, ближайшие по времени — первые
+  const activeOlympiads = (data.olympiads || [])
+    .filter((o: any) => o.status === 'active' || o.status === 'registration')
+    .sort((a: any, b: any) => {
+      if (!a.start_time) return 1;
+      if (!b.start_time) return -1;
+      return new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
+    });
+
   return (
     <main>
       <Hero bannerData={data.banner} courses={allCourses} contactData={data.school_info} />
-      <OlympiadComponent data={data.olympiads}/>
+      <OlympiadComponent data={activeOlympiads} />
       <Companies />
       <Courses courses={topTenCourses} />
-      <Stats />
+      <Stats schoolInfo={data.school_info} />
       <Mentor  teachers={topTenTeachers}/>
       <Testimonial />
       <ContactForm/>

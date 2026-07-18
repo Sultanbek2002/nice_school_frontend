@@ -10,22 +10,25 @@ const MP   = motion.p      as any;
 const MH1  = motion.h1     as any;
 const MBtn = motion.button as any;
 
-const STATS = [
-  { label: "Кабинеты",     value: "6+" },
-  { label: "Преподаватели", value: "20+" },
-  { label: "Стандарт",     value: "IB" },
-  { label: "Учеников",     value: "500+" },
-];
+interface SchoolInfo {
+  students_count?: number;
+  teachers_count?: number;
+}
 
 export default function SchoolTourLanding() {
   const [mounted, setMounted] = useState(false);
   const [facadePhoto, setFacadePhoto] = useState("");
+  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>({});
 
   useEffect(() => {
     setMounted(true);
     fetch(`${GO_API_URL}/api/school-tour-settings`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.facade_photo) setFacadePhoto(d.facade_photo); })
+      .catch(() => {});
+    fetch(`${GO_API_URL}/api/school-info`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setSchoolInfo(d); })
       .catch(() => {});
   }, []);
 
@@ -174,7 +177,12 @@ export default function SchoolTourLanding() {
       >
         {/* Mobile: 2x2 grid  |  Desktop: horizontal row */}
         <div className="grid grid-cols-2 sm:flex sm:items-stretch sm:justify-center sm:divide-x divide-white/10 px-4 py-4 sm:py-5 gap-px sm:gap-0">
-          {STATS.map(({ label, value }) => (
+          {[
+            { label: "Кабинеты",      value: "6+" },
+            { label: "Преподаватели", value: schoolInfo.teachers_count ? `${schoolInfo.teachers_count}+` : "20+" },
+            { label: "Стандарт",      value: "IB" },
+            { label: "Учеников",      value: schoolInfo.students_count ? `${schoolInfo.students_count}+` : "500+" },
+          ].map(({ label, value }) => (
             <div key={label} className="flex flex-col items-center justify-center py-2 sm:px-8 sm:py-1 border-r border-white/10 last:border-r-0 even:border-r-0 sm:border-r-0">
               <span className="text-xl sm:text-2xl md:text-3xl font-black" style={{ color: "#17a589" }}>
                 {value}

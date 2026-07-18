@@ -61,6 +61,19 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
     setVisibleItems(4)
   }
 
+  const [userInitial, setUserInitial] = useState<string | null>(null)
+
+  useEffect(() => {
+    const token = Cookies.get('auth_token')
+    if (!token) return
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      setUserInitial((payload.email as string)?.[0]?.toUpperCase() || null)
+    } catch {
+      // ignore
+    }
+  }, [])
+
   const handleAccountClick = () => {
     const token = Cookies.get('auth_token')
     if (token) {
@@ -111,23 +124,17 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
             </nav>
 
             <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleAccountClick}
-                  className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20"
-                  aria-label="Войти"
-                >
+              <button
+                onClick={handleAccountClick}
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20"
+                aria-label={userInitial ? 'Личный кабинет' : 'Войти'}
+              >
+                {userInitial ? (
+                  <span className="text-primary font-black text-base leading-none">{userInitial}</span>
+                ) : (
                   <Icon icon="material-symbols:account-circle-outline" width={26} className="text-primary" />
-                </button>
-
-                <button
-                  onClick={handleAccountClick}
-                  className="sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20"
-                  aria-label="Войти"
-                >
-                  <Icon icon="material-symbols:account-circle-outline" width={24} className="text-primary" />
-                </button>
-              </div>
+                )}
+              </button>
 
               <button
                 onClick={() => setNavbarOpen(!navbarOpen)}

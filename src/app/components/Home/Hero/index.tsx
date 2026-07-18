@@ -30,6 +30,8 @@ interface HeroProps {
     instagram?: string
     whatsapp?: string
     telegram?: string
+    students_count?: number
+    courses_count?: number
   } | null
 }
 
@@ -276,12 +278,12 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
             </MD>
           </div>
 
-          {/* Блок с фото + соцсети справа */}
+          {/* Блок с фото */}
           <MD
             initial={{ opacity: 0, scale: 0.85, x: 40 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-            className="col-span-12 lg:col-span-6 flex items-center justify-center gap-4 relative order-1 lg:order-2"
+            className="col-span-12 lg:col-span-6 flex items-center justify-center relative order-1 lg:order-2"
           >
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[90%] rounded-[3rem] bg-primary/10 blur-[60px] pointer-events-none" />
 
@@ -296,17 +298,17 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
               className="absolute bottom-4 -left-4 z-20 glass-card rounded-2xl px-3 py-2 flex items-center gap-2"
             >
               <Icon icon="solar:users-group-rounded-bold" className="text-primary text-lg" />
-              <span className="text-xs font-bold text-midnight_text">1200+ студентов</span>
+              <span className="text-xs font-bold text-midnight_text">{contactData?.students_count ? `${contactData.students_count}+` : '1200+'} студентов</span>
             </MD>
 
             <MD animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
               className="absolute bottom-12 right-0 z-20 glass-card rounded-2xl px-3 py-2 flex items-center gap-2"
             >
               <Icon icon="solar:book-bold" className="text-secondary text-lg" />
-              <span className="text-xs font-bold text-midnight_text">50+ курсов</span>
+              <span className="text-xs font-bold text-midnight_text">{contactData?.courses_count ? `${contactData.courses_count}+` : '50+'} курсов</span>
             </MD>
 
-            <div className="relative w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[500px] z-10">
+            <div className="relative w-full max-w-[400px] sm:max-w-[540px] lg:max-w-full z-10">
               <div className="absolute inset-0 rounded-[2.5rem] -rotate-3 scale-95"
                 style={{ background: 'linear-gradient(140deg, rgba(23,165,137,0.18), rgba(18,58,94,0.12))', border: '1px solid rgba(23,165,137,0.2)' }}
               />
@@ -323,7 +325,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
                 <div className="absolute bottom-0 left-0 right-0 h-1/3 z-10 pointer-events-none rounded-b-[2rem]"
                   style={{ background: 'linear-gradient(to top, rgba(23,165,137,0.08), transparent)' }}
                 />
-                <div className="relative aspect-square w-full rounded-[2rem] overflow-hidden">
+                <div className="relative aspect-[4/3] w-full rounded-[2rem] overflow-hidden">
                   <Image
                     src={fixImageUrl(bannerData.photo)}
                     alt={bannerData.title}
@@ -339,54 +341,55 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
               />
             </div>
 
-            {/* ── Соцсети + Контакты — только desktop ── */}
-            <div className="hidden lg:flex flex-col items-center gap-3 self-center flex-shrink-0">
-              {contactData?.instagram && (
-                <Link
-                  href={contactData.instagram}
-                  target="_blank"
-                  className="group flex items-center justify-center w-10 h-10 rounded-2xl glass-card hover:-translate-y-1 transition-all duration-300"
-                  aria-label="Instagram"
-                >
-                  <Icon icon="skill-icons:instagram" width={22} className="group-hover:scale-110 transition-transform" />
-                </Link>
-              )}
-              {contactData?.whatsapp && (
-                <Link
-                  href={`https://wa.me/${(contactData.whatsapp || '').replace(/\D/g, '')}`}
-                  target="_blank"
-                  className="group flex items-center justify-center w-10 h-10 rounded-2xl glass-card hover:-translate-y-1 transition-all duration-300"
-                  aria-label="WhatsApp"
-                >
-                  <Icon icon="logos:whatsapp-icon" width={22} className="group-hover:scale-110 transition-transform" />
-                </Link>
-              )}
-              {contactData?.telegram && (
-                <Link
-                  href={contactData.telegram}
-                  target="_blank"
-                  className="group flex items-center justify-center w-10 h-10 rounded-2xl glass-card hover:-translate-y-1 transition-all duration-300"
-                  aria-label="Telegram"
-                >
-                  <Icon icon="logos:telegram" width={22} className="group-hover:scale-110 transition-transform" />
-                </Link>
-              )}
-
-              {/* Разделитель */}
-              <div className="w-px h-8 rounded-full bg-primary/20" />
-
-              {/* Кнопка Контакты — вертикальный текст */}
-              <Link
-                href="/#contact"
-                className="px-4 py-2.5 rounded-2xl bg-primary text-white text-xs font-black tracking-wide uppercase shadow-lg shadow-primary/30 hover:bg-secondary hover:-translate-y-1 transition-all duration-300 text-center whitespace-nowrap"
-              >
-                Контакты
-              </Link>
-            </div>
           </MD>
 
         </div>
       </div>
+
+      {/* ── Соцсети + Контакты — правый край, только desktop ── */}
+      {(contactData?.instagram || contactData?.whatsapp || contactData?.telegram) && (
+        <div className="hidden lg:flex flex-col items-center gap-3 absolute right-4 xl:right-6 top-1/2 -translate-y-1/2 z-20">
+          {contactData?.instagram && (
+            <Link
+              href={contactData.instagram}
+              target="_blank"
+              className="group flex items-center justify-center w-10 h-10 rounded-2xl glass-card hover:-translate-y-1 transition-all duration-300"
+              aria-label="Instagram"
+            >
+              <Icon icon="skill-icons:instagram" width={22} className="group-hover:scale-110 transition-transform" />
+            </Link>
+          )}
+          {contactData?.whatsapp && (
+            <Link
+              href={`https://wa.me/${(contactData.whatsapp || '').replace(/\D/g, '')}`}
+              target="_blank"
+              className="group flex items-center justify-center w-10 h-10 rounded-2xl glass-card hover:-translate-y-1 transition-all duration-300"
+              aria-label="WhatsApp"
+            >
+              <Icon icon="logos:whatsapp-icon" width={22} className="group-hover:scale-110 transition-transform" />
+            </Link>
+          )}
+          {contactData?.telegram && (
+            <Link
+              href={contactData.telegram}
+              target="_blank"
+              className="group flex items-center justify-center w-10 h-10 rounded-2xl glass-card hover:-translate-y-1 transition-all duration-300"
+              aria-label="Telegram"
+            >
+              <Icon icon="logos:telegram" width={22} className="group-hover:scale-110 transition-transform" />
+            </Link>
+          )}
+
+          <div className="w-px h-8 rounded-full bg-primary/20" />
+
+          <Link
+            href="/#contact"
+            className="px-4 py-2.5 rounded-2xl bg-primary text-white text-xs font-black tracking-wide uppercase shadow-lg shadow-primary/30 hover:bg-secondary hover:-translate-y-1 transition-all duration-300 whitespace-nowrap"
+          >
+            Контакты
+          </Link>
+        </div>
+      )}
 
       {/* Portal dropdown — рендерится в document.body поверх всего */}
       {dropdown}
