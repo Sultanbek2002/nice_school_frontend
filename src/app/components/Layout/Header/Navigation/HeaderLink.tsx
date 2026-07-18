@@ -34,7 +34,11 @@ const HeaderLink: React.FC<{ item: HeaderType }> = ({ item }) => {
       
       <Link
         href={item.href}
-        className={`text-lg flex text-black hover:text-primary capitalized relative`}
+        className={`text-lg flex items-center capitalized relative transition-colors duration-200 ${
+          isActive
+            ? "text-primary font-semibold"
+            : "text-black hover:text-primary"
+        }`}
       >
         {item.label}
         {item.submenu && (
@@ -53,6 +57,10 @@ const HeaderLink: React.FC<{ item: HeaderType }> = ({ item }) => {
               d="m7 10l5 5l5-5"
             />
           </svg>
+        )}
+        {/* Active underline indicator */}
+        {isActive && (
+          <span className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full bg-primary" />
         )}
       </Link>
 
