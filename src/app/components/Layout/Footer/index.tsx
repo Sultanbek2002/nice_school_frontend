@@ -1,125 +1,174 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import Logo from '../Header/Logo'
 import { Icon } from '@iconify/react'
 
 interface FooterProps {
-  data?: any; // Сюда придут данные school_info
+  data?: any
+  navLinks?: { label: string; href: string }[]
 }
 
-const Footer: React.FC<FooterProps> = ({ data }) => {
-  // Если данных нет, можно вернуть пустой блок или дефолтные значения
-  const school = data || {};
+const FIXED_LINKS = [
+  { label: 'Рейтинг',      href: '/rating' },
+  { label: 'Олимпиада',    href: '/olympiads' },
+  { label: 'Ресурсы',      href: '/resources' },
+  { label: 'Игры',         href: '/games' },
+  { label: 'Тур по школе', href: '/school-tour' },
+  { label: 'Управление',   href: '/management' },
+]
+
+const SOCIALS = [
+  { key: 'instagram', icon: 'tabler:brand-instagram', label: 'Instagram' },
+  { key: 'whatsapp',  icon: 'tabler:brand-whatsapp',  label: 'WhatsApp', href: (v: string) => `https://wa.me/${v.replace(/\D/g, '')}` },
+  { key: 'telegram',  icon: 'tabler:brand-telegram',  label: 'Telegram' },
+  { key: 'facebook',  icon: 'tabler:brand-facebook',  label: 'Facebook' },
+]
+
+const Footer: React.FC<FooterProps> = ({ data, navLinks = [] }) => {
+  const school = data || {}
+  const allNavLinks = [...FIXED_LINKS, ...navLinks]
+  const [moreOpen, setMoreOpen] = useState(false)
+  const hasExtra = allNavLinks.length > 8
+  const col1 = allNavLinks.slice(0, 4)
+  const col2 = hasExtra ? allNavLinks.slice(4, 7) : allNavLinks.slice(4, 8)
+  const extraLinks = hasExtra ? allNavLinks.slice(7) : []
 
   return (
-    <footer className='pt-16 border-t border-primary/10' style={{ background: 'linear-gradient(180deg, #e4f2ea 0%, #daf0e4 100%)' }}>
-      <div className='container mx-auto px-4'>
-        <div className='grid grid-cols-1 sm:grid-cols-6 lg:gap-20 md:gap-24 sm:gap-12 gap-12 pb-10'>
+    <footer className="border-t border-primary/10" style={{ background: 'linear-gradient(180deg,#e8f5ef 0%,#daf0e4 100%)' }}>
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
 
-          {/* 1. Логотип и Соцсети */}
-          <div className='col-span-2'>
-            <div className='mb-8'>
-              <Logo />
-            </div>
-            <div className='flex items-center gap-4'>
-              {school.instagram && (
-                <Link href={school.instagram} target="_blank" className='hover:text-primary text-black text-3xl transition-colors'>
-                  <Icon icon='tabler:brand-instagram' />
-                </Link>
-              )}
-              {school.whatsapp && (
-                <Link href={`https://wa.me/${school.whatsapp.replace(/\D/g, '')}`} target="_blank" className='hover:text-primary text-black text-3xl transition-colors'>
-                  <Icon icon='tabler:brand-whatsapp' />
-                </Link>
-              )}
-              {school.telegram && (
-                <Link href={school.telegram} target="_blank" className='hover:text-primary text-black text-3xl transition-colors'>
-                  <Icon icon='tabler:brand-telegram' />
-                </Link>
-              )}
-              {school.facebook && (
-                <Link href={school.facebook} target="_blank" className='hover:text-primary text-black text-3xl transition-colors'>
-                  <Icon icon='tabler:brand-facebook' />
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {/* 2. Быстрые ссылки (можно оставить статичными или завязать на меню) */}
-          <div className='col-span-2'>
-            <p className='text-black text-xl font-bold mb-7 uppercase tracking-wider'>
-              Контакты
+          {/* 1. Лого + описание + соцсети */}
+          <div>
+            <Logo />
+            <p className="text-black/50 text-sm mt-3 mb-4 leading-relaxed max-w-[220px]">
+              Современная международная школа с инновационным подходом к обучению.
             </p>
-            <ul className='space-y-4'>
-              <li>
-                <Link href="/about" className='text-black/60 hover:text-primary transition-colors'>О нас</Link>
-              </li>
-              <li>
-                <Link href="/courses" className='text-black/60 hover:text-primary transition-colors'>Курсы</Link>
-              </li>
-              <li>
-                <Link href="/contact" className='text-black/60 hover:text-primary transition-colors'>Контакты</Link>
-              </li>
-            </ul>
+            <div className="flex items-center gap-3">
+              {SOCIALS.map(({ key, icon, label, href }) => {
+                const val = school[key]
+                if (!val) return null
+                const link = href ? href(val) : val
+                return (
+                  <Link key={key} href={link} target="_blank" aria-label={label}
+                    className="w-8 h-8 rounded-full bg-primary/10 hover:bg-primary hover:text-white text-primary flex items-center justify-center transition-all">
+                    <Icon icon={icon} width={16} />
+                  </Link>
+                )
+              })}
+            </div>
           </div>
 
-          {/* 3. Контактная информация из Базы */}
-          <div className='col-span-2'>
-            <div className='flex flex-col gap-6'>
+          {/* 2. Контакты */}
+          <div>
+            <p className="text-black font-bold text-sm uppercase tracking-wider mb-4">Контакты</p>
+            <div className="space-y-3">
               {school.address && (
-                <div className='flex items-start gap-3'>
-                  <Icon icon='solar:point-on-map-perspective-bold' className='text-primary text-2xl mt-1 flex-shrink-0' />
-                  <p className='text-black/80 text-sm leading-relaxed'>
-                    {school.address}
-                  </p>
+                <div className="flex items-start gap-2">
+                  <Icon icon="solar:point-on-map-perspective-bold" className="text-primary text-lg mt-0.5 flex-shrink-0" />
+                  <p className="text-black/55 text-sm leading-relaxed">{school.address}</p>
                 </div>
               )}
-
-              {school.phones && school.phones.split(',').map((phone: string, index: React.Key | null | undefined) => {
-                const trimmedPhone = phone.trim(); // Убираем лишние пробелы по краям
-                const phoneDigits = trimmedPhone.replace(/\s+/g, ''); // Убираем все пробелы для ссылки tel:
-
+              {school.phones && school.phones.split(',').map((phone: string, i: number) => {
+                const trimmed = phone.trim()
                 return (
-                  <Link
-                    key={index}
-                    href={`tel:${phoneDigits}`}
-                    className='flex items-center gap-3 group w-fit mb-2 last:mb-0'
-                  >
-                    <Icon
-                      icon='solar:phone-bold'
-                      className='text-primary text-2xl flex-shrink-0 transition-transform group-hover:scale-110'
-                    />
-                    <p className='text-black/60 group-hover:text-primary transition-colors font-medium'>
-                      {trimmedPhone}
-                    </p>
+                  <Link key={i} href={`tel:${trimmed.replace(/\s+/g, '')}`}
+                    className="flex items-center gap-2 group w-fit">
+                    <Icon icon="solar:phone-bold" className="text-primary text-lg flex-shrink-0" />
+                    <span className="text-black/55 group-hover:text-primary transition-colors text-sm">{trimmed}</span>
                   </Link>
-                );
+                )
               })}
-
               {school.email && (
-                <Link href={`mailto:${school.email}`} className='flex items-center gap-3 group w-fit'>
-                  <Icon icon='solar:mailbox-bold' className='text-primary text-2xl flex-shrink-0' />
-                  <p className='text-black/60 group-hover:text-primary transition-colors font-medium'>
-                    {school.email}
-                  </p>
+                <Link href={`mailto:${school.email}`} className="flex items-center gap-2 group w-fit">
+                  <Icon icon="solar:mailbox-bold" className="text-primary text-lg flex-shrink-0" />
+                  <span className="text-black/55 group-hover:text-primary transition-colors text-sm">{school.email}</span>
                 </Link>
               )}
             </div>
+          </div>
+
+          {/* 3. Навигация — 2 колонки по 5, если >10 то "Еще" */}
+          <div>
+            <p className="text-black font-bold text-sm uppercase tracking-wider mb-4">Меню</p>
+
+            <div className="flex gap-6">
+              {/* Колонка 1: первые 5 */}
+              <ul className="space-y-2 flex-1">
+                {col1.map((item, i) => (
+                  <li key={i}>
+                    <Link href={item.href} className="text-black/55 hover:text-primary transition-colors text-sm">
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Колонка 2: следующие 5 (или 4 + "Еще") */}
+              {col2.length > 0 && (
+                <ul className="space-y-2 flex-1">
+                  {col2.map((item, i) => (
+                    <li key={i}>
+                      <Link href={item.href} className="text-black/55 hover:text-primary transition-colors text-sm">
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                  {extraLinks.length > 0 && (
+                    <li>
+                      <button
+                        onClick={() => setMoreOpen(v => !v)}
+                        className="flex items-center gap-1 text-primary text-sm font-medium hover:underline"
+                      >
+                        <span>{moreOpen ? 'Скрыть' : 'Еще'}</span>
+                        <Icon icon={moreOpen ? 'solar:alt-arrow-up-bold' : 'solar:alt-arrow-down-bold'} width={14} />
+                      </button>
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+
+            {/* Раскрытые доп. пункты */}
+            {moreOpen && extraLinks.length > 0 && (
+              <div className="flex gap-6 mt-2">
+                <ul className="space-y-2 flex-1">
+                  {extraLinks.slice(0, 5).map((item, i) => (
+                    <li key={i}>
+                      <Link href={item.href} className="text-black/55 hover:text-primary transition-colors text-sm">
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                {extraLinks.length > 5 && (
+                  <ul className="space-y-2 flex-1">
+                    {extraLinks.slice(5, 10).map((item, i) => (
+                      <li key={i}>
+                        <Link href={item.href} className="text-black/55 hover:text-primary transition-colors text-sm">
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 4. Нижняя панель */}
-        <div className='mt-10 lg:flex items-center justify-between border-t border-black/10 py-8'>
-          <p className='text-black/40 text-sm text-center lg:text-start'>
-            © {new Date().getFullYear()} Nice School. Все права защищены.
+        {/* Нижняя панель */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-black/10 mt-6 pt-5">
+          <p className="text-black/35 text-xs">
+            © {new Date().getFullYear()} NICE International School. Все права защищены.
           </p>
-          <div className='flex gap-6 mt-4 lg:mt-0 justify-center'>
-            <Link href='/privacy' className='text-black/40 hover:text-primary text-sm transition-colors'>
+          <div className="flex gap-4">
+            <Link href="/privacy" className="text-black/35 hover:text-primary text-xs transition-colors">
               Политика конфиденциальности
             </Link>
-            <Link href='/terms' className='text-black/40 hover:text-primary text-sm transition-colors'>
+            <Link href="/terms" className="text-black/35 hover:text-primary text-xs transition-colors">
               Условия использования
             </Link>
           </div>

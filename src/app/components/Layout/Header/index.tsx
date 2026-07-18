@@ -19,9 +19,21 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
   const [navbarOpen, setNavbarOpen] = useState(false)
   const [sticky, setSticky] = useState(false)
-  const [visibleItems, setVisibleItems] = useState(4)
+  const [splitAt, setSplitAt] = useState(99)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const moreCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const openMore = () => {
+    if (moreCloseTimer.current) clearTimeout(moreCloseTimer.current)
+    setMoreOpen(true)
+  }
+  const closeMore = () => {
+    moreCloseTimer.current = setTimeout(() => setMoreOpen(false), 200)
+  }
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const navWrapperRef = useRef<HTMLDivElement>(null)
+  const measureRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   const handleScroll = () => {
@@ -41,6 +53,7 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
     { label: "Ресурсы", href: "/resources" },
     { label: "Игры", href: "/games" },
     { label: "Тур по школе", href: "/school-tour" },
+    { label: "Управление", href: "/management" },
 
     
   ];
@@ -48,18 +61,9 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
   const baseNavData = navData || [];
   const combinedNavData = [...fixedMenus, ...baseNavData];
 
-  // 3. Кесүү (slice) логикасын жаңы жалпы массивге колдонуу
-  const visibleNavData = combinedNavData.slice(0, visibleItems)
-  const hiddenNavData = combinedNavData.slice(visibleItems)
+  const visibleNavData = combinedNavData.slice(0, splitAt)
+  const hiddenNavData = combinedNavData.slice(splitAt)
   const hasMoreItems = hiddenNavData.length > 0
-
-  const showAllItems = () => {
-    setVisibleItems(combinedNavData.length)
-  }
-
-  const hideExtraItems = () => {
-    setVisibleItems(4)
-  }
 
   const [userInitial, setUserInitial] = useState<string | null>(null)
 
@@ -73,6 +77,34 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
       // ignore
     }
   }, [])
+
+  useEffect(() => {
+    const wrapper = navWrapperRef.current
+    const measure = measureRef.current
+    if (!wrapper || !measure) return
+
+    const calc = () => {
+      const available = wrapper.offsetWidth
+      const MORE_BTN = 80
+      const GAP = 32
+      const items = Array.from(measure.children) as HTMLElement[]
+      let total = 0
+      let count = 0
+      for (let i = 0; i < items.length; i++) {
+        const w = items[i].offsetWidth + GAP
+        const hasMore = i < items.length - 1
+        if (total + w + (hasMore ? MORE_BTN : 0) > available) break
+        total += w
+        count++
+      }
+      setSplitAt(count || 1)
+    }
+
+    const ro = new ResizeObserver(calc)
+    ro.observe(wrapper)
+    requestAnimationFrame(calc)
+    return () => ro.disconnect()
+  }, [combinedNavData.length])
 
   const handleAccountClick = () => {
     const token = Cookies.get('auth_token')
@@ -90,40 +122,66 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
           sticky ? "py-2" : "py-4"
         }`}
       >
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between gap-4">
+        <div className="w-full px-4 pr-5">
+          <div className="flex items-center">
             <div className="flex-shrink-0">
               <Logo />
             </div>
 
-            <nav className="hidden lg:flex grow items-center justify-center">
-              <div className="flex gap-x-8 items-center">
+            {/* Скрытый слой для измерения ширины пунктов */}
+            <div
+              ref={measureRef}
+              className="absolute invisible pointer-events-none flex gap-x-8"
+              style={{ whiteSpace: 'nowrap', top: -9999, left: 0 }}
+              aria-hidden
+            >
+              {combinedNavData.map((item, i) => (
+                <div key={i}><HeaderLink item={item} /></div>
+              ))}
+            </div>
+
+            <nav ref={navWrapperRef} className="hidden lg:block flex-1">
+              <div className="flex gap-x-8 items-center justify-center">
                 {visibleNavData.map((item, index) => (
                   <HeaderLink key={index} item={item} />
                 ))}
 
                 {hasMoreItems && (
-                  <div className="relative group">
-                    <button
-                      className="flex items-center gap-1 text-midnight_text hover:text-primary transition-colors font-medium"
-                    >
+                  <div
+                    className="relative"
+                    onMouseEnter={openMore}
+                    onMouseLeave={closeMore}
+                  >
+                    <button className="flex items-center gap-1 text-midnight_text hover:text-primary transition-colors font-medium">
                       <span>Еще</span>
                       <Icon icon="solar:alt-arrow-down-bold" width={16} />
                     </button>
-
-                    <div className="absolute top-full left-0 mt-2 rounded-xl min-w-[200px] py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 glass-card">
-                      {hiddenNavData.map((item, index) => (
-                        <div key={index} className="px-4 py-2 hover:bg-gray-50">
-                          <HeaderLink item={item} />
-                        </div>
-                      ))}
-                    </div>
+                    {moreOpen && (
+                      <div
+                        className="absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded-xl min-w-[200px] py-2 glass-card z-50 shadow-lg"
+                        onMouseEnter={openMore}
+                        onMouseLeave={closeMore}
+                      >
+                        {hiddenNavData.map((item, index) => (
+                          <div key={index} className="px-4 py-2 hover:bg-primary/5 rounded-lg mx-1">
+                            <HeaderLink item={item} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </nav>
 
-            <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
+            <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+              <button
+                onClick={() => setNavbarOpen(!navbarOpen)}
+                className="lg:hidden p-1 text-midnight_text"
+              >
+                <Icon icon={navbarOpen ? "solar:close-circle-bold" : "solar:hamburger-menu-broken"} width={34} />
+              </button>
+
               <button
                 onClick={handleAccountClick}
                 className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20"
@@ -134,13 +192,6 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
                 ) : (
                   <Icon icon="material-symbols:account-circle-outline" width={26} className="text-primary" />
                 )}
-              </button>
-
-              <button
-                onClick={() => setNavbarOpen(!navbarOpen)}
-                className="lg:hidden p-1 text-midnight_text"
-              >
-                <Icon icon={navbarOpen ? "solar:close-circle-bold" : "solar:hamburger-menu-broken"} width={34} />
               </button>
             </div>
           </div>
@@ -180,33 +231,8 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
         </div>
 
         <nav className="flex flex-col p-6 space-y-2 overflow-y-auto max-h-[calc(100vh-80px)]">
-          {visibleNavData.map((item, index) => (
+          {combinedNavData.map((item, index) => (
             <div key={index} onClick={() => setNavbarOpen(false)}>
-              <MobileHeaderLink item={item} />
-            </div>
-          ))}
-
-          {hasMoreItems && (
-            <button
-              onClick={() => {
-                if (visibleItems === combinedNavData.length) {
-                  hideExtraItems()
-                } else {
-                  showAllItems()
-                }
-              }}
-              className="flex items-center justify-center gap-2 text-primary font-medium py-2 px-4 border border-primary/30 rounded-xl hover:bg-primary/10 transition-colors text-sm"
-            >
-              <span>{visibleItems === combinedNavData.length ? 'Скрыть' : 'Показать еще'}</span>
-              <Icon
-                icon={visibleItems === combinedNavData.length ? "solar:alt-arrow-up-bold" : "solar:alt-arrow-down-bold"}
-                width={16}
-              />
-            </button>
-          )}
-
-          {visibleItems === combinedNavData.length && hiddenNavData.map((item, index) => (
-            <div key={`hidden-${index}`} onClick={() => setNavbarOpen(false)}>
               <MobileHeaderLink item={item} />
             </div>
           ))}

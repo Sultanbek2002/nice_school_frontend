@@ -74,7 +74,7 @@ export default async function RootLayout({
           <main className="pt-20">
             {children}
           </main>
-          <Footer data={schoolInfo} />
+          <Footer data={schoolInfo} navLinks={navLinks} />
         </div>
       </body>
     </html>

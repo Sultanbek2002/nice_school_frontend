@@ -44,7 +44,7 @@ const BestStudents: React.FC<BestStudentsProps> = ({ data }) => {
                 <div className="relative w-32 h-32 md:w-36 md:h-36 mx-auto rounded-full overflow-hidden border-4 border-gray-50 group-hover:border-primary/20 transition-all duration-500 shadow-inner">
                   <Image
                     src={item.photo || '/images/mentor/placeholder.webp'}
-                    alt={item.fullName}
+                    alt={item.fullName || 'Ученик'}
                     fill
                     className='object-cover transition-transform duration-700 group-hover:scale-110'
                   />
