@@ -23,7 +23,7 @@
 // Типизация данных
 // Server-side: direct HTTP (no mixed-content issue, server-to-server)
 // Client-side: relative /go-backend proxy → Next.js rewrites to HTTP backend
-const BACKEND_DIRECT = process.env.BACKEND_URL || 'http://localhost:8080'
+const BACKEND_DIRECT = process.env.BACKEND_URL || 'http://172.20.10.2:8080'
 export const GO_API_URL = typeof window === 'undefined' ? BACKEND_DIRECT : '/go-backend'
 
 // GameQuiz WebSocket connections go straight to the Go backend rather than through

@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async rewrites() {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
+    const backendUrl = process.env.BACKEND_URL || 'http://172.20.10.2:8080'
     return [
       {
         source: '/go-backend/:path*',

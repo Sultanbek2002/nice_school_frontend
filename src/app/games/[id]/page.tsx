@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import GamePlayer from "./GamePlayer";
-import { GO_API_URL } from "@/utils/apiData";
+import { GO_API_URL, fixImageUrl } from "@/utils/apiData";
 import { RelatedGameCard, RelatedSectionBlock } from "@/app/components/RelatedSection";
 
 interface Game {
@@ -54,7 +54,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ id:
     );
   }
 
-  const gameUrl = game.game_type === "External" ? game.external_url : game.file_url;
+  const gameUrl = game.game_type === "External" ? game.external_url : fixImageUrl(game.file_url, '');
 
   return (
     <main className="min-h-screen pt-24 pb-16">
@@ -110,7 +110,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ id:
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Разработчик</p>
               <div className="flex items-center gap-3">
                 {game.developer_avatar ? (
-                  <img src={game.developer_avatar} alt={game.developer_name} className="w-12 h-12 rounded-full object-cover border" />
+                  <img src={fixImageUrl(game.developer_avatar, '')} alt={game.developer_name} className="w-12 h-12 rounded-full object-cover border" />
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center flex-shrink-0">
                     <span className="text-white font-bold text-lg">

@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { GO_API_URL } from "@/utils/apiData";
+import { GO_API_URL, fixImageUrl } from "@/utils/apiData";
 
 interface Game {
   ID: number;
@@ -42,7 +42,7 @@ function GameCard({ game, href }: { game: any; href: string }) {
       {/* Thumbnail */}
       <div className="relative h-52 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
         {game.thumbnail ? (
-          <img src={game.thumbnail} alt={game.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <img src={fixImageUrl(game.thumbnail, '')} alt={game.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-7xl opacity-30">🎮</div>
@@ -57,7 +57,7 @@ function GameCard({ game, href }: { game: any; href: string }) {
         {/* Developer avatar */}
         {game.developer_avatar ? (
           <img
-            src={game.developer_avatar}
+            src={fixImageUrl(game.developer_avatar, '')}
             alt={game.developer_name}
             className="absolute bottom-3 right-3 w-10 h-10 rounded-full border-2 border-white shadow-lg object-cover"
           />
