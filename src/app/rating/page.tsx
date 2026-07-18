@@ -31,7 +31,8 @@ interface Particle {
 
 interface CanvasHandle { burst(x: number, y: number, color?: string, count?: number): void; rain(count?: number): void }
 
-const CanvasEffects = forwardRef<CanvasHandle, Record<string, never>>((_, ref) => {
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+const CanvasEffects = forwardRef<CanvasHandle, {}>((_, ref) => {
   const cvs = useRef<HTMLCanvasElement>(null)
   const pool = useRef<Particle[]>([])
 
