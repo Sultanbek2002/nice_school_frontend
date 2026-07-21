@@ -10,6 +10,7 @@ import { HeaderType } from '@/app/types/menu'
 import Signin from '../../Auth/SignIn/Signin'
 import Cookies from 'js-cookie'
 import { useRouter } from 'next/navigation'
+import { useNotifications } from '@/hooks/useNotifications'
 
 interface HeaderProps {
   navData: HeaderType[];
@@ -48,10 +49,12 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
   const whatsappLink = contactData?.whatsapp ? `https://wa.me/${contactData.whatsapp.replace(/\D/g, '')}` : '#'
 
   const fixedMenus: HeaderType[] = [
+    { label: "О школе", href: "/about", submenu: [{ label: "О нас", href: "/about" }] },
     { label: "Рейтинг", href: "/rating" },
     { label: "Олимпиада", href: "/olympiads" },
     { label: "Ресурсы", href: "/resources" },
     { label: "Игры", href: "/games" },
+    { label: "Live Test", href: "/test" },
     { label: "Тур по школе", href: "/school-tour" },
     { label: "Управление", href: "/management" },
 
@@ -66,6 +69,9 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
   const hasMoreItems = hiddenNavData.length > 0
 
   const [userInitial, setUserInitial] = useState<string | null>(null)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const notifRef = useRef<HTMLDivElement>(null)
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications()
 
   useEffect(() => {
     const token = Cookies.get('auth_token')
@@ -106,13 +112,46 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
     return () => ro.disconnect()
   }, [combinedNavData.length])
 
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
   const handleAccountClick = () => {
     const token = Cookies.get('auth_token')
     if (token) {
-      router.push('/student')
+      if (notifications.length === 0) {
+        router.push('/student')
+      } else {
+        setNotifOpen(v => !v)
+      }
     } else {
       setIsLoginModalOpen(true)
     }
+  }
+
+  const notifIcon: Record<string, string> = {
+    application_approved: 'solar:check-circle-bold-duotone',
+    application_rejected: 'solar:close-circle-bold-duotone',
+    result_published:     'solar:cup-star-bold-duotone',
+  }
+  const notifColor: Record<string, string> = {
+    application_approved: 'text-emerald-500',
+    application_rejected: 'text-red-400',
+    result_published:     'text-amber-500',
+  }
+
+  function timeAgo(iso: string) {
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000
+    if (diff < 60) return 'Азыр'
+    if (diff < 3600) return `${Math.floor(diff / 60)} мин.`
+    if (diff < 86400) return `${Math.floor(diff / 3600)} саат`
+    return `${Math.floor(diff / 86400)} күн`
   }
 
   return (
@@ -182,17 +221,83 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
                 <Icon icon={navbarOpen ? "solar:close-circle-bold" : "solar:hamburger-menu-broken"} width={34} />
               </button>
 
-              <button
-                onClick={handleAccountClick}
-                className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20"
-                aria-label={userInitial ? 'Личный кабинет' : 'Войти'}
-              >
-                {userInitial ? (
-                  <span className="text-primary font-black text-base leading-none">{userInitial}</span>
-                ) : (
-                  <Icon icon="material-symbols:account-circle-outline" width={26} className="text-primary" />
+              <div className="relative" ref={notifRef}>
+                <button
+                  onClick={handleAccountClick}
+                  className="relative flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20"
+                  aria-label={userInitial ? 'Уведомления' : 'Войти'}
+                >
+                  {userInitial ? (
+                    <span className="text-primary font-black text-base leading-none">{userInitial}</span>
+                  ) : (
+                    <Icon icon="material-symbols:account-circle-outline" width={26} className="text-primary" />
+                  )}
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center leading-none shadow-md">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification dropdown */}
+                {notifOpen && userInitial && (
+                  <div className="absolute right-0 top-12 w-80 rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-200" style={{background:'rgba(255,255,255,0.97)',backdropFilter:'blur(20px)'}}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
+                      <span className="font-black text-sm text-midnight_text">Уведомления</span>
+                      <div className="flex items-center gap-2">
+                        {unreadCount > 0 && (
+                          <button onClick={markAllRead} className="text-[11px] font-bold text-primary hover:underline">
+                            Баарын окуу
+                          </button>
+                        )}
+                        <button
+                          onClick={() => { setNotifOpen(false); router.push('/student') }}
+                          className="text-[12px] font-black text-primary hover:underline transition-colors"
+                        >
+                          Кабинет →
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* List */}
+                    <div className="max-h-80 overflow-y-auto divide-y divide-black/5">
+                      {notifications.length === 0 ? (
+                        <div className="py-10 text-center">
+                          <Icon icon="solar:bell-off-bold-duotone" width={32} className="text-gray-300 mx-auto mb-2" />
+                          <p className="text-xs text-gray-400 font-semibold">Уведомлений нет</p>
+                        </div>
+                      ) : notifications.map(n => (
+                        <button
+                          key={n.ID}
+                          onClick={() => {
+                            markRead(n.ID)
+                            setNotifOpen(false)
+                            if (n.link) router.push(n.link)
+                          }}
+                          className={`w-full text-left flex items-start gap-3 px-4 py-3 transition-colors hover:bg-primary/5 ${!n.is_read ? 'bg-primary/[0.04]' : ''}`}
+                        >
+                          <div className={`flex-shrink-0 mt-0.5 ${notifColor[n.type] ?? 'text-primary'}`}>
+                            <Icon icon={notifIcon[n.type] ?? 'solar:bell-bold-duotone'} width={20} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-xs font-black text-gray-900 leading-snug">
+                                {n.title}
+                              </p>
+                              {!n.is_read && (
+                                <span className="flex-shrink-0 w-2 h-2 rounded-full bg-red-500 mt-0.5" />
+                              )}
+                            </div>
+                            <p className="text-[11px] text-gray-600 font-semibold leading-snug mt-0.5 line-clamp-2">{n.body}</p>
+                            <p className="text-[10px] text-gray-400 font-medium mt-1">{timeAgo(n.CreatedAt)}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </button>
+              </div>
             </div>
           </div>
 

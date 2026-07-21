@@ -26,11 +26,14 @@
 const BACKEND_DIRECT = process.env.BACKEND_URL || 'http://172.20.10.2:8080'
 export const GO_API_URL = typeof window === 'undefined' ? BACKEND_DIRECT : '/go-backend'
 
-// GameQuiz WebSocket connections go straight to the Go backend rather than through
-// the /go-backend Next.js rewrite, which is HTTP-oriented and not guaranteed to
-// proxy the WS upgrade handshake in every hosting setup. Override with
-// NEXT_PUBLIC_GAME_WS_URL in production.
-export const GAME_WS_URL = process.env.NEXT_PUBLIC_GAME_WS_URL || BACKEND_DIRECT.replace(/^http/, 'ws')
+// WebSocket goes through the same /go-backend rewrite as HTTP.
+// On the client we derive ws(s):// from window.location so the proxy handles the upgrade.
+// Override with NEXT_PUBLIC_GAME_WS_URL in production if needed.
+export const GAME_WS_URL =
+  process.env.NEXT_PUBLIC_GAME_WS_URL ||
+  (typeof window !== 'undefined'
+    ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/go-backend`
+    : BACKEND_DIRECT.replace(/^http/, 'ws'))
 
 // Normalizes any stored backend image URL (old IPs, localhost) to the current backend URL
 export function fixImageUrl(url: string, fallback = '/images/courses/placeholder.png'): string {
