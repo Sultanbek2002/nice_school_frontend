@@ -72,6 +72,9 @@ export default function MonitorPage() {
             setStatus("finished");
             if (timerRef.current) clearInterval(timerRef.current);
             break;
+          case "cancelled":
+            router.push("/test");
+            break;
         }
       } catch {}
     };

@@ -41,6 +41,7 @@ export default function PlayPage() {
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
   const [textAnswer, setTextAnswer] = useState("");
   const [ack, setAck] = useState<AnswerAck | null>(null);
+  const [questionEnded, setQuestionEnded] = useState<string | null>(null); // correct_answer JSON
   const [score, setScore] = useState(0);
   const [myUserID, setMyUserID] = useState(0);
   const [displayName, setDisplayName] = useState("");
@@ -88,8 +89,13 @@ export default function PlayPage() {
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data);
-        if (msg.type === "question") applyQuestion(msg.data as QMessage);
-        else if (msg.type === "answer_ack") {
+        if (msg.type === "question") {
+          setQuestionEnded(null);
+          applyQuestion(msg.data as QMessage);
+        } else if (msg.type === "question_ended") {
+          setQuestionEnded(msg.data.correct_answer);
+          if (!answered) setAnswered(true);
+        } else if (msg.type === "answer_ack") {
           const a = msg.data as AnswerAck;
           setAck(a);
           setScore((prev) => prev + a.points_awarded);
@@ -111,6 +117,7 @@ export default function PlayPage() {
     setSelectedMulti([]);
     setTextAnswer("");
     setAck(null);
+    setQuestionEnded(null);
     if (timerRef.current) clearInterval(timerRef.current);
     const tick = () => {
       const left = Math.max(0, q.ends_at - Date.now() / 1000);
@@ -123,6 +130,10 @@ export default function PlayPage() {
 
   const parseOptions = (s: string): string[] => {
     try { return JSON.parse(s); } catch { return []; }
+  };
+
+  const parseCorrect = (s: string): string[] => {
+    try { return JSON.parse(s); } catch { return [s]; }
   };
 
   const submitAnswer = (answer: string) => {
@@ -147,6 +158,8 @@ export default function PlayPage() {
 
   const opts = parseOptions(current.question.options);
   const timerPercent = (timeLeft / current.question.time_limit) * 100;
+  const correctList = ack ? parseCorrect(ack.correct_answer) : questionEnded ? parseCorrect(questionEnded) : [];
+  const showCorrect = (ack !== null || questionEnded !== null);
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-gradient-to-br from-indigo-900 via-purple-900 to-primary">
@@ -180,53 +193,85 @@ export default function PlayPage() {
         </div>
       </div>
 
-      {/* Answer ack */}
-      {ack && (
-        <div className={`mx-3 mb-2 rounded-2xl p-3 text-center font-bold ${ack.is_correct ? "bg-green-500/80" : "bg-red-500/80"} text-white`}>
-          {ack.is_correct ? `✅ Туура! +${ack.points_awarded} упай` : "❌ Туура эмес"}
+      {/* Answer result overlay */}
+      {showCorrect && (
+        <div className={`mx-3 mb-2 rounded-2xl p-3 text-center ${ack ? (ack.is_correct ? "bg-green-500/80" : "bg-red-500/80") : "bg-orange-500/80"} text-white`}>
+          {ack ? (
+            <>
+              <div className="text-base font-bold">{ack.is_correct ? `✅ Туура! +${ack.points_awarded} упай` : "❌ Туура эмес"}</div>
+              {!ack.is_correct && correctList.length > 0 && (
+                <div className="mt-1 text-sm opacity-90">Туура жооп: <span className="font-bold">{correctList.join(", ")}</span></div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="text-base font-bold">⏰ Убакыт бүттү</div>
+              {correctList.length > 0 && (
+                <div className="mt-1 text-sm opacity-90">Туура жооп: <span className="font-bold">{correctList.join(", ")}</span></div>
+              )}
+            </>
+          )}
         </div>
       )}
 
-      {/* Options — grows to fill remaining space */}
+      {/* Options */}
       <div className="flex flex-1 flex-col px-3 pb-4">
         {current.question.type === "single" && (
           <div className="grid flex-1 grid-cols-2 gap-2 sm:gap-3">
-            {opts.map((opt, i) => (
-              <button
-                key={i}
-                disabled={answered}
-                onClick={() => { setSelected(opt); submitAnswer(opt); }}
-                className="flex min-h-[70px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95 sm:min-h-[80px]"
-                style={{
-                  background: OPTION_COLORS[i % 4] + (selected === opt ? "cc" : "44"),
-                  borderColor: OPTION_COLORS[i % 4] + (selected === opt ? "ff" : "66"),
-                }}
-              >
-                <span className="mr-2 font-mono font-black text-xs opacity-70">{OPTION_LABELS[i]})</span>
-                <span className="text-sm leading-tight">{opt}</span>
-              </button>
-            ))}
+            {opts.map((opt, i) => {
+              const isCorrectOpt = showCorrect && correctList.includes(opt);
+              const isSelected = selected === opt;
+              return (
+                <button
+                  key={i}
+                  disabled={answered}
+                  onClick={() => { setSelected(opt); submitAnswer(opt); }}
+                  className="flex min-h-[70px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95 sm:min-h-[80px]"
+                  style={{
+                    background: isCorrectOpt
+                      ? "#22c55e99"
+                      : OPTION_COLORS[i % 4] + (isSelected ? "cc" : "44"),
+                    borderColor: isCorrectOpt
+                      ? "#22c55e"
+                      : OPTION_COLORS[i % 4] + (isSelected ? "ff" : "66"),
+                  }}
+                >
+                  <span className="mr-2 font-mono font-black text-xs opacity-70">{OPTION_LABELS[i]})</span>
+                  <span className="text-sm leading-tight">{opt}</span>
+                  {isCorrectOpt && <span className="ml-auto">✅</span>}
+                </button>
+              );
+            })}
           </div>
         )}
 
         {current.question.type === "multiple" && (
           <div className="flex flex-1 flex-col">
             <div className="grid flex-1 grid-cols-2 gap-2 mb-3">
-              {opts.map((opt, i) => (
-                <button
-                  key={i}
-                  disabled={answered}
-                  onClick={() => toggleMulti(opt)}
-                  className="flex min-h-[70px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95"
-                  style={{
-                    background: OPTION_COLORS[i % 4] + (selectedMulti.includes(opt) ? "cc" : "44"),
-                    borderColor: OPTION_COLORS[i % 4] + (selectedMulti.includes(opt) ? "ff" : "66"),
-                  }}
-                >
-                  <span className="mr-2 text-sm">{selectedMulti.includes(opt) ? "✓" : OPTION_LABELS[i] + ")"}</span>
-                  <span className="text-sm leading-tight">{opt}</span>
-                </button>
-              ))}
+              {opts.map((opt, i) => {
+                const isCorrectOpt = showCorrect && correctList.includes(opt);
+                const isSelected = selectedMulti.includes(opt);
+                return (
+                  <button
+                    key={i}
+                    disabled={answered}
+                    onClick={() => toggleMulti(opt)}
+                    className="flex min-h-[70px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95"
+                    style={{
+                      background: isCorrectOpt
+                        ? "#22c55e99"
+                        : OPTION_COLORS[i % 4] + (isSelected ? "cc" : "44"),
+                      borderColor: isCorrectOpt
+                        ? "#22c55e"
+                        : OPTION_COLORS[i % 4] + (isSelected ? "ff" : "66"),
+                    }}
+                  >
+                    <span className="mr-2 text-sm">{isSelected ? "✓" : OPTION_LABELS[i] + ")"}</span>
+                    <span className="text-sm leading-tight">{opt}</span>
+                    {isCorrectOpt && <span className="ml-auto">✅</span>}
+                  </button>
+                );
+              })}
             </div>
             <button
               disabled={answered || selectedMulti.length === 0}
@@ -240,21 +285,29 @@ export default function PlayPage() {
 
         {current.question.type === "true_false" && (
           <div className="grid flex-1 grid-cols-2 gap-3">
-            {["Туура", "Жалган"].map((v, i) => (
-              <button
-                key={v}
-                disabled={answered}
-                onClick={() => { setSelected(v); submitAnswer(v); }}
-                className="flex min-h-[100px] flex-col items-center justify-center rounded-2xl border-2 font-extrabold text-white transition-all active:scale-95 sm:min-h-[120px]"
-                style={{
-                  background: OPTION_COLORS[i] + (selected === v ? "cc" : "44"),
-                  borderColor: OPTION_COLORS[i] + (selected === v ? "ff" : "66"),
-                }}
-              >
-                <span className="mb-1 text-3xl">{v === "Туура" ? "✅" : "❌"}</span>
-                <span className="text-base">{v}</span>
-              </button>
-            ))}
+            {["Туура", "Жалган"].map((v, i) => {
+              const isCorrectOpt = showCorrect && correctList.includes(v);
+              const isSelected = selected === v;
+              return (
+                <button
+                  key={v}
+                  disabled={answered}
+                  onClick={() => { setSelected(v); submitAnswer(v); }}
+                  className="flex min-h-[100px] flex-col items-center justify-center rounded-2xl border-2 font-extrabold text-white transition-all active:scale-95 sm:min-h-[120px]"
+                  style={{
+                    background: isCorrectOpt
+                      ? "#22c55e99"
+                      : OPTION_COLORS[i] + (isSelected ? "cc" : "44"),
+                    borderColor: isCorrectOpt
+                      ? "#22c55e"
+                      : OPTION_COLORS[i] + (isSelected ? "ff" : "66"),
+                  }}
+                >
+                  <span className="mb-1 text-3xl">{v === "Туура" ? "✅" : "❌"}</span>
+                  <span className="text-base">{v}</span>
+                </button>
+              );
+            })}
           </div>
         )}
 
