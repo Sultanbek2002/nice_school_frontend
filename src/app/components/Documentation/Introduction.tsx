@@ -3,9 +3,10 @@ import Image from "next/image";
 import nextImg from "/public/images/documentation/Categories=Nextjs.svg";
 import reactImg from "/public/images/documentation/Categories=React.svg";
 import tailwindImg from "/public/images/documentation/Categories=Tailwind.svg";
-import nextauthImg from "/public/images/documentation/nextauth.png";
 import typescriptImg from "/public/images/documentation/Categories=Typescript.svg";
 import axiosImg from "/public/images/documentation/axios.svg";
+
+const nextauthImg = "/images/documentation/nextauth.png";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { useState } from "react";
 import { DocNavigation } from "./DocNavigation";
@@ -75,6 +76,8 @@ export const Introduction = () => {
                   <Image
                     src={item.img}
                     alt="npm-package"
+                    width={40}
+                    height={40}
                     className=" mx-auto w-10 h-10 "
                   />
                   <h5 className="text-2xl font-bold mt-3.5 text-black">{`v${item.version}`}</h5>
