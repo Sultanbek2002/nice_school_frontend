@@ -45,7 +45,7 @@ function StatCard({ value, label }: { value: string; label: string }) {
   )
 }
 
-function FeatureCard({ icon: Icon, title, desc }: { icon: React.ElementType; title: string; desc: string }) {
+function FeatureCard({ icon: Icon, title, desc }: { icon: React.ElementType<{ className?: string }>; title: string; desc: string }) {
   return (
     <div className="rounded-3xl bg-white p-6 shadow-md border border-slate-100 hover:-translate-y-1 transition-transform">
       <div className="h-12 w-12 rounded-2xl bg-slate-gray flex items-center justify-center">
