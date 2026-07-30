@@ -1,28 +1,70 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Icon } from '@iconify/react'
 
 interface CoursesProps {
     data?: any;
+    title?: string;
 }
 
-const CourseComponent: React.FC<CoursesProps> = ({ data }) => {
-    // 1. Проверяем данные
+const CourseComponent: React.FC<CoursesProps> = ({ data, title }) => {
     const courses = Array.isArray(data) ? data : [];
+    const [search, setSearch] = useState('');
 
     if (courses.length === 0) return null;
+
+    const q = search.trim().toLowerCase();
+    const filtered = q
+        ? courses.filter((c: any) =>
+            (c.title || '').toLowerCase().includes(q) ||
+            (c.description || '').toLowerCase().includes(q) ||
+            (c.skills || '').toLowerCase().includes(q)
+          )
+        : courses;
 
     return (
         <section id='courses' className='scroll-mt-12 py-16 bg-transparent'>
             <div className='container mx-auto px-4'>
-                {/* Заголовок секции (можно вернуть, если нужно) */}
+                {/* Header row: title + search */}
+                <div className='flex flex-col sm:flex-row sm:items-center gap-4 mb-8'>
+                    {title && (
+                        <h2 className='text-2xl md:text-3xl lg:text-4xl font-bold text-midnight_text shrink-0'>
+                            {title}
+                        </h2>
+                    )}
+                    <div className={`relative ${title ? 'sm:ml-auto sm:w-72' : 'max-w-sm'} w-full`}>
+                        <div className='absolute inset-y-0 left-4 flex items-center pointer-events-none'>
+                            <Icon icon='solar:magnifer-bold' className='text-gray-400' width={16} />
+                        </div>
+                        <input
+                            type='text'
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder='Поиск по названию или навыкам...'
+                            className='w-full pl-10 pr-9 py-2.5 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-gray-300 shadow-sm'
+                        />
+                        {search && (
+                            <button
+                                onClick={() => setSearch('')}
+                                className='absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors'
+                            >
+                                <Icon icon='solar:close-circle-bold' width={16} />
+                            </button>
+                        )}
+                    </div>
+                </div>
 
-                {/* СЕТКА КУРСОВ */}
+                {filtered.length === 0 ? (
+                    <div className='text-center py-14'>
+                        <div className='text-5xl mb-3'>🔍</div>
+                        <p className='text-gray-400 font-bold'>Ничего не найдено по запросу «{search}»</p>
+                    </div>
+                ) : (
                 <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'>
-                    {courses.map((item: any, i: number) => {
+                    {filtered.map((item: any, i: number) => {
                         // 2. Генерируем slug внутри map для каждого курса отдельно
                         const courseSlug = encodeURIComponent(
                             item.title.toLowerCase().trim().replace(/\s+/g, '-')
@@ -98,6 +140,7 @@ const CourseComponent: React.FC<CoursesProps> = ({ data }) => {
                         );
                     })}
                 </div>
+                )}
             </div>
         </section>
     );

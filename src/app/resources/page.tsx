@@ -63,6 +63,7 @@ export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSubject, setActiveSubject] = useState("Все");
+  const [search, setSearch] = useState("");
   const [slideOpen, setSlideOpen] = useState<Resource | null>(null);
   const [boardOpen, setBoardOpen] = useState(false);
   const [tool, setTool] = useState<BoardTool>("pen");
@@ -433,21 +434,46 @@ export default function ResourcesPage() {
           </div>
         </div>
 
-        {/* Subject filter chips */}
-        <div className="flex gap-2 flex-wrap justify-center mb-10">
-          {SUBJECTS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setActiveSubject(s)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
-                activeSubject === s
-                  ? "bg-violet-600 text-white shadow-lg shadow-violet-300"
-                  : "bg-white/80 text-slate-600 hover:bg-white hover:shadow-md border border-white/60"
-              }`}
-            >
-              {s}
-            </button>
-          ))}
+        {/* Search + Subject filter */}
+        <div className="flex flex-col gap-4 mb-10">
+          {/* Search input */}
+          <div className="relative max-w-md mx-auto w-full">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <Icon icon="solar:magnifer-bold" className="text-slate-400" width={18} />
+            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Поиск по названию, предмету или категории..."
+              className="w-full pl-11 pr-10 py-3 rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300 shadow-sm"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <Icon icon="solar:close-circle-bold" width={18} />
+              </button>
+            )}
+          </div>
+
+          {/* Subject filter chips */}
+          <div className="flex gap-2 flex-wrap justify-center">
+            {SUBJECTS.map((s) => (
+              <button
+                key={s}
+                onClick={() => setActiveSubject(s)}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                  activeSubject === s
+                    ? "bg-violet-600 text-white shadow-lg shadow-violet-300"
+                    : "bg-white/80 text-slate-600 hover:bg-white hover:shadow-md border border-white/60"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Content */}
@@ -459,21 +485,30 @@ export default function ResourcesPage() {
               className="text-violet-500"
             />
           </div>
-        ) : resources.length === 0 ? (
-          <div className="text-center py-20">
-            <Icon
-              icon="solar:file-search-bold-duotone"
-              width={56}
-              className="text-slate-300 mx-auto mb-4"
-            />
-            <p className="text-slate-400 text-lg font-medium">Ресурсы не найдены</p>
-            <p className="text-slate-300 text-sm mt-1">
-              Выберите другой предмет
-            </p>
-          </div>
         ) : (
+          (() => {
+            const q = search.trim().toLowerCase();
+            const filtered = q
+              ? resources.filter(r =>
+                  r.title.toLowerCase().includes(q) ||
+                  r.subject.toLowerCase().includes(q) ||
+                  r.category.toLowerCase().includes(q) ||
+                  r.description.toLowerCase().includes(q)
+                )
+              : resources;
+            return filtered.length === 0 ? (
+              <div className="text-center py-20">
+                <Icon icon="solar:file-search-bold-duotone" width={56} className="text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-400 text-lg font-medium">
+                  {search ? `Ничего не найдено по запросу «${search}»` : "Ресурсы не найдены"}
+                </p>
+                <p className="text-slate-300 text-sm mt-1">
+                  {search ? "Попробуйте другой запрос или выберите другой предмет" : "Выберите другой предмет"}
+                </p>
+              </div>
+            ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {resources.map((r) => {
+            {filtered.map((r) => {
               const grad =
                 SUBJECT_COLORS[r.subject] || "from-violet-500 to-purple-600";
               const icon =
@@ -555,6 +590,8 @@ export default function ResourcesPage() {
               );
             })}
           </div>
+            );
+          })()
         )}
       </div>
 

@@ -49,24 +49,42 @@ export default async function DynamicPage({ params }: { params: Promise<{ slug: 
         <div className="w-20 h-1 bg-primary mt-2 rounded-full mb-10"></div>
       
         {/* Рендерим блоки */}
-        <div className="flex flex-col gap-y-16"> 
-          {currentPage.blocks
-            ?.sort((a: any, b: any) => a.position - b.position) // Сортируем блоки по позиции
-            .map((block: any) => {
+        <div className="flex flex-col gap-y-16">
+          {(() => {
+            const sorted = [...(currentPage.blocks || [])].sort((a: any, b: any) => a.position - b.position);
+            const skip = new Set<number>();
+            const titleFor: Record<number, string> = {};
+
+            // Если subtitle идёт прямо перед teachers_grid или best_students — объединяем
+            const ABSORB_TYPES = new Set(['teachers_grid', 'best_students', 'courses_grid']);
+            sorted.forEach((block: any, idx: number) => {
+              if (block.type === 'subtitle' && idx + 1 < sorted.length) {
+                const next = sorted[idx + 1];
+                if (ABSORB_TYPES.has(next.type)) {
+                  skip.add(block.ID);
+                  try {
+                    titleFor[next.ID] = JSON.parse(block.content || '""').replace(/^"|"$/g, '');
+                  } catch {
+                    titleFor[next.ID] = (block.content || '').replace(/^"|"$/g, '');
+                  }
+                }
+              }
+            });
+
+            return sorted.map((block: any) => {
+              if (skip.has(block.ID)) return null;
               const Component = COMPONENTS_MAP[block.type];
               if (!Component) return null;
-
               let blockData: any;
               try {
-                // Пытаемся распарсить JSON
                 blockData = JSON.parse(block.content || "{}");
-              } catch (e) {
-                // Если это не JSON (например, строка в subtitle), берем как есть
+              } catch {
                 blockData = block.content;
               }
-
-              return <Component key={block.ID} data={blockData} />;
-          })}
+              const extraProps = titleFor[block.ID] ? { title: titleFor[block.ID] } : {};
+              return <Component key={block.ID} data={blockData} {...extraProps} />;
+            });
+          })()}
         </div>
       </div>
     </main>

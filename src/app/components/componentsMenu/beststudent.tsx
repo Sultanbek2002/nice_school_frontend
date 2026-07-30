@@ -1,23 +1,70 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
 import { Icon } from '@iconify/react'
 
 interface BestStudentsProps {
   data?: any;
+  title?: string;
 }
 
-const BestStudents: React.FC<BestStudentsProps> = ({ data }) => {
+const BestStudents: React.FC<BestStudentsProps> = ({ data, title }) => {
   const students = Array.isArray(data) ? data : [];
+  const [search, setSearch] = useState('');
 
   if (students.length === 0) return null;
+
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? students.filter((s: any) =>
+        (s.fullName || '').toLowerCase().includes(q) ||
+        (s.subject || '').toLowerCase().includes(q) ||
+        String(s.grade || '').toLowerCase().includes(q) ||
+        (s.olympiad || '').toLowerCase().includes(q)
+      )
+    : students;
 
   return (
     <section className='py-12 bg-transparent' id='best-students'>
       <div className='container mx-auto px-4'>
+        {/* Header row: title + search */}
+        <div className='flex flex-col sm:flex-row sm:items-center gap-4 mb-8'>
+          {title && (
+            <h2 className='text-2xl md:text-3xl lg:text-4xl font-bold text-midnight_text shrink-0'>
+              {title}
+            </h2>
+          )}
+          <div className={`relative ${title ? 'sm:ml-auto sm:w-72' : 'max-w-sm'} w-full`}>
+          <div className='absolute inset-y-0 left-4 flex items-center pointer-events-none'>
+            <Icon icon='solar:magnifer-bold' className='text-gray-400' width={16} />
+          </div>
+          <input
+            type='text'
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder='Поиск по имени, предмету или классу...'
+            className='w-full pl-10 pr-9 py-2.5 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-gray-300 shadow-sm'
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className='absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors'
+            >
+              <Icon icon='solar:close-circle-bold' width={16} />
+            </button>
+          )}
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className='text-center py-14'>
+            <div className='text-5xl mb-3'>🔍</div>
+            <p className='text-gray-400 font-bold'>Ничего не найдено по запросу «{search}»</p>
+          </div>
+        ) : (
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8'>
-          {students.map((item: any, i: number) => (
+          {filtered.map((item: any, i: number) => (
             <div 
               key={i} 
               className='group relative p-6 pt-10 text-center rounded-[2.5rem] bg-white border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-500'
@@ -89,6 +136,7 @@ const BestStudents: React.FC<BestStudentsProps> = ({ data }) => {
             </div>
           ))}
         </div>
+        )}
       </div>
     </section>
   )

@@ -66,9 +66,7 @@ const HeaderLink: React.FC<{ item: HeaderType }> = ({ item }) => {
 
       {submenuOpen && (
         <div
-          className={`absolute py-2 left-0 mt-0.5 w-60 bg-white dark:bg-darklight dark:text-white shadow-lg rounded-lg `}
-          data-aos="fade-up"
-          data-aos-duration="500"
+          className="absolute py-2 left-0 mt-0.5 w-60 bg-white dark:bg-darklight shadow-lg rounded-lg z-50"
         >
             {item.submenu?.map((subItem, index) => {
               const isSubItemActive = path === subItem.href; // Check if the submenu item is active
@@ -78,7 +76,7 @@ const HeaderLink: React.FC<{ item: HeaderType }> = ({ item }) => {
                   href={subItem.href}
                   className={`block px-4 py-2 ${isSubItemActive
                       ? "bg-primary text-white"
-                      : "text-black dark:text-white hover:bg-primary"
+                      : "text-midnight_text dark:text-white hover:bg-primary hover:text-white"
                     }`}
                 >
                   {subItem.label}

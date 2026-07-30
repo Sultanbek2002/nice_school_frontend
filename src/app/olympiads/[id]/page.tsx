@@ -67,6 +67,8 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
     type ResultRow = { rank: number; fio: string; school: string; class_name: string; score: number; max_score: number; percentage: number; time_taken: number };
     const [results, setResults] = useState<ResultRow[]>([]);
     const [resultsLoading, setResultsLoading] = useState(false);
+    const [resultsSearch, setResultsSearch] = useState("");
+    const [myFio, setMyFio] = useState<string | null>(null);
     const [otherOlympiads, setOtherOlympiads] = useState<Olympiad[]>([]);
 
     const [modalView, setModalView] = useState<ModalView | null>(null);
@@ -132,6 +134,14 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                         .then(r => r.ok ? r.json() : null)
                         .then(res => { if (res?.results) setResults(res.results); })
                         .finally(() => setResultsLoading(false));
+                    const token = getToken();
+                    if (token) {
+                        fetch(`${GO_API_URL}/api/my-profile-data`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        }).then(r => r.ok ? r.json() : null)
+                          .then(profile => { if (profile?.fio) setMyFio(profile.fio); })
+                          .catch(() => {});
+                    }
                 }
             }
             if (Array.isArray(all)) {
@@ -807,50 +817,100 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
 
                                 {/* Full leaderboard table */}
                                 <div className="glass-card rounded-[2rem] overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-slate-200/60 flex items-center gap-2">
-                                        {mounted && <Icon icon="solar:list-bold-duotone" className="text-violet-500" width={20} />}
-                                        <h4 className="font-black text-slate-800 text-sm">Полный рейтинг</h4>
-                                        <span className="ml-auto text-xs text-slate-400 font-bold">{results.length} участников</span>
+                                    <div className="px-6 py-4 border-b border-slate-200/60 flex flex-col sm:flex-row sm:items-center gap-3">
+                                        <div className="flex items-center gap-2">
+                                            {mounted && <Icon icon="solar:list-bold-duotone" className="text-violet-500" width={20} />}
+                                            <h4 className="font-black text-slate-800 text-sm">Полный рейтинг</h4>
+                                            <span className="text-xs text-slate-400 font-bold">{results.length} участников</span>
+                                        </div>
+                                        <div className="sm:ml-auto relative">
+                                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                                {mounted && <Icon icon="solar:magnifer-bold" className="text-slate-400" width={16} />}
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={resultsSearch}
+                                                onChange={e => setResultsSearch(e.target.value)}
+                                                placeholder="Поиск по имени или школе..."
+                                                className="pl-9 pr-4 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-300 w-full sm:w-64"
+                                            />
+                                            {resultsSearch && (
+                                                <button
+                                                    onClick={() => setResultsSearch("")}
+                                                    className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                                                >
+                                                    <Icon icon="solar:close-circle-bold" width={16} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                <tr className="bg-slate-50/80 text-left">
-                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider w-12">#</th>
-                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider">Участник</th>
-                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider hidden sm:table-cell">Школа / Класс</th>
-                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right">Баллы</th>
-                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right">%</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100">
-                                                {results.map((r) => (
-                                                    <tr key={r.rank} className={`transition-colors hover:bg-violet-50/30 ${r.rank <= 3 ? "bg-amber-50/30" : ""}`}>
-                                                        <td className="px-4 py-3 font-black text-center">
-                                                            {r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : (
-                                                                <span className="text-slate-400 text-xs">{r.rank}</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <p className="font-black text-slate-800 text-sm">{r.fio}</p>
-                                                        </td>
-                                                        <td className="px-4 py-3 hidden sm:table-cell">
-                                                            <p className="text-xs text-slate-600 font-semibold">{r.school}</p>
-                                                            <p className="text-xs text-slate-400">{r.class_name}</p>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right">
-                                                            <span className="font-black text-slate-800">{r.score}</span>
-                                                            <span className="text-slate-400 text-xs">/{r.max_score}</span>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right">
-                                                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-black ${r.rank === 1 ? "bg-yellow-100 text-yellow-700" : r.rank === 2 ? "bg-slate-100 text-slate-600" : r.rank === 3 ? "bg-orange-100 text-orange-700" : "bg-violet-50 text-violet-600"}`}>
-                                                                {r.percentage}%
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                        {(() => {
+                                            const q = resultsSearch.trim().toLowerCase();
+                                            const filtered = q
+                                                ? results.filter(r =>
+                                                    r.fio.toLowerCase().includes(q) ||
+                                                    r.school.toLowerCase().includes(q) ||
+                                                    r.class_name.toLowerCase().includes(q)
+                                                )
+                                                : results;
+                                            return (
+                                                <>
+                                                    {filtered.length === 0 ? (
+                                                        <div className="py-10 text-center">
+                                                            <p className="text-slate-400 font-bold text-sm">Ничего не найдено по запросу «{resultsSearch}»</p>
+                                                        </div>
+                                                    ) : (
+                                                        <table className="w-full text-sm">
+                                                            <thead>
+                                                                <tr className="bg-slate-50/80 text-left">
+                                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider w-12">#</th>
+                                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider">Участник</th>
+                                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider hidden sm:table-cell">Школа / Класс</th>
+                                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right">Баллы</th>
+                                                                    <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right">%</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-slate-100">
+                                                                {filtered.map((r) => {
+                                                                    const isMe = !!myFio && r.fio === myFio;
+                                                                    return (
+                                                                    <tr key={r.rank} className={`transition-colors ${isMe ? "bg-violet-100/70 hover:bg-violet-100" : r.rank <= 3 ? "bg-amber-50/30 hover:bg-violet-50/30" : "hover:bg-violet-50/30"}`}>
+                                                                        <td className="px-4 py-3 font-black text-center">
+                                                                            {r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : (
+                                                                                <span className={`text-xs font-black ${isMe ? "text-violet-600" : "text-slate-400"}`}>{r.rank}</span>
+                                                                            )}
+                                                                        </td>
+                                                                        <td className="px-4 py-3">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <p className={`font-black text-sm ${isMe ? "text-violet-700" : "text-slate-800"}`}>{r.fio}</p>
+                                                                                {isMe && (
+                                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-violet-600 text-white leading-none">Это вы</span>
+                                                                                )}
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="px-4 py-3 hidden sm:table-cell">
+                                                                            <p className={`text-xs font-semibold ${isMe ? "text-violet-600" : "text-slate-600"}`}>{r.school}</p>
+                                                                            <p className={`text-xs ${isMe ? "text-violet-400" : "text-slate-400"}`}>{r.class_name}</p>
+                                                                        </td>
+                                                                        <td className="px-4 py-3 text-right">
+                                                                            <span className={`font-black ${isMe ? "text-violet-700" : "text-slate-800"}`}>{r.score}</span>
+                                                                            <span className="text-slate-400 text-xs">/{r.max_score}</span>
+                                                                        </td>
+                                                                        <td className="px-4 py-3 text-right">
+                                                                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-black ${isMe ? "bg-violet-600 text-white" : r.rank === 1 ? "bg-yellow-100 text-yellow-700" : r.rank === 2 ? "bg-slate-100 text-slate-600" : r.rank === 3 ? "bg-orange-100 text-orange-700" : "bg-violet-50 text-violet-600"}`}>
+                                                                                {r.percentage}%
+                                                                            </span>
+                                                                        </td>
+                                                                    </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             </>

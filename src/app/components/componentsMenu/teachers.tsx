@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, GraduationCap, Star } from 'lucide-react'
+import { ArrowRight, GraduationCap, Search, Star, X } from 'lucide-react'
 
 interface Teacher {
   fullName: string
@@ -16,6 +16,7 @@ interface Teacher {
 
 interface MentorProps {
   data?: Teacher[]
+  title?: string
 }
 
 function teacherSlug(name: string) {
@@ -215,21 +216,68 @@ function MentorCard({ teacher, index }: { teacher: Teacher; index: number }) {
 
 // ─── Section ──────────────────────────────────────────────────────────────────
 
-const Mentor: React.FC<MentorProps> = ({ data }) => {
+const Mentor: React.FC<MentorProps> = ({ data, title }) => {
   const mentors = Array.isArray(data) ? data : []
+  const [search, setSearch] = useState('')
+
   if (mentors.length === 0) return null
+
+  const q = search.trim().toLowerCase()
+  const filtered = q
+    ? mentors.filter(t =>
+        (t.fullName || '').toLowerCase().includes(q) ||
+        (t.subject || '').toLowerCase().includes(q) ||
+        String(t.experience || '').includes(q)
+      )
+    : mentors
 
   return (
     <section className="py-12 bg-transparent" id="mentor" style={{ overflow: 'visible' }}>
       <div className="container mx-auto px-4" style={{ overflow: 'visible' }}>
-        <div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
-          style={{ overflow: 'visible' }}
-        >
-          {mentors.map((item: Teacher, i: number) => (
-            <MentorCard key={item.fullName + i} teacher={item} index={i} />
-          ))}
+        {/* Header row: title + search */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+          {title && (
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-midnight_text shrink-0">
+              {title}
+            </h2>
+          )}
+          <div className="relative sm:ml-auto sm:w-72 w-full">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <Search className="w-4 h-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Поиск по имени или предмету..."
+              className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-gray-300 shadow-sm"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
+
+        {filtered.length === 0 ? (
+          <div className="text-center py-14">
+            <div className="text-5xl mb-3">🔍</div>
+            <p className="text-gray-400 font-bold">Ничего не найдено по запросу «{search}»</p>
+          </div>
+        ) : (
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+            style={{ overflow: 'visible' }}
+          >
+            {filtered.map((item: Teacher, i: number) => (
+              <MentorCard key={item.fullName + i} teacher={item} index={i} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )
