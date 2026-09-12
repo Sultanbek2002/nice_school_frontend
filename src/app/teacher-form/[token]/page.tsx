@@ -20,6 +20,51 @@ interface FormState {
 
 const EMPTY: FormState = { fullName: '', subject: '', experience: '', age: '', bio: '' }
 
+// Телефоны (особенно iPhone) часто сохраняют фото в HEIC — сервер такой формат не принимает.
+// Перекодируем в JPEG прямо в браузере (заодно уменьшаем размер под мобильный интернет).
+// Safari умеет декодировать HEIC в <img>/canvas нативно, поэтому конвертация работает и для него.
+// Если конвертация не удалась (например, файл — PDF) — просто отдаём файл как есть.
+async function toJpeg(file: File, maxDim = 1600, quality = 0.85): Promise<File> {
+  if (file.type === 'application/pdf') return file
+  try {
+    const bitmap = await createImageBitmap(file).catch(async () => {
+      const url = URL.createObjectURL(file)
+      try {
+        const img = new Image()
+        img.src = url
+        await new Promise((resolve, reject) => {
+          img.onload = resolve
+          img.onerror = reject
+        })
+        return img
+      } finally {
+        URL.revokeObjectURL(url)
+      }
+    })
+    const w = 'width' in bitmap ? bitmap.width : 0
+    const h = 'height' in bitmap ? bitmap.height : 0
+    if (!w || !h) return file
+
+    const scale = Math.min(1, maxDim / Math.max(w, h))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(w * scale)
+    canvas.height = Math.round(h * scale)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(bitmap as CanvasImageSource, 0, 0, canvas.width, canvas.height)
+
+    const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality))
+    if (!blob) return file
+
+    const newName = file.name.replace(/\.[^.]+$/, '') + '.jpg'
+    return new File([blob], newName, { type: 'image/jpeg' })
+  } catch {
+    // Не смогли декодировать (например, браузер не поддерживает HEIC) — пусть уходит как есть,
+    // сервер сам решит, принимать или отклонять по MIME.
+    return file
+  }
+}
+
 export default function TeacherFormPage() {
   const params = useParams<{ token: string }>()
   const token = params?.token as string
@@ -51,20 +96,23 @@ export default function TeacherFormPage() {
       })
   }, [token])
 
-  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawFile = e.target.files?.[0]
+    e.target.value = ''
+    if (!rawFile) return
+    const file = await toJpeg(rawFile)
     if (photoPreview) URL.revokeObjectURL(photoPreview)
     setPhoto(file)
     setPhotoPreview(URL.createObjectURL(file))
   }
 
-  const handleCertificates = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length) {
-      const withPreview = files.map((file) => ({ file, preview: URL.createObjectURL(file) }))
-      setCertificates((prev) => [...prev, ...withPreview])
-    }
+  const handleCertificates = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawFiles = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!rawFiles.length) return
+    const converted = await Promise.all(rawFiles.map((f) => toJpeg(f)))
+    const withPreview = converted.map((file) => ({ file, preview: URL.createObjectURL(file) }))
+    setCertificates((prev) => [...prev, ...withPreview])
   }
 
   const removeCertificate = (idx: number) => {
