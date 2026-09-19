@@ -75,29 +75,8 @@ const MentorData: MentorType[] = [
   },
 ]
 
-const TestimonialData: TestimonialType[] = [
-  {
-    name: 'Елена Ковалева',
-    profession: 'Мама ученика 5 класса',
-    comment: 'Прекрасная школа! Ребенок ходит на занятия с огромным удовольствием. Учителя находят подход к каждому, а робототехника стала нашим главным увлечением.',
-    imgSrc: '/images/testimonial/user1.webp',
-    rating: 5,
-  },
-  {
-    name: 'Айбек Султанов',
-    profession: 'Выпускник школы, студент ИТ-факультета',
-    comment: 'Благодаря сильной подготовке по информатике и математике я без проблем поступил на бюджет. Проекты на Arduino очень помогли понять базу.',
-    imgSrc: '/images/testimonial/user2.webp',
-    rating: 5,
-  },
-  {
-    name: 'Нургуль Асанова',
-    profession: 'Мама одиннадцатиклассника',
-    comment: 'Очень довольны качеством обучения и подготовкой к олимпиадам. Преподаватели искренне любят свое дело и поддерживают детей на каждом этапе!',
-    imgSrc: '/images/testimonial/user3.webp',
-    rating: 5,
-  },
-]
+// Раньше здесь был захардкоженный массив демо-отзывов — теперь реальные отзывы
+// заводятся через админку и приходят из бэкенда (см. getTestimonials ниже).
 const FooterLinkData: FooterLinkType[] = [
   {
     section: 'Sitemap',
@@ -112,42 +91,45 @@ const FooterLinkData: FooterLinkType[] = [
 
 // ГЛАВНОЕ ИЗМЕНЕНИЕ ЗДЕСЬ
 export const GET = async () => {
+  let HeaderData: HeaderType[] = [];
+  let TestimonialData: TestimonialType[] = [];
+
   try {
-    // Делаем запрос к твоему Go бэкенду
-    const response = await fetch(`${GO_API_URL}/api/menu`, {
-      cache: 'no-store' 
-    });
-
+    const response = await fetch(`${GO_API_URL}/api/menu`, { cache: 'no-store' });
     if (!response.ok) throw new Error('Бэкенд не отвечает');
-
     const goData = await response.json();
-    
 
     // Маппим данные из Go (Name, Link) в формат HeaderType (label, href)
-    const HeaderData: HeaderType[] = goData.map((item: any) => ({
+    HeaderData = goData.map((item: any) => ({
       label: item.name,
       href: item.link
     }));
-
-    return NextResponse.json({
-      HeaderData, // Эти данные теперь из базы через Go
-      TechGaintsData,
-      CourseData,
-      MentorData,
-      TestimonialData,
-      FooterLinkData,
-    })
   } catch (error) {
     console.error("Ошибка получения меню:", error);
-    
-    // Если бэкенд упал, возвращаем пустой массив для меню, чтобы сайт не сломался
-    return NextResponse.json({
-      HeaderData: [], 
-      TechGaintsData,
-      CourseData,
-      MentorData,
-      TestimonialData,
-      FooterLinkData,
-    })
+    // Если бэкенд упал, отдаём пустой массив, чтобы сайт не сломался
   }
+
+  try {
+    const res = await fetch(`${GO_API_URL}/api/testimonials`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Бэкенд не отвечает');
+    const data = await res.json();
+    TestimonialData = (Array.isArray(data) ? data : []).map((item: any) => ({
+      name: item.name,
+      profession: item.profession,
+      comment: item.comment,
+      imgSrc: item.photo || '/images/testimonial/user1.webp',
+      rating: item.rating,
+    }));
+  } catch (error) {
+    console.error("Ошибка получения отзывов:", error);
+  }
+
+  return NextResponse.json({
+    HeaderData,
+    TechGaintsData,
+    CourseData,
+    MentorData,
+    TestimonialData,
+    FooterLinkData,
+  })
 }
