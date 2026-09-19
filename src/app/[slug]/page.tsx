@@ -29,7 +29,9 @@ export default async function DynamicPage({ params }: { params: Promise<{ slug: 
   const currentPath = `/${slug}`;
   
   // 2. Ищем страницу внутри массива response.structure
-  const currentPage = response.structure.find(page => page.link === currentPath);
+  // .trim() — в БД встречаются меню с пробелами в конце link (опечатка при создании),
+  // из-за чего страница не находилась даже при видимо совпадающем URL
+  const currentPage = response.structure.find(page => page.link?.trim() === currentPath);
 
   if (!currentPage) {
     return (
