@@ -37,8 +37,8 @@ export default function SchoolMap() {
       <div className="container mx-auto px-4">
         {/* Section header */}
         <div className="mb-6">
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-800">Бизди табыңыз</h2>
-          <p className="text-slate-500 text-sm mt-1">Картага басыңыз — мектепке маршрут автоматтык түрдө ачылат</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-800">Найдите нас</h2>
+          <p className="text-slate-500 text-sm mt-1">Нажмите на карту — маршрут до школы откроется автоматически</p>
         </div>
 
         {/* Map card */}
@@ -46,14 +46,14 @@ export default function SchoolMap() {
           className="relative rounded-3xl overflow-hidden shadow-2xl cursor-pointer group"
           onClick={openDirections}
           role="button"
-          aria-label="Мектепке маршрут түзүү"
+          aria-label="Построить маршрут до школы"
         >
           {/* Map iframe — pointer-events-none so parent gets the click */}
           <iframe
             src={`https://maps.google.com/maps?q=${SCHOOL_LAT},${SCHOOL_LNG}&output=embed&hl=ru&z=17`}
             className="w-full h-[380px] md:h-[480px] pointer-events-none select-none"
             loading="lazy"
-            title="Мектептин жайгашкан жери"
+            title="Расположение школы"
             referrerPolicy="no-referrer-when-downgrade"
           />
 
@@ -67,7 +67,7 @@ export default function SchoolMap() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
             </svg>
             <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">
-              {navigating ? "Жайгашкан жерди аныктоо..." : "Басып маршрут ачыңыз"}
+              {navigating ? "Определяем местоположение..." : "Нажмите, чтобы открыть маршрут"}
             </span>
             {navigating && (
               <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
