@@ -87,12 +87,12 @@ const Companies = () => {
               // Рамка выше, чем шире — логотипы спонсоров часто квадратные или портретные
               // (аватарка из Instagram, эмблема банка), в узкой низкой рамке они превращались в точку
               const logo = (
-                <div className='relative mx-auto' style={{ width: 90, height: 110 }}>
+                <div className='relative mx-auto' style={{ width: 64, height: 140 }}>
                   <Image
                     src={item.imgSrc}
                     alt={item.name || 'Спонсор'}
                     fill
-                    sizes='90px'
+                    sizes='64px'
                     className='object-contain'
                   />
                 </div>
