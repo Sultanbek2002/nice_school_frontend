@@ -1,8 +1,11 @@
 import React from "react";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import GamePlayer from "./GamePlayer";
 import { GO_API_URL, fixImageUrl } from "@/utils/apiData";
 import { RelatedGameCard, RelatedSectionBlock } from "@/app/components/RelatedSection";
+import { pageMetadata, truncate, SITE_NAME } from "@/utils/seo";
 
 interface Game {
   ID: number;
@@ -24,6 +27,25 @@ function formatDate(d: string) {
   } catch { return ""; }
 }
 
+// Заголовок и описание страницы игры для поисковиков и превью в мессенджерах
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    const res = await fetch(`${GO_API_URL}/api/games/${id}`, { cache: "no-store" });
+    if (res.ok) {
+      const g: Game = await res.json();
+      const title = g.title.trim();
+      return pageMetadata({
+        title: `${title} — обучающая игра`,
+        description: truncate(g.description) || `Играйте онлайн: «${title}» — обучающая игра от ${SITE_NAME}.`,
+        path: `/games/${id}`,
+        image: g.thumbnail,
+      });
+    }
+  } catch {}
+  return pageMetadata({ title: "Игра", path: `/games/${id}`, noindex: true });
+}
+
 export default async function GameDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -42,17 +64,8 @@ export default async function GameDetailPage({ params }: { params: Promise<{ id:
     }
   } catch {}
 
-  if (!game) {
-    return (
-      <main className="min-h-screen pt-28 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🎮</div>
-          <h2 className="text-2xl font-bold text-slate-700 mb-2">Игра не найдена</h2>
-          <Link href="/games" className="text-teal-600 underline">← Оюндарга кайтуу</Link>
-        </div>
-      </main>
-    );
-  }
+  // Настоящий HTTP 404 (а не «200 + текст ошибки») — иначе Google считает такие адреса мусорными страницами
+  if (!game) notFound();
 
   const gameUrl = game.game_type === "External" ? game.external_url : fixImageUrl(game.file_url, '');
 

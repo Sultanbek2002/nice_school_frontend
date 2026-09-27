@@ -1,5 +1,8 @@
 import React from "react";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getSiteStructure, ApiResponse } from '@/utils/apiData';
+import { pageMetadata, truncate, SITE_NAME } from '@/utils/seo';
 import TextBlock from "@/app/components/componentsMenu/text";
 import Carousel from "@/app/components/componentsMenu/carousel";
 import Teachers from "@/app/components/componentsMenu/teachers";
@@ -22,6 +25,33 @@ const COMPONENTS_MAP: Record<string, React.FC<any>> = {
   events_grid: EventsGrid,
 };
 
+// Заголовок страницы = её название из админки («Меню сайта»); описание — из первого текстового блока
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const response: ApiResponse = await getSiteStructure();
+    const page = response.structure.find(p => p.link?.trim() === `/${slug}`);
+    if (page) {
+      const name = page.name.trim();
+      let text = '';
+      for (const b of page.blocks || []) {
+        if (b.type !== 'text') continue;
+        try {
+          const parsed = JSON.parse(b.content || '{}');
+          text = truncate(parsed?.text || (typeof parsed === 'string' ? parsed : ''));
+        } catch { text = truncate(b.content); }
+        if (text) break;
+      }
+      return pageMetadata({
+        title: name,
+        description: text || `${name} — ${SITE_NAME}, Ош.`,
+        path: `/${slug}`,
+      });
+    }
+  } catch {}
+  return pageMetadata({ title: 'Страница', path: `/${slug}`, noindex: true });
+}
+
 export default async function DynamicPage({ params }: { params: Promise<{ slug: string }> }) {
   // 1. Получаем объект ответа
   const response: ApiResponse = await getSiteStructure();
@@ -33,13 +63,8 @@ export default async function DynamicPage({ params }: { params: Promise<{ slug: 
   // из-за чего страница не находилась даже при видимо совпадающем URL
   const currentPage = response.structure.find(page => page.link?.trim() === currentPath);
 
-  if (!currentPage) {
-    return (
-      <div className="pt-40 text-center min-h-screen">
-        <h2 className="text-2xl font-bold text-midnight_text">Баракча табылган жок</h2>
-      </div>
-    );
-  }
+  // Настоящий HTTP 404 вместо «200 + текст ошибки»: иначе Google индексирует любые несуществующие адреса
+  if (!currentPage) notFound();
 
   return (
     <main className="min-h-screen pt-20 lg:pt-28 pb-10">

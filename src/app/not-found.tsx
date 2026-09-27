@@ -3,7 +3,8 @@ import NotFound from "@/app/components/NotFound";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "404 Page | Venus ",
+  title: "Страница не найдена",
+  robots: { index: false, follow: false },
 };
 
 const ErrorPage = () => {

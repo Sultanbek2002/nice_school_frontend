@@ -3,8 +3,8 @@ import Profile from "@/app/components/Student/profile/page";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title:
-    "Sign Up | Property",
+  title: "Личный кабинет ученика",
+  robots: { index: false, follow: false },
 };
 
 const ProfilePage = () => {

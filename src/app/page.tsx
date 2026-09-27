@@ -12,19 +12,15 @@ import { getSiteStructure } from '@/utils/apiData';
 
 import { Metadata } from "next";
 import OlympiadComponent from "./components/componentsMenu/olympiad";
+import { pageMetadata, schoolJsonLd, jsonLdString, DEFAULT_TITLE } from "@/utils/seo";
 
-export const metadata: Metadata = {
-  title: "Nice school",
-  icons: {
-    icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTe6TIfD1x8ZfFg-S85x-0yDZDLrnFOFCbcSA&s', // путь относительно папки public
-    shortcut: '/shortcut-static-icon.png',
-    apple: '/apple-touch-icon.png', // для iPhone
-    other: {
-      rel: 'apple-touch-icon-precomposed',
-      url: '/apple-touch-icon-precomposed.png',
-    },
-  },
-};
+// Заголовок и описание главной берутся из общих настроек (layout.tsx / utils/seo.ts).
+// Иконки теперь лежат файлами src/app/icon.png, apple-icon.png, favicon.ico — Next.js
+// подключает их сам, внешняя ссылка на gstatic больше не нужна.
+export const metadata: Metadata = pageMetadata({
+  title: { absolute: DEFAULT_TITLE },
+  path: '/',
+});
 
 
 export default async function Home() {
@@ -67,6 +63,11 @@ export default async function Home() {
 
   return (
     <main>
+      {/* Разметка для Google: «паспорт школы» (не виден посетителям) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdString(schoolJsonLd(data.school_info)) }}
+      />
       <Hero bannerData={data.banner} courses={allCourses} contactData={data.school_info} />
       <OlympiadComponent data={activeOlympiads} />
       <Companies />

@@ -1,5 +1,7 @@
+import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, Manrope } from 'next/font/google'
 import './globals.css'
+import { SITE_URL, SITE_NAME, DEFAULT_TITLE, DEFAULT_DESCRIPTION, OG_IMAGE } from '@/utils/seo'
 import Header from '@/app/components/Layout/Header'
 import Footer from '@/app/components/Layout/Footer'
 import Preloader from '@/app/components/Preloader'
@@ -17,6 +19,39 @@ const manrope = Manrope({
   weight: ['400', '500', '600', '700', '800'],
   variable: '--font-body',
 })
+
+// Настройки по умолчанию для ВСЕХ страниц. Каждая страница может переопределить
+// свои title/description (через export const metadata или generateMetadata).
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: { default: DEFAULT_TITLE, template: `%s | ${SITE_NAME}` },
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: 'website',
+    locale: 'ru_RU',
+    siteName: SITE_NAME,
+    url: '/',
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    images: [OG_IMAGE],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    images: [OG_IMAGE.url],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#123a6e',
+}
 
 export default async function RootLayout({
   children,
@@ -43,7 +78,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang='en' suppressHydrationWarning>
+    <html lang='ru' suppressHydrationWarning>
       <body className={`${spaceGrotesk.variable} ${manrope.variable} font-[family-name:var(--font-body)]`}>
         {/* Ambient blobs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">

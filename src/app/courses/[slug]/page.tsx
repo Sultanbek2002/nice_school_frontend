@@ -1,8 +1,41 @@
 import React from "react";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { getSiteStructure, ApiResponse, GO_API_URL } from "@/utils/apiData";
 import { RelatedCourseCard, RelatedSectionBlock } from "@/app/components/RelatedSection";
+import { pageMetadata, truncate, SITE_NAME } from "@/utils/seo";
+
+// Заголовок и описание страницы курса для поисковиков и превью в мессенджерах
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const response: ApiResponse = await getSiteStructure();
+    let all: any[] = [];
+    response.structure.forEach((page: any) => {
+      page.blocks?.forEach((block: any) => {
+        if (block.type === 'courses_grid') {
+          try {
+            const parsed = JSON.parse(block.content || "[]");
+            if (Array.isArray(parsed)) all = [...all, ...parsed];
+          } catch {}
+        }
+      });
+    });
+    const c = all.find(x => x?.title && encodeURIComponent(x.title.toLowerCase().replace(/\s+/g, '-')) === slug);
+    if (c) {
+      const title = String(c.title).trim();
+      return pageMetadata({
+        title: `${title} — курс`,
+        description: truncate(c.description) || truncate(c.valueProp) || `Курс «${title}» в ${SITE_NAME}, Ош.`,
+        path: `/courses/${slug}`,
+        image: c.mainImage,
+      });
+    }
+  } catch {}
+  return pageMetadata({ title: 'Курс', path: `/courses/${slug}`, noindex: true });
+}
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -25,9 +58,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
   );
   const otherCourses = allCourses.filter(c => encodeURIComponent(c.title.toLowerCase().replace(/\s+/g, '-')) !== slug).slice(0, 4);
 
-  if (!course) {
-    return <div className="pt-40 text-center text-2xl font-bold">Курс не найден</div>;
-  }
+  // Настоящий HTTP 404 вместо «200 + текст ошибки»
+  if (!course) notFound();
 
   return (
     <main className="min-h-screen pt-28 pb-20">

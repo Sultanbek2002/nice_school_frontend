@@ -1,9 +1,51 @@
 import React from "react";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getSiteStructure } from "@/utils/apiData";
+import { pageMetadata, truncate, SITE_NAME } from "@/utils/seo";
 import { RelatedTeacherCard, RelatedSectionBlock } from "@/app/components/RelatedSection";
 import { ArrowLeft, BookOpen, GraduationCap } from "lucide-react";
+
+// Все учителя из блоков teachers_grid и поиск по slug (тот же алгоритм, что в карточках)
+async function findTeacher(slug: string) {
+  const response = await getSiteStructure();
+  let all: any[] = [];
+  response.structure.forEach((page: any) => {
+    page.blocks?.forEach((block: any) => {
+      if (block.type === 'teachers_grid') {
+        try {
+          const parsed = JSON.parse(block.content || "[]");
+          if (Array.isArray(parsed)) all = [...all, ...parsed];
+          else if (parsed && typeof parsed === 'object') all.push(parsed);
+        } catch {}
+      }
+    });
+  });
+  return all.find(t => t?.fullName && encodeURIComponent(t.fullName.toLowerCase().replace(/\s+/g, '-')) === slug);
+}
+
+// Заголовок и описание страницы учителя для поисковиков и превью в мессенджерах
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const t = await findTeacher(slug);
+    if (t) {
+      const name = String(t.fullName).trim();
+      const subject = t.subject ? String(t.subject).trim() : '';
+      return pageMetadata({
+        title: `${name} — учитель${subject ? `, ${subject}` : ''}`,
+        description:
+          truncate(t.bio) ||
+          `${name}${subject ? ` — преподаватель предмета «${subject}»` : ' — преподаватель'} в ${SITE_NAME}, Ош.`,
+        path: `/mentors/${slug}`,
+        image: t.photo,
+      });
+    }
+  } catch {}
+  return pageMetadata({ title: 'Учитель', path: `/mentors/${slug}`, noindex: true });
+}
 
 export default async function TeacherDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -29,16 +71,8 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
     .filter(t => encodeURIComponent(t.fullName.toLowerCase().replace(/\s+/g, '-')) !== slug)
     .slice(0, 4);
 
-  if (!teacher) {
-    return (
-      <main className="min-h-screen pt-40 pb-20 text-center">
-        <p className="text-grey text-lg">Учитель не найден</p>
-        <Link href="/#mentor" className="mt-6 inline-block text-primary font-semibold hover:underline">
-          ← Вернуться к менторам
-        </Link>
-      </main>
-    );
-  }
+  // Настоящий HTTP 404 вместо «200 + текст ошибки»
+  if (!teacher) notFound();
 
   return (
     <main className="min-h-screen pt-28 pb-20" style={{ background: '#f2f9f6' }}>

@@ -2,8 +2,8 @@ import SignUp from "@/app/components/Auth/SignUp/page";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title:
-    "Sign Up | Property",
+  title: "Регистрация",
+  robots: { index: false, follow: false },
 };
 
 const SignupPage = () => {
