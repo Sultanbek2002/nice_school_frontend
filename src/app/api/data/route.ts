@@ -6,17 +6,8 @@ import { TestimonialType } from '@/app/types/testimonial'
 import { NextResponse } from 'next/server'
 import { GO_API_URL } from '@/utils/apiData';
 
-// Оставляем эти данные как есть (статичными)
-const TechGaintsData: { imgSrc: string }[] = [
-  { imgSrc: '/images/companies/airbnb.svg' },
-  { imgSrc: '/images/companies/fedex.svg' },
-  { imgSrc: '/images/companies/google.svg' },
-  { imgSrc: '/images/companies/hubspot.svg' },
-  { imgSrc: '/images/companies/microsoft.svg' },
-  { imgSrc: '/images/companies/walmart.svg' },
-  { imgSrc: '/images/companies/airbnb.svg' },
-  { imgSrc: '/images/companies/fedex.svg' },
-]
+// Раньше здесь был захардкоженный массив чужих логотипов (Airbnb, FedEx, Google...) —
+// теперь реальные спонсоры заводятся через админку и приходят из бэкенда (см. ниже).
 
 const CourseData: CourseType[] = [
   {
@@ -93,6 +84,7 @@ const FooterLinkData: FooterLinkType[] = [
 export const GET = async () => {
   let HeaderData: HeaderType[] = [];
   let TestimonialData: TestimonialType[] = [];
+  let TechGaintsData: { imgSrc: string; name?: string; website?: string }[] = [];
 
   try {
     const response = await fetch(`${GO_API_URL}/api/menu`, { cache: 'no-store' });
@@ -122,6 +114,19 @@ export const GET = async () => {
     }));
   } catch (error) {
     console.error("Ошибка получения отзывов:", error);
+  }
+
+  try {
+    const res = await fetch(`${GO_API_URL}/api/sponsors`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Бэкенд не отвечает');
+    const data = await res.json();
+    TechGaintsData = (Array.isArray(data) ? data : []).map((item: any) => ({
+      imgSrc: item.logo,
+      name: item.name,
+      website: item.website || undefined,
+    }));
+  } catch (error) {
+    console.error("Ошибка получения спонсоров:", error);
   }
 
   return NextResponse.json({

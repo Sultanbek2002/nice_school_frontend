@@ -6,9 +6,15 @@ import Slider from 'react-slick'
 import 'slick-carousel/slick/slick.css'
 import 'slick-carousel/slick/slick-theme.css'
 
+interface Sponsor {
+  imgSrc: string
+  name?: string
+  website?: string
+}
+
 // CAROUSEL SETTINGS
 const Companies = () => {
-  const [techGaint, setTechGaint] = useState<{ imgSrc: string }[]>([])
+  const [techGaint, setTechGaint] = useState<Sponsor[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,6 +71,10 @@ const Companies = () => {
     ],
   }
 
+  // Пока в админке не добавили ни одного спонсора — блок просто не показываем,
+  // не показывать же пустую карусель
+  if (techGaint.length === 0) return null
+
   return (
     <section className='text-center'>
       <div className='container'>
@@ -73,17 +83,27 @@ const Companies = () => {
         </h6>
         <div className='py-7 border-b'>
           <Slider {...settings}>
-            {techGaint.map((item, i) => (
-              <div key={i}>
+            {techGaint.map((item, i) => {
+              const logo = (
                 <Image
                   src={item.imgSrc}
-                  alt={item.imgSrc}
+                  alt={item.name || 'Спонсор'}
                   width={116}
                   height={36}
-                  className='w-auto'
+                  className='w-auto mx-auto object-contain'
+                  style={{ maxHeight: 36 }}
                 />
-              </div>
-            ))}
+              )
+              return (
+                <div key={i}>
+                  {item.website ? (
+                    <a href={item.website} target='_blank' rel='noopener noreferrer' aria-label={item.name}>
+                      {logo}
+                    </a>
+                  ) : logo}
+                </div>
+              )
+            })}
           </Slider>
         </div>
       </div>
