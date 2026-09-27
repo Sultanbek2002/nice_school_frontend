@@ -60,9 +60,6 @@ const Mentor: React.FC<MentorProps> = ({ teachers = [] }) => {
               className='inline-block rounded-full border border-black/10 object-cover transition-transform duration-500 group-hover:scale-105'
             />
           </Link>
-          <div className='absolute right-[22%] -bottom-[2%] glass-card rounded-full p-4'>
-            <Image src={'/images/mentor/linkedin.svg'} alt='linkedin-image' width={25} height={24} />
-          </div>
         </div>
         <div>
           <Link href={detailUrl}>
