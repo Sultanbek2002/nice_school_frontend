@@ -148,13 +148,14 @@ export default function Preloader() {
               justifyContent: "center",
               animation: "preloader-pulse-ring 3s ease-in-out infinite",
             }}>
+              {/* Эмблема школы (тот же файл, что во вкладке браузера: src/app/icon.png) */}
               <Image
-                src="/images/logo/ellipse.svg"
+                src="/icon.png"
                 alt="NICE"
                 width={64}
                 height={64}
                 priority
-                style={{ opacity: 0.88, filter: "brightness(1.2) saturate(0.9)" }}
+                unoptimized
               />
             </div>
           </div>
