@@ -84,15 +84,18 @@ const Companies = () => {
         <div className='py-7 border-b'>
           <Slider {...settings}>
             {techGaint.map((item, i) => {
+              // Рамка выше, чем шире — логотипы спонсоров часто квадратные или портретные
+              // (аватарка из Instagram, эмблема банка), в узкой низкой рамке они превращались в точку
               const logo = (
-                <Image
-                  src={item.imgSrc}
-                  alt={item.name || 'Спонсор'}
-                  width={116}
-                  height={36}
-                  className='w-auto mx-auto object-contain'
-                  style={{ maxHeight: 36 }}
-                />
+                <div className='relative mx-auto' style={{ width: 90, height: 110 }}>
+                  <Image
+                    src={item.imgSrc}
+                    alt={item.name || 'Спонсор'}
+                    fill
+                    sizes='90px'
+                    className='object-contain'
+                  />
+                </div>
               )
               return (
                 <div key={i}>
