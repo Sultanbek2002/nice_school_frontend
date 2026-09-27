@@ -47,6 +47,9 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
   },
+  // Подтверждение владения сайтом в Яндекс.Вебмастере (способ «метатег»).
+  // Рядом лежит и файл public/yandex_678a421166a0faaa.html — тот же код, оба способа рабочие.
+  verification: { yandex: '678a421166a0faaa' },
 }
 
 export const viewport: Viewport = {
