@@ -79,7 +79,7 @@ export default function Signin({ onClose }: SigninProps) {
           setLockoutUntil(Date.now() + secs * 1000)
           setLockoutDisplay(secs)
         } else {
-          setError(data.error || 'Кирүүдө ката кетти')
+          setError(data.error || 'Не удалось войти. Попробуйте ещё раз')
         }
         return
       }
@@ -137,7 +137,7 @@ export default function Signin({ onClose }: SigninProps) {
     e.preventDefault()
     setError('')
     if (newPassword.length < 8) {
-      setError('Новый пароль должен быть не короче 8 символов')
+      setError('Новый пароль долилин быть не короче 8 символов')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -156,7 +156,7 @@ export default function Signin({ onClose }: SigninProps) {
         setError(data.error || 'Не удалось сменить пароль. Попробуйте ещё раз')
         return
       }
-      // Пароль сменён — возвращаем на вход с уже заполненным email, без автологина
+      // Пароль сменён — возвращаем на вход с уили заполненным email, без автологина
       setCode('')
       setNewPassword('')
       setConfirmPassword('')
@@ -170,9 +170,9 @@ export default function Signin({ onClose }: SigninProps) {
     }
   }
 
-  const title = mode === 'login' ? 'Кош келиңиз!' : mode === 'forgot' ? 'Сброс пароля' : 'Новый пароль'
+  const title = mode === 'login' ? 'Добро пожаловать!' : mode === 'forgot' ? 'Сброс пароля' : 'Новый пароль'
   const subtitle =
-    mode === 'login' ? 'Аккаунтуңузга кириңиз'
+    mode === 'login' ? 'Войдите в свой аккаунт'
     : mode === 'forgot' ? 'Введите email, и мы отправим код для сброса пароля'
     : `Код отправлен на ${email}`
 
@@ -206,12 +206,12 @@ export default function Signin({ onClose }: SigninProps) {
             >
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Icon icon="solar:lock-bold-duotone" className="text-orange-500 text-2xl" />
-                <span className="text-orange-700 font-bold text-sm">Аккаунт убактылуу бөгөттөлдү</span>
+                <span className="text-orange-700 font-bold text-sm">Аккаунт временно заблокирован</span>
               </div>
               <div className="text-3xl font-black text-orange-600 tabular-nums">
                 {formatTime(lockoutDisplay)}
               </div>
-              <p className="text-orange-500 text-xs mt-1">убакыт өткөндөн кийин кайра аракет кылыңыз</p>
+              <p className="text-orange-500 text-xs mt-1">попробуйте снова после окончания времени</p>
             </MD>
           )}
 
@@ -248,7 +248,7 @@ export default function Signin({ onClose }: SigninProps) {
                 </div>
                 <input
                   type="email"
-                  placeholder="Email дарегиңиз"
+                  placeholder="Введите email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -300,17 +300,17 @@ export default function Signin({ onClose }: SigninProps) {
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
                     <Icon icon="svg-spinners:ring-resize" className="text-lg" />
-                    Кирүүдө...
+                    Вход...
                   </span>
                 ) : isLocked ? (
                   <span className="flex items-center justify-center gap-2">
                     <Icon icon="solar:lock-bold" className="text-lg" />
-                    {formatTime(lockoutDisplay)} — Бөгөттөлгөн
+                    {formatTime(lockoutDisplay)} — заблокировано
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     <Icon icon="solar:login-bold" className="text-lg" />
-                    Кирүү
+                    Войти
                   </span>
                 )}
                 <span className="absolute inset-0 -translate-x-full hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
@@ -448,14 +448,14 @@ export default function Signin({ onClose }: SigninProps) {
                   <div className="w-full border-t border-slate-100" />
                 </div>
                 <div className="relative flex justify-center">
-                  <span className="bg-white px-3 text-xs text-gray-400">же</span>
+                  <span className="bg-white px-3 text-xs text-gray-400">или</span>
                 </div>
               </div>
 
               <p className="text-center text-sm text-gray-500">
-                Аккаунтуңуз жокпу?{' '}
+                Нет аккаунта?{' '}
                 <Link href="/signup" onClick={onClose} className="text-primary font-bold hover:underline">
-                  Катталуу
+                  Регистрация
                 </Link>
               </p>
             </>
@@ -465,7 +465,7 @@ export default function Signin({ onClose }: SigninProps) {
         <p className="text-center mt-4">
           <Link href="/" className="text-sm text-gray-400 hover:text-primary transition-colors flex items-center justify-center gap-1">
             <Icon icon="solar:arrow-left-linear" />
-            Башкы бетке кайтуу
+            На главную
           </Link>
         </p>
       </div>

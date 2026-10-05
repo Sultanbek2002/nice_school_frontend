@@ -41,11 +41,11 @@ export default function SignUpPage() {
     setError('')
 
     if (password !== confirmPassword) {
-      setError('Паролдор бири-бирине дал келген жок')
+      setError('Пароли не совпадают')
       return
     }
     if (password.length < 6) {
-      setError('Пароль минимум 6 белгиден турушу керек')
+      setError('Пароль должен содержать минимум 6 символов')
       return
     }
 
@@ -57,7 +57,7 @@ export default function SignUpPage() {
         body: JSON.stringify({ email, password }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Ката кетти')
+      if (!res.ok) throw new Error(data.error || 'Произошла ошибка')
       goTo(2)
     } catch (err: any) {
       setError(err.message)
@@ -72,7 +72,7 @@ export default function SignUpPage() {
     setError('')
     const code = otp.join('')
     if (code.length < 6) {
-      setError('6 орундуу кодду киргизиңиз')
+      setError('Введите 6-значный код')
       return
     }
 
@@ -84,7 +84,7 @@ export default function SignUpPage() {
         body: JSON.stringify({ email, code }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Код туура эмес')
+      if (!res.ok) throw new Error(data.error || 'Неверный код')
       if (data.token) Cookies.set('auth_token', data.token, { expires: 7, path: '/' })
       goTo(3)
     } catch (err: any) {
@@ -128,9 +128,9 @@ export default function SignUpPage() {
   }
 
   const steps = [
-    { icon: 'solar:user-bold-duotone', label: 'Маалымат' },
+    { icon: 'solar:user-bold-duotone', label: 'Данные' },
     { icon: 'solar:shield-check-bold-duotone', label: 'Код' },
-    { icon: 'solar:check-circle-bold-duotone', label: 'Даяр' },
+    { icon: 'solar:check-circle-bold-duotone', label: 'Готово' },
   ]
 
   return (
@@ -177,8 +177,8 @@ export default function SignUpPage() {
             {step === 1 && (
               <MD key="step1" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit">
                 <div className="text-center mb-6">
-                  <h2 className="text-xl font-black text-midnight_text">Каттоо</h2>
-                  <p className="text-gray-400 text-sm mt-1">Маалыматтарыңызды киргизиңиз</p>
+                  <h2 className="text-xl font-black text-midnight_text">Регистрация</h2>
+                  <p className="text-gray-400 text-sm mt-1">Заполните свои данные</p>
                 </div>
 
                 {error && (
@@ -193,7 +193,7 @@ export default function SignUpPage() {
                     <Icon icon="solar:letter-bold-duotone" className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400" />
                     <input
                       type="email"
-                      placeholder="Email дарегиңиз"
+                      placeholder="Введите email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -205,7 +205,7 @@ export default function SignUpPage() {
                     <Icon icon="solar:lock-password-bold-duotone" className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400" />
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Пароль (минимум 6 белги)"
+                      placeholder="Пароль (минимум 6 символов)"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
@@ -220,7 +220,7 @@ export default function SignUpPage() {
                     <Icon icon="solar:lock-keyhole-bold-duotone" className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400" />
                     <input
                       type={showConfirm ? 'text' : 'password'}
-                      placeholder="Паролду кайталаңыз"
+                      placeholder="Повторите пароль"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
@@ -235,7 +235,7 @@ export default function SignUpPage() {
                   {confirmPassword && (
                     <div className={`flex items-center gap-2 text-xs font-medium px-1 ${password === confirmPassword ? 'text-green-500' : 'text-red-400'}`}>
                       <Icon icon={password === confirmPassword ? 'solar:check-circle-bold' : 'solar:close-circle-bold'} />
-                      {password === confirmPassword ? 'Паролдор дал келди' : 'Паролдор дал келген жок'}
+                      {password === confirmPassword ? 'Пароли совпадают' : 'Пароли не совпадают'}
                     </div>
                   )}
 
@@ -246,7 +246,7 @@ export default function SignUpPage() {
                     whileTap={{ scale: 0.98 }}
                     className="w-full py-3.5 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/25 hover:bg-secondary transition-colors disabled:opacity-60 text-sm flex items-center justify-center gap-2"
                   >
-                    {loading ? <><Icon icon="svg-spinners:ring-resize" className="text-lg" /> Жиберүүдө...</> : <><Icon icon="solar:letter-bold" className="text-lg" /> Код жиберүү</>}
+                    {loading ? <><Icon icon="svg-spinners:ring-resize" className="text-lg" /> Отправка...</> : <><Icon icon="solar:letter-bold" className="text-lg" /> Отправить код</>}
                   </MButton>
                 </form>
               </MD>
@@ -258,9 +258,9 @@ export default function SignUpPage() {
                   <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-3">
                     <Icon icon="solar:letter-opened-bold-duotone" className="text-3xl text-primary" />
                   </div>
-                  <h2 className="text-xl font-black text-midnight_text">Кодду текшерүү</h2>
+                  <h2 className="text-xl font-black text-midnight_text">Проверка кода</h2>
                   <p className="text-gray-400 text-sm mt-1">
-                    <span className="font-semibold text-midnight_text">{email}</span> дарегине 6 орундуу код жиберилди
+                    Код из 6 цифр отправлен на <span className="font-semibold text-midnight_text">{email}</span>
                   </p>
                 </div>
 
@@ -297,15 +297,15 @@ export default function SignUpPage() {
                     whileTap={{ scale: 0.98 }}
                     className="w-full py-3.5 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/25 hover:bg-secondary transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2"
                   >
-                    {loading ? <><Icon icon="svg-spinners:ring-resize" className="text-lg" /> Текшерилүүдө...</> : <><Icon icon="solar:shield-check-bold" className="text-lg" /> Ырастоо</>}
+                    {loading ? <><Icon icon="svg-spinners:ring-resize" className="text-lg" /> Проверка...</> : <><Icon icon="solar:shield-check-bold" className="text-lg" /> Подтвердить</>}
                   </MButton>
 
                   <div className="flex items-center justify-between text-sm">
                     <button type="button" onClick={() => goTo(1)} className="text-gray-400 hover:text-primary transition-colors flex items-center gap-1">
-                      <Icon icon="solar:arrow-left-linear" /> Артка
+                      <Icon icon="solar:arrow-left-linear" /> Назад
                     </button>
                     <button type="button" onClick={handleResend} disabled={loading} className="text-primary hover:underline font-medium disabled:opacity-50">
-                      Кайра жиберүү
+                      Отправить повторно
                     </button>
                   </div>
                 </form>
@@ -323,8 +323,8 @@ export default function SignUpPage() {
                   >
                     <Icon icon="solar:check-circle-bold-duotone" className="text-5xl text-green-500" />
                   </MD>
-                  <h2 className="text-2xl font-black text-midnight_text mb-2">Каттоо аяктады!</h2>
-                  <p className="text-gray-400 text-sm mb-8">Сиздин аккаунтуңуз ийгиликтүү түзүлдү</p>
+                  <h2 className="text-2xl font-black text-midnight_text mb-2">Регистрация завершена!</h2>
+                  <p className="text-gray-400 text-sm mb-8">Ваш аккаунт успешно создан</p>
                   <MButton
                     onClick={() => window.location.href = '/student'}
                     whileHover={{ scale: 1.02 }}
@@ -332,7 +332,7 @@ export default function SignUpPage() {
                     className="w-full py-3.5 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/25 hover:bg-secondary transition-colors text-sm flex items-center justify-center gap-2"
                   >
                     <Icon icon="solar:home-bold" className="text-lg" />
-                    Профилге өтүү
+                    Перейти в профиль
                   </MButton>
                 </div>
               </MD>
@@ -342,9 +342,9 @@ export default function SignUpPage() {
           {/* Ссылка на вход */}
           {step < 3 && (
             <p className="text-center text-sm text-gray-400 mt-6">
-              Аккаунтуңуз барбы?{' '}
+              Уже есть аккаунт?{' '}
               <Link href="/signin" className="text-primary font-bold hover:underline">
-                Кирүү
+                Войти
               </Link>
             </p>
           )}
@@ -353,7 +353,7 @@ export default function SignUpPage() {
         <p className="text-center mt-4">
           <Link href="/" className="text-sm text-gray-400 hover:text-primary transition-colors flex items-center justify-center gap-1">
             <Icon icon="solar:arrow-left-linear" />
-            Башкы бетке кайтуу
+            На главную
           </Link>
         </p>
       </div>
