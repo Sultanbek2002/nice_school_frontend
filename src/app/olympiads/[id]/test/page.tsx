@@ -6,6 +6,7 @@ import { GO_API_URL } from "@/utils/apiData";
 // ─── Types ───────────────────────────────────────────────
 interface Olympiad {
     ID: number; title: string; subject: string; time_limit: number; status: string; start_time: string | null;
+    require_face_verification: boolean;
 }
 interface Question {
     id: number; type: string; text: string; image_url: string;
@@ -123,6 +124,24 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 setStage("no-access");
                 return;
             }
+            // Эгер бул олимпиада жүздү текшерүүнү талап кылбаса — камерага такыр
+            // кайрылбай эле түз тестке киргизебиз (прокторинг видеосу да жазылбайт)
+            if (!olym.require_face_verification) {
+                fetch(`${GO_API_URL}/api/olympiads/${id}/test-questions`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }).then(r => r.ok ? r.json() : Promise.reject())
+                  .then(qs => {
+                      setQuestions(qs);
+                      setStartedAt(Date.now());
+                      setStage("testing");
+                  })
+                  .catch(() => {
+                      setNoAccessMsg("Суроолорду жүктөөдө ката кетти. Баракты кайра жүктөңүз.");
+                      setStage("no-access");
+                  });
+                return;
+            }
+
             const target = app.face_embeddings ? "face-check" : "face-setup";
             nextStageRef.current = target;
             setStage("permission");

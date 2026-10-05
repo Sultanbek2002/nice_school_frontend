@@ -11,6 +11,7 @@ interface Olympiad {
     start_time: string | null;
     image_url: string; file_url: string; format: string; location: string;
     prize_1: string; prize_2: string; prize_3: string; status: string; time_limit: number;
+    require_face_verification: boolean; require_certificate: boolean;
 }
 
 function fmtDateTime(iso: string | null | undefined): string {
@@ -511,10 +512,15 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                         phone: d.phone || "",
                         certificate_url: d.certificate_url || "",
                     });
-                    setHasExistingProfile(true);
-                    setFormStep(3); // skip to face scan
-                    setModalView("form");
-                    return;
+                    // Face re-capture shortcut only makes sense when this olympiad actually
+                    // requires face verification — otherwise fall through to the normal flow
+                    // (fields are already pre-filled, so it's still just one extra click)
+                    if (olympiad?.require_face_verification) {
+                        setHasExistingProfile(true);
+                        setFormStep(3); // skip to face scan
+                        setModalView("form");
+                        return;
+                    }
                 }
             } catch { /* no previous data, show full form */ }
         }
@@ -559,6 +565,24 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
         else setCertPreview(null);
     };
 
+    // Submit the application directly, without the face-capture step (used when this
+    // olympiad doesn't require face verification). `overrides` lets callers pass a
+    // just-uploaded certificate_url without waiting for the setForm() state update to flush.
+    const submitApplication = async (overrides?: Partial<RegForm>) => {
+        setSubmitting(true);
+        try {
+            const token = getToken();
+            const res = await fetch(`${GO_API_URL}/api/olympiads/${id}/apply`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ ...form, ...overrides, email: userEmail, face_embeddings: "" }),
+            });
+            const data = await res.json();
+            if (res.ok) { setModalView("done"); setAppStatus("pending"); }
+            else setFormError(data.error || "Произошла ошибка");
+        } finally { setSubmitting(false); }
+    };
+
     const goNextStep = async () => {
         setFormError("");
         if (formStep === 1) {
@@ -566,16 +590,20 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
             if (!form.school.trim())    { setFormError("Заполните школу"); return; }
             if (!form.class_name.trim()){ setFormError("Заполните класс"); return; }
             if (!form.birth_date)       { setFormError("Выберите дату рождения"); return; }
-            setFormStep(2);
+            if (olympiad?.require_certificate) setFormStep(2);
+            else if (olympiad?.require_face_verification) setFormStep(3);
+            else await submitApplication();
         } else if (formStep === 2) {
+            let certUrl = form.certificate_url;
             if (certFile) {
                 setUploading(true);
                 const fd = new FormData(); fd.append("file", certFile);
                 const res = await fetch(`${GO_API_URL}/api/upload-certificate`, { method: "POST", body: fd });
                 setUploading(false);
-                if (res.ok) { const d = await res.json(); setForm(prev => ({ ...prev, certificate_url: d.url || "" })); }
+                if (res.ok) { const d = await res.json(); certUrl = d.url || ""; setForm(prev => ({ ...prev, certificate_url: certUrl })); }
             }
-            setFormStep(3);
+            if (olympiad?.require_face_verification) setFormStep(3);
+            else await submitApplication({ certificate_url: certUrl });
         }
     };
 
@@ -1038,9 +1066,14 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                 <button onClick={() => { setHasExistingProfile(false); setFormStep(1); }} className="text-[10px] text-violet-400 hover:text-violet-600 underline mt-0.5">Изменить данные</button>
                                             </div>
                                         </div>
-                                    ) : (
-                                        <StepBar current={formStep} total={3} />
-                                    )}
+                                    ) : (() => {
+                                        // Some steps may be skipped for this olympiad (no cert / no face required) —
+                                        // show the progress bar only for steps that actually apply.
+                                        const activeSteps = [1, ...(olympiad?.require_certificate ? [2] : []), ...(olympiad?.require_face_verification ? [3] : [])];
+                                        const total = activeSteps.length;
+                                        const current = activeSteps.indexOf(formStep) + 1 || 1;
+                                        return <StepBar current={current} total={total} />;
+                                    })()}
 
                                     {/* STEP 1 */}
                                     {formStep === 1 && (
@@ -1052,7 +1085,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                             <div><label className="block text-xs font-bold text-slate-500 mb-1.5">Дата рождения *</label>
                                                 <input type="date" className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400" value={form.birth_date} max={new Date().toISOString().split("T")[0]} onChange={e => { setForm(prev => ({ ...prev, birth_date: e.target.value })); setFormError(""); }} /></div>
                                             {formError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{formError}</p>}
-                                            <button onClick={goNextStep} className="w-full py-4 rounded-2xl font-black text-white" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>Далее →</button>
+                                            <button onClick={goNextStep} disabled={submitting} className="w-full py-4 rounded-2xl font-black text-white disabled:opacity-60" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>{submitting ? "Отправка..." : "Далее →"}</button>
                                         </div>
                                     )}
 
@@ -1073,7 +1106,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                             {formError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{formError}</p>}
                                             <div className="flex gap-3">
                                                 <button onClick={() => setFormStep(1)} className="px-5 py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">← Назад</button>
-                                                <button onClick={goNextStep} disabled={uploading} className="flex-1 py-3 rounded-2xl font-black text-white disabled:opacity-60" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>{uploading ? "Загрузка..." : "Далее →"}</button>
+                                                <button onClick={goNextStep} disabled={uploading || submitting} className="flex-1 py-3 rounded-2xl font-black text-white disabled:opacity-60" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>{uploading ? "Загрузка..." : submitting ? "Отправка..." : "Далее →"}</button>
                                             </div>
                                         </div>
                                     )}
@@ -1100,7 +1133,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                                 Попробовать снова
                                                             </button>
                                                             <button
-                                                                onClick={() => { setFormStep(hasExistingProfile ? 1 : 2); setHasExistingProfile(false); }}
+                                                                onClick={() => { setFormStep(hasExistingProfile ? 1 : (olympiad?.require_certificate ? 2 : 1)); setHasExistingProfile(false); }}
                                                                 className="w-full py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">
                                                                 ← Назад
                                                             </button>
@@ -1144,7 +1177,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                                 📷 Разрешить доступ к камере
                                                             </button>
                                                             <button
-                                                                onClick={() => { setFormStep(hasExistingProfile ? 1 : 2); setHasExistingProfile(false); }}
+                                                                onClick={() => { setFormStep(hasExistingProfile ? 1 : (olympiad?.require_certificate ? 2 : 1)); setHasExistingProfile(false); }}
                                                                 className="w-full py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">
                                                                 ← Назад
                                                             </button>
@@ -1327,7 +1360,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                             {formError && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl">{formError}</p>}
 
                                             <div className="flex gap-3">
-                                                <button onClick={() => { stopCamera(); setFormStep(hasExistingProfile ? 1 : 2); setHasExistingProfile(false); }} className="px-5 py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">← Назад</button>
+                                                <button onClick={() => { stopCamera(); setFormStep(hasExistingProfile ? 1 : (olympiad?.require_certificate ? 2 : 1)); setHasExistingProfile(false); }} className="px-5 py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">← Назад</button>
                                                 <button onClick={handleSubmit} disabled={submitting || !allFacesCaptured}
                                                     className="flex-1 py-3 rounded-2xl font-black text-white disabled:opacity-40 transition-all"
                                                     style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
