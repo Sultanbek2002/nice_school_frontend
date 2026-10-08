@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react'
 import { motion } from 'framer-motion'
 import Cookies from 'js-cookie'
 import { GO_API_URL } from '@/utils/apiData'
+import GoogleSignInButton from '../GoogleSignInButton'
 
 const MD = motion.div as any
 const MButton = motion.button as any
@@ -137,7 +138,7 @@ export default function Signin({ onClose }: SigninProps) {
     e.preventDefault()
     setError('')
     if (newPassword.length < 8) {
-      setError('Новый пароль долилин быть не короче 8 символов')
+      setError('Новый пароль должен быть не короче 8 символов')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -156,7 +157,7 @@ export default function Signin({ onClose }: SigninProps) {
         setError(data.error || 'Не удалось сменить пароль. Попробуйте ещё раз')
         return
       }
-      // Пароль сменён — возвращаем на вход с уили заполненным email, без автологина
+      // Пароль сменён — возвращаем на вход с уже заполненным email, без автологина
       setCode('')
       setNewPassword('')
       setConfirmPassword('')
@@ -450,6 +451,10 @@ export default function Signin({ onClose }: SigninProps) {
                 <div className="relative flex justify-center">
                   <span className="bg-white px-3 text-xs text-gray-400">или</span>
                 </div>
+              </div>
+
+              <div className="mb-5">
+                <GoogleSignInButton onError={setError} />
               </div>
 
               <p className="text-center text-sm text-gray-500">

@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Cookies from 'js-cookie'
 import { GO_API_URL } from '@/utils/apiData'
+import GoogleSignInButton from '../GoogleSignInButton'
 
 const MD = motion.div as any
 const MButton = motion.button as any
@@ -249,6 +250,16 @@ export default function SignUpPage() {
                     {loading ? <><Icon icon="svg-spinners:ring-resize" className="text-lg" /> Отправка...</> : <><Icon icon="solar:letter-bold" className="text-lg" /> Отправить код</>}
                   </MButton>
                 </form>
+
+                <div className="relative my-5">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-100" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-white px-3 text-xs text-gray-400">или</span>
+                  </div>
+                </div>
+                <GoogleSignInButton onError={setError} />
               </MD>
             )}
 
