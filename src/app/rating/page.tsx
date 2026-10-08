@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo, useRef, forwardRef, useImperativeHandle } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import { Icon } from '@iconify/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GO_API_URL } from '@/utils/apiData'
@@ -16,6 +17,54 @@ type Trend = 'up' | 'down' | 'same'
 function getTrend(s: Student): Trend {
   if (s.previous_score === 0 || s.score === s.previous_score) return 'same'
   return s.score > s.previous_score ? 'up' : 'down'
+}
+
+interface ScoreLogEntry {
+  ID: number; delta: number; reason: string; given_by_name: string; CreatedAt: string
+}
+
+function fmtLogDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  } catch { return iso }
+}
+
+// Карточка истории баллов — показывается при наведении (десктоп) или по тапу (телефон)
+function ScoreHistoryPopover({ rect, entries }: { rect: DOMRect; entries: ScoreLogEntry[] | 'loading' | 'error' }) {
+  const width = 280
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1024
+  const left = Math.min(Math.max(8, rect.left), vw - width - 8)
+  const openUp = rect.bottom + 260 > (typeof window !== 'undefined' ? window.innerHeight : 800)
+  return (
+    <div
+      className="score-history-popover fixed z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 text-left"
+      style={{ left, width, top: openUp ? undefined : rect.bottom + 8, bottom: openUp ? (typeof window !== 'undefined' ? window.innerHeight - rect.top + 8 : undefined) : undefined, maxHeight: 280, overflowY: 'auto' }}
+      onMouseDown={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
+    >
+      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">История баллов</p>
+      {entries === 'loading' && <p className="text-xs text-gray-400 px-1 py-3 text-center">Загрузка...</p>}
+      {entries === 'error' && <p className="text-xs text-rose-400 px-1 py-3 text-center">Не удалось загрузить</p>}
+      {Array.isArray(entries) && entries.length === 0 && (
+        <p className="text-xs text-gray-400 px-1 py-3 text-center">Пока нет начислений</p>
+      )}
+      {Array.isArray(entries) && entries.length > 0 && (
+        <div className="space-y-1.5">
+          {entries.map(e => (
+            <div key={e.ID} className="flex items-start gap-2 px-1 py-1.5 rounded-xl hover:bg-gray-50">
+              <span className={`flex-shrink-0 text-xs font-black px-1.5 py-0.5 rounded-lg ${e.delta > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>
+                {e.delta > 0 ? `+${e.delta}` : e.delta}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-gray-700 font-medium leading-snug break-words">{e.reason || '—'}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{e.given_by_name} · {fmtLogDate(e.CreatedAt)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 const MEDAL_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32']
@@ -443,6 +492,36 @@ export default function RatingPage() {
   const [preparing, setPreparing] = useState(false)
   const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null)
 
+  // История баллов — подгружается лениво по наведению/тапу и кэшируется по ID ученика
+  const [historyCache, setHistoryCache] = useState<Record<number, ScoreLogEntry[] | 'loading' | 'error'>>({})
+  const [openHistory, setOpenHistory] = useState<{ id: number; rect: DOMRect } | null>(null)
+
+  const loadHistory = (id: number) => {
+    setHistoryCache(prev => prev[id] ? prev : { ...prev, [id]: 'loading' })
+    if (historyCache[id]) return
+    fetch(`${GO_API_URL}/api/students/${id}/score-history`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((data: ScoreLogEntry[]) => setHistoryCache(prev => ({ ...prev, [id]: Array.isArray(data) ? data : [] })))
+      .catch(() => setHistoryCache(prev => ({ ...prev, [id]: 'error' })))
+  }
+
+  const openStudentHistory = (id: number, el: HTMLElement) => {
+    setOpenHistory({ id, rect: el.getBoundingClientRect() })
+    loadHistory(id)
+  }
+
+  // Закрыть карточку истории при тапе/клике куда-то ещё (на телефоне нет mouseleave).
+  // Клики внутри строки/попапа игнорируем — там свой onClick управляет открытием/закрытием.
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (target.closest('.score-row') || target.closest('.score-history-popover')) return
+      setOpenHistory(null)
+    }
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [])
+
   useEffect(() => {
     Promise.all([
       fetch(`${GO_API_URL}/api/students`).then(r => r.json()),
@@ -591,14 +670,19 @@ export default function RatingPage() {
                     const barPct = (s.score / maxScore) * 100
                     const medalColor = rank === 1 ? '#FFD700' : rank === 2 ? '#9ca3af' : rank === 3 ? '#CD7F32' : null
                     const recentlyChanged = trend !== 'same'
+                    const isHistoryOpen = openHistory?.id === s.ID
                     return (
                       <MD key={s.ID} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.015 }}
-                        className={`grid grid-cols-[28px_1fr_40px_52px_36px] lg:grid-cols-[36px_1fr_52px_64px_44px] gap-2 lg:gap-3 px-3 lg:px-5 py-2 lg:py-3 items-center border-b border-gray-50 hover:bg-gray-50 transition-colors ${recentlyChanged ? 'bg-emerald-50/40' : ''}`}>
+                        onMouseEnter={(e: ReactMouseEvent<HTMLDivElement>) => openStudentHistory(s.ID, e.currentTarget)}
+                        onMouseLeave={() => setOpenHistory(prev => (prev?.id === s.ID ? null : prev))}
+                        onClick={(e: ReactMouseEvent<HTMLDivElement>) => isHistoryOpen ? setOpenHistory(null) : openStudentHistory(s.ID, e.currentTarget)}
+                        className={`score-row grid grid-cols-[28px_1fr_40px_52px_36px] lg:grid-cols-[36px_1fr_52px_64px_44px] gap-2 lg:gap-3 px-3 lg:px-5 py-2 lg:py-3 items-center border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${recentlyChanged ? 'bg-emerald-50/40' : ''} ${isHistoryOpen ? 'bg-gray-50' : ''}`}>
                         <span className="text-xs lg:text-sm font-black text-center" style={{ color: medalColor ?? '#d1d5db' }}>{rank}</span>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs lg:text-sm font-semibold text-gray-800 truncate">{s.fio}</span>
                             {recentlyChanged && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />}
+                            <Icon icon="solar:history-bold" width={11} className="text-gray-300 shrink-0" />
                           </div>
                           <div className="relative h-1 rounded-full bg-gray-100 mt-1">
                             <MD initial={{ width: 0 }} animate={{ width: `${barPct}%` }} transition={{ duration: 0.6, delay: i * 0.015 }}
@@ -621,6 +705,10 @@ export default function RatingPage() {
           </div>
         )}
       </div>
+
+      {openHistory && (
+        <ScoreHistoryPopover rect={openHistory.rect} entries={historyCache[openHistory.id] ?? 'loading'} />
+      )}
     </div>
   )
 }
