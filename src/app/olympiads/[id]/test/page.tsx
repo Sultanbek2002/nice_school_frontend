@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Cookies from "js-cookie";
 import { GO_API_URL } from "@/utils/apiData";
+import { loadFaceApi } from "@/utils/faceModels";
 
 // ─── Types ───────────────────────────────────────────────
 interface Olympiad {
@@ -30,7 +31,6 @@ type Stage =
     | "already-done"; // already submitted
 
 const MAX_ATTEMPTS = 3;
-const MODEL_URL = "/face-models";
 
 function getToken() { return Cookies.get("auth_token") || ""; }
 
@@ -237,6 +237,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
 
     // Called directly from button tap (user gesture) — iOS requires getUserMedia in user gesture
     const requestPermissions = useCallback(async () => {
+        loadFaceApi().catch(() => {}); // старт в фоне, параллельно с запросом доступа к камере
         try {
             // Request camera + mic in one call — keeps stream alive, no second getUserMedia needed
             const s = await navigator.mediaDevices.getUserMedia({
@@ -384,16 +385,9 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
 
         try {
             // Extract descriptor directly from video (avoids JPEG compression artifacts)
-            const faceapi = await import("@vladmandic/face-api");
-            if (!faceapi.nets.ssdMobilenetv1.isLoaded) {
-                await Promise.all([
-                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-                ]);
-            }
+            const faceapi = await loadFaceApi();
             // Detect from live video element — no JPEG compression, best quality
-            const det = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+            const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
 
             if (!det) {
                 if (isSetup) {

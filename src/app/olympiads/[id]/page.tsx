@@ -4,6 +4,7 @@ import Image from "next/image";
 import Cookies from "js-cookie";
 import { Icon } from "@iconify/react";
 import { GO_API_URL } from "@/utils/apiData";
+import { loadFaceApi } from "@/utils/faceModels";
 import { RelatedOlympiadCard, RelatedSectionBlock } from "@/app/components/RelatedSection";
 
 interface Olympiad {
@@ -372,53 +373,21 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
 
     const allFacesCaptured = FACE_PHASES.every(p => capturedFaces[p.key]);
 
-    // ── face-api.js: preload models in background ──────────────
-    const faceApiLoadedRef = useRef(false);
-    const faceApiLoadingRef = useRef(false);
-
-    const preloadFaceApi = useCallback(async () => {
-        if (faceApiLoadedRef.current || faceApiLoadingRef.current) return;
-        faceApiLoadingRef.current = true;
-        try {
-            const faceapi = await import("@vladmandic/face-api");
-            const MODEL_URL = "/face-models";
-            if (!faceapi.nets.ssdMobilenetv1.isLoaded) {
-                await Promise.all([
-                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-                ]);
-            }
-            faceApiLoadedRef.current = true;
-        } catch (e) {
-            console.warn("face-api preload failed", e);
-        } finally {
-            faceApiLoadingRef.current = false;
-        }
-    }, []);
-
+    // ── face-api.js: preload models in background (see src/utils/faceModels.ts) ──
     // Start preloading face-api models as soon as step 3 is entered
     useEffect(() => {
-        if (formStep === 3) preloadFaceApi();
-    }, [formStep, preloadFaceApi]);
+        if (formStep === 3) loadFaceApi().catch(() => {});
+    }, [formStep]);
 
     // ── face-api.js: extract 128-float descriptor from front face ──
     const extractFaceDescriptor = useCallback(async (dataUrl: string): Promise<number[] | null> => {
         try {
-            const faceapi = await import("@vladmandic/face-api");
-            const MODEL_URL = "/face-models";
-            if (!faceapi.nets.ssdMobilenetv1.isLoaded) {
-                await Promise.all([
-                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-                ]);
-            }
+            const faceapi = await loadFaceApi();
             const img = document.createElement("img");
             img.src = dataUrl;
             await new Promise<void>(resolve => { img.onload = () => resolve(); });
             const det = await faceapi
-                .detectSingleFace(img)
+                .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
                 .withFaceLandmarks()
                 .withFaceDescriptor();
             if (!det) return null;
