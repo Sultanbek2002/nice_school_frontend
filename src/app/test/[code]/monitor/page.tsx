@@ -118,7 +118,7 @@ export default function MonitorPage() {
                 disabled={sessions.length === 0}
                 className="rounded-xl bg-green-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-50 active:scale-95"
               >
-                🚀 Баштоо ({sessions.length})
+                🚀 Начать ({sessions.length})
               </button>
             )}
             {status === "live" && (
@@ -127,13 +127,13 @@ export default function MonitorPage() {
                   onClick={() => send(isLast ? "finish" : "next")}
                   className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white active:scale-95"
                 >
-                  {isLast ? "🏁 Бүтүрүү" : "→ Кийинки"}
+                  {isLast ? "🏁 Завершить" : "→ Следующий"}
                 </button>
                 <button
                   onClick={() => send("finish")}
                   className="rounded-xl border border-white/20 px-3 py-2 text-xs text-white/60 active:scale-95"
                 >
-                  Токтотуу
+                  Остановить
                 </button>
               </>
             )}
@@ -142,19 +142,19 @@ export default function MonitorPage() {
                 onClick={() => router.push(`/test/${code}/results`)}
                 className="rounded-xl bg-white/20 px-4 py-2 text-sm font-bold text-white active:scale-95"
               >
-                Жыйынтыктар →
+                Результаты →
               </button>
             )}
             {(status === "lobby" || status === "live") && (
               <button
                 onClick={() => {
-                  if (confirm("Тестти жокко чыгарасызбы? Бардык катышуучулар чыгарылат.")) {
+                  if (confirm("Отменить тест? Все участники будут отключены.")) {
                     send("cancel");
                   }
                 }}
                 className="rounded-xl border border-red-400/50 px-3 py-2 text-xs font-semibold text-red-400 active:scale-95"
               >
-                Жокко чыгаруу
+                Отменить
               </button>
             )}
           </div>
@@ -186,15 +186,14 @@ export default function MonitorPage() {
             {status === "connecting" && (
               <div className="flex flex-1 flex-col items-center justify-center rounded-2xl bg-white/5 text-white/40">
                 <div className="mb-2 text-4xl">📡</div>
-                <p>Байланышуу...</p>
+                <p>Подключение...</p>
               </div>
             )}
 
             {status === "lobby" && (
               <div className="flex flex-1 flex-col items-center justify-center rounded-2xl bg-white/5 p-6 text-center">
-                <div className="mb-3 text-4xl sm:text-5xl">🎮</div>
-                <p className="text-lg font-bold">Лобби ачык</p>
-                <p className="mt-1 text-sm text-white/50">Катышуучулар кошулуп жатат...</p>
+                <p className="text-lg font-bold">Лобби открыто</p>
+                <p className="mt-1 text-sm text-white/50">Участники подключаются...</p>
                 <div className="mt-4 rounded-xl bg-white/5 px-6 py-3">
                   <div className="font-mono text-3xl font-extrabold tracking-[0.25em] text-primary sm:text-4xl">{code}</div>
                   <p className="mt-1 text-xs text-white/30">nice.school/test</p>
@@ -215,9 +214,9 @@ export default function MonitorPage() {
             {(status === "live" || status === "finished") && current && (
               <div className="flex flex-1 flex-col rounded-2xl bg-white/5 p-4">
                 <div className="mb-2 flex items-center justify-between text-xs text-white/50">
-                  <span>Суроо {current.index + 1} / {current.total}</span>
+                  <span>Вопрос {current.index + 1} / {current.total}</span>
                   <span className={`font-bold text-sm ${timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-white"}`}>
-                    {status === "live" ? `${timeLeft}с` : "Бүттү"}
+                    {status === "live" ? `${timeLeft}с` : "Завершено"}
                   </span>
                 </div>
                 <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
@@ -247,7 +246,7 @@ export default function MonitorPage() {
                 )}
                 {current.question.type === "text" && (
                   <div className="rounded-xl bg-white/5 px-3 py-2 text-sm italic text-white/60">
-                    Текст жооп
+                    Текстовый ответ
                   </div>
                 )}
               </div>
@@ -273,7 +272,7 @@ export default function MonitorPage() {
                 </div>
               ))}
               {sessions.length === 0 && (
-                <div className="py-8 text-center text-sm text-white/30">Катышуучулар жок</div>
+                <div className="py-8 text-center text-sm text-white/30">Нет участников</div>
               )}
             </div>
           </div>

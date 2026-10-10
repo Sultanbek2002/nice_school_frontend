@@ -56,7 +56,7 @@ export default function ResultsPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-primary">
-        <div className="text-center text-white"><div className="mb-2 text-4xl">⏳</div>Жүктөлүүдө...</div>
+        <div className="text-center text-white"><div className="mb-2 text-4xl">⏳</div>Загрузка...</div>
       </div>
     );
   }
@@ -76,8 +76,8 @@ export default function ResultsPage() {
         {/* Header */}
         <div className="mb-5 text-center">
           <div className="mb-2 text-4xl sm:text-5xl">🏆</div>
-          <h1 className="text-2xl font-extrabold text-white sm:text-3xl">{test?.title || "Жыйынтыктар"}</h1>
-          <p className="mt-1 text-sm text-white/50">{sessions.length} катышуучу</p>
+          <h1 className="text-2xl font-extrabold text-white sm:text-3xl">{test?.title || "Результаты"}</h1>
+          <p className="mt-1 text-sm text-white/50">{sessions.length} участников</p>
         </div>
 
         {/* Tabs */}
@@ -87,7 +87,7 @@ export default function ResultsPage() {
               onClick={() => setTab("my")}
               className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${tab === "my" ? "bg-white text-primary" : "text-white/60"}`}
             >
-              Менин жыйынтыктарым
+              Мои результаты
             </button>
             <button
               onClick={() => setTab("all")}
@@ -110,16 +110,16 @@ export default function ResultsPage() {
               <div className="mt-3 flex justify-center gap-6">
                 <div className="text-center">
                   <div className="text-3xl font-extrabold text-white">{myResult.session.score}</div>
-                  <div className="text-xs text-white/50">упай</div>
+                  <div className="text-xs text-white/50">баллов</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-extrabold text-white">{correctCount}/{myResult.answers.length}</div>
-                  <div className="text-xs text-white/50">туура жооп</div>
+                  <div className="text-xs text-white/50">правильных ответов</div>
                 </div>
                 {myRank > 0 && (
                   <div className="text-center">
                     <div className="text-3xl font-extrabold text-white">{myRank < 4 ? MEDALS[myRank - 1] : `#${myRank}`}</div>
-                    <div className="text-xs text-white/50">орун</div>
+                    <div className="text-xs text-white/50">место</div>
                   </div>
                 )}
               </div>
@@ -139,14 +139,14 @@ export default function ResultsPage() {
                         <p className="text-sm font-semibold text-white">{q.text}</p>
                         {ans && (
                           <p className="mt-0.5 text-xs text-white/60">
-                            Жообуңуз: <span className="text-white/80">{ans.Answer || "—"}</span>
+                            Ваш ответ: <span className="text-white/80">{ans.Answer || "—"}</span>
                           </p>
                         )}
                         {!ans?.IsCorrect && (
-                          <p className="mt-0.5 text-xs text-green-400">Туура жооп: {parseCorrect(q.correct)}</p>
+                          <p className="mt-0.5 text-xs text-green-400">Правильный ответ: {parseCorrect(q.correct)}</p>
                         )}
                         {ans?.IsCorrect && (
-                          <p className="mt-0.5 text-xs text-green-400">+{ans.PointsAwarded} упай</p>
+                          <p className="mt-0.5 text-xs text-green-400">+{ans.PointsAwarded} баллов</p>
                         )}
                       </div>
                     </div>
@@ -208,12 +208,12 @@ export default function ResultsPage() {
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{s.display_name}</span>
                   <div className="text-right">
                     <div className="font-extrabold text-white">{s.score}</div>
-                    <div className="text-xs text-white/40">{s.answered_count} жооп</div>
+                    <div className="text-xs text-white/40">{s.answered_count} ответов</div>
                   </div>
                 </div>
               ))}
               {sessions.length === 0 && (
-                <div className="py-10 text-center text-sm text-white/40">Катышуучулар жок</div>
+                <div className="py-10 text-center text-sm text-white/40">Нет участников</div>
               )}
             </div>
           </>
@@ -221,7 +221,7 @@ export default function ResultsPage() {
 
         <div className="text-center">
           <Link href="/test" className="inline-block rounded-xl bg-white/20 px-6 py-3 font-semibold text-white backdrop-blur-sm active:scale-95">
-            Башкы бет
+            Главная
           </Link>
         </div>
       </div>

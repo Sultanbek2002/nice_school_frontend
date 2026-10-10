@@ -26,10 +26,10 @@ interface LiveTest {
 }
 
 const QTYPES = [
-  { value: "single", label: "Бир туура жооп" },
-  { value: "multiple", label: "Бир нече туура жооп" },
-  { value: "true_false", label: "Туура / Жалган" },
-  { value: "text", label: "Текст жооп" },
+  { value: "single", label: "Один правильный ответ" },
+  { value: "multiple", label: "Несколько правильных ответов" },
+  { value: "true_false", label: "Верно / Неверно" },
+  { value: "text", label: "Текстовый ответ" },
 ];
 
 function emptyQuestion(order: number): Question {
@@ -86,7 +86,7 @@ function CreateTestInner() {
         }));
         setQuestions(qs);
       })
-      .catch(() => setError("Жүктөп алуу катасы"));
+      .catch(() => setError("Ошибка загрузки"));
   }, [editCode]);
 
   const tryParseArr = (s: string): string[] | null => {
@@ -95,11 +95,11 @@ function CreateTestInner() {
 
   const safeJson = async (res: Response) => {
     const text = await res.text();
-    try { return JSON.parse(text); } catch { throw new Error(res.ok ? "Сервер жооп бербеди" : `Сервер катасы ${res.status}`); }
+    try { return JSON.parse(text); } catch { throw new Error(res.ok ? "Сервер не ответил" : `Ошибка сервера ${res.status}`); }
   };
 
   const saveTest = async () => {
-    if (!title.trim()) { setError("Аталышты жазыңыз"); return; }
+    if (!title.trim()) { setError("Введите название"); return; }
     setSaving(true); setError("");
     try {
       let current = test;
@@ -110,7 +110,7 @@ function CreateTestInner() {
           body: JSON.stringify({ title, description: desc }),
         });
         const data = await safeJson(res);
-        if (!res.ok) throw new Error(data?.error || "Тест түзүлгөн жок");
+        if (!res.ok) throw new Error(data?.error || "Тест не создан");
         current = data;
         setTest(data);
       } else {
@@ -119,7 +119,7 @@ function CreateTestInner() {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify({ title, description: desc }),
         });
-        if (!res.ok) throw new Error("Сактоо катасы");
+        if (!res.ok) throw new Error("Ошибка сохранения");
       }
       // sync questions with IDs
       const newQs: Question[] = [];
@@ -170,7 +170,7 @@ function CreateTestInner() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await safeJson(res);
-      if (!res.ok) throw new Error(data?.error || "Ача алган жок");
+      if (!res.ok) throw new Error(data?.error || "Не удалось открыть");
       router.push(`/test/${code}/monitor`);
     } catch (e: any) {
       setError(e.message);
@@ -241,10 +241,10 @@ function CreateTestInner() {
             onClick={() => router.push("/test")}
             className="shrink-0 text-grey hover:text-midnight_text"
           >
-            ← Артка
+            ← Назад
           </button>
           <h1 className="min-w-0 truncate text-xl font-extrabold text-midnight_text sm:text-2xl">
-            {test ? "Тестти түзөтүү" : "Жаңы тест"}
+            {test ? "Редактирование теста" : "Новый тест"}
           </h1>
           {test && (
             <span className="ml-auto shrink-0 font-mono text-sm font-bold tracking-widest text-primary">
@@ -259,18 +259,18 @@ function CreateTestInner() {
 
         {/* Info */}
         <div className="glass-card mb-6 rounded-2xl p-5">
-          <label className="mb-1 block text-sm font-semibold text-midnight_text">Аталышы *</label>
+          <label className="mb-1 block text-sm font-semibold text-midnight_text">Название *</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Кыргызстан тарыхы"
+            placeholder="История Кыргызстана"
             className="mb-4 w-full rounded-xl border border-black/10 bg-white/80 px-3 py-2.5 text-midnight_text focus:border-primary focus:outline-none"
           />
-          <label className="mb-1 block text-sm font-semibold text-midnight_text">Сүрөттөмө</label>
+          <label className="mb-1 block text-sm font-semibold text-midnight_text">Описание</label>
           <textarea
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
-            placeholder="Кыскача маалымат..."
+            placeholder="Краткое описание..."
             rows={2}
             className="w-full rounded-xl border border-black/10 bg-white/80 px-3 py-2.5 text-midnight_text focus:border-primary focus:outline-none resize-none"
           />
@@ -279,7 +279,7 @@ function CreateTestInner() {
         {/* Questions */}
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-bold text-midnight_text">
-            Суроолор ({questions.length})
+            Вопросы ({questions.length})
           </h2>
         </div>
 
@@ -294,14 +294,14 @@ function CreateTestInner() {
         <div className="mb-4 flex gap-2">
           <button
             onClick={() => {
-              if (!test) { setError("Алгач тестти сактаңыз"); return; }
+              if (!test) { setError("Сначала сохраните тест"); return; }
               fileRef.current?.click();
             }}
             disabled={importing}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/5 py-3 text-sm font-semibold text-primary disabled:opacity-50 active:scale-95"
           >
             <span>📥</span>
-            {importing ? "Импорт..." : "Excel импорт"}
+            {importing ? "Импорт..." : "Импорт из Excel"}
           </button>
           <button
             onClick={() => {
@@ -337,7 +337,7 @@ function CreateTestInner() {
                     </div>
                     <div className="flex gap-3">
                       <div className="flex flex-1 items-center gap-2">
-                        <label className="shrink-0 text-xs text-grey">Упай</label>
+                        <label className="shrink-0 text-xs text-grey">Баллы</label>
                         <input
                           type="number"
                           value={q.points}
@@ -346,7 +346,7 @@ function CreateTestInner() {
                         />
                       </div>
                       <div className="flex flex-1 items-center gap-2">
-                        <label className="shrink-0 text-xs text-grey">Убакыт(с)</label>
+                        <label className="shrink-0 text-xs text-grey">Время (с)</label>
                         <input
                           type="number"
                           value={q.time_limit}
@@ -359,7 +359,7 @@ function CreateTestInner() {
                   <textarea
                     value={q.text}
                     onChange={(e) => updateQ(idx, { text: e.target.value })}
-                    placeholder="Суроону жазыңыз..."
+                    placeholder="Напишите вопрос..."
                     rows={2}
                     className="mb-3 w-full rounded-xl border border-black/10 bg-white/80 px-3 py-2.5 text-sm text-midnight_text focus:border-primary focus:outline-none resize-none"
                   />
@@ -382,7 +382,7 @@ function CreateTestInner() {
                               );
                               updateQ(idx, { options: newOpts, correct: newCorrect });
                             }}
-                            placeholder={`${oi + 1}-вариант`}
+                            placeholder={`Вариант ${oi + 1}`}
                             className="flex-1 rounded-lg border border-black/10 bg-white/80 px-2 py-1.5 text-sm"
                           />
                         </div>
@@ -397,18 +397,20 @@ function CreateTestInner() {
                           onClick={() => updateQ(idx, { correct: [v] })}
                           className={`flex-1 rounded-xl py-2 text-sm font-semibold border-2 ${q.correct[0] === v ? "border-primary bg-primary text-white" : "border-gray-200 bg-white text-midnight_text"}`}
                         >
-                          {v}
+                          {/* Значение (v) остаётся "Туура"/"Жалган" для совместимости со старыми
+                              вопросами в базе — переводим только подпись */}
+                          {v === "Туура" ? "Верно" : "Неверно"}
                         </button>
                       ))}
                     </div>
                   )}
                   {q.type === "text" && (
                     <div className="mb-3">
-                      <label className="mb-1 block text-xs text-grey">Туура жооп</label>
+                      <label className="mb-1 block text-xs text-grey">Правильный ответ</label>
                       <input
                         value={q.correct[0] || ""}
                         onChange={(e) => updateQ(idx, { correct: [e.target.value] })}
-                        placeholder="Туура жооп"
+                        placeholder="Правильный ответ"
                         className="w-full rounded-xl border border-black/10 bg-white/80 px-3 py-2 text-sm"
                       />
                     </div>
@@ -418,13 +420,13 @@ function CreateTestInner() {
                       onClick={() => updateQ(idx, { _editing: false })}
                       className="rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20"
                     >
-                      Даяр
+                      Готово
                     </button>
                     <button
                       onClick={() => deleteQuestion(q, idx)}
                       className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-100"
                     >
-                      Жок кылуу
+                      Удалить
                     </button>
                   </div>
                 </div>
@@ -432,21 +434,21 @@ function CreateTestInner() {
                 <div className="flex items-start gap-3">
                   <span className="mt-0.5 text-sm font-bold text-grey">{idx + 1}.</span>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-midnight_text line-clamp-2">{q.text || <span className="text-grey italic">Суроо жазылган эмес</span>}</p>
-                    <p className="mt-1 text-xs text-grey">{QTYPES.find((t) => t.value === q.type)?.label} · {q.points} упай · {q.time_limit}с</p>
+                    <p className="text-sm font-semibold text-midnight_text line-clamp-2">{q.text || <span className="text-grey italic">Вопрос не написан</span>}</p>
+                    <p className="mt-1 text-xs text-grey">{QTYPES.find((t) => t.value === q.type)?.label} · {q.points} баллов · {q.time_limit}с</p>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => updateQ(idx, { _editing: true })}
                       className="text-xs text-primary hover:underline"
                     >
-                      Түзөт
+                      Изменить
                     </button>
                     <button
                       onClick={() => deleteQuestion(q, idx)}
                       className="text-xs text-red-500 hover:underline"
                     >
-                      Жок кыл
+                      Удалить
                     </button>
                   </div>
                 </div>
@@ -459,7 +461,7 @@ function CreateTestInner() {
           onClick={() => setQuestions((prev) => [...prev, emptyQuestion(prev.length + 1)])}
           className="mb-8 w-full rounded-xl border-2 border-dashed border-primary/30 py-3 text-sm font-semibold text-primary hover:bg-primary/5"
         >
-          + Суроо кошуу
+          + Добавить вопрос
         </button>
 
         {/* Actions */}
@@ -469,7 +471,7 @@ function CreateTestInner() {
             disabled={saving}
             className="flex-1 rounded-xl border border-primary/30 py-3 font-semibold text-primary hover:bg-primary/5 disabled:opacity-50"
           >
-            {saving ? "Сакталууда..." : "Сактоо"}
+            {saving ? "Сохранение..." : "Сохранить"}
           </button>
           {test && test.status === "draft" && (
             <button
@@ -477,7 +479,7 @@ function CreateTestInner() {
               disabled={opening || questions.length === 0}
               className="flex-1 rounded-xl bg-primary py-3 font-bold text-white hover:bg-primary/90 disabled:opacity-50"
             >
-              {opening ? "..." : "Ачуу →"}
+              {opening ? "..." : "Открыть →"}
             </button>
           )}
           {test && test.status !== "draft" && (

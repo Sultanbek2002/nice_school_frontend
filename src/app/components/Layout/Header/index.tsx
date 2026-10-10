@@ -60,7 +60,7 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
 
     
   ];
-  // 2. Бэкендден келген меню менен туруктуу менюларды бириктирүү
+  // 2. Объединяем меню с бэкенда с постоянными пунктами меню
   const baseNavData = navData || [];
   const combinedNavData = [...fixedMenus, ...baseNavData];
 
@@ -148,10 +148,10 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
 
   function timeAgo(iso: string) {
     const diff = (Date.now() - new Date(iso).getTime()) / 1000
-    if (diff < 60) return 'Азыр'
+    if (diff < 60) return 'Сейчас'
     if (diff < 3600) return `${Math.floor(diff / 60)} мин.`
-    if (diff < 86400) return `${Math.floor(diff / 3600)} саат`
-    return `${Math.floor(diff / 86400)} күн`
+    if (diff < 86400) return `${Math.floor(diff / 3600)} ч.`
+    return `${Math.floor(diff / 86400)} дн.`
   }
 
   return (

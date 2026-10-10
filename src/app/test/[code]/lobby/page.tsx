@@ -88,7 +88,7 @@ export default function LobbyPage() {
 
   const connect = () => {
     if (!displayName.trim() || !picked) {
-      setError("Атыңызды жана персонажыңызды тандаңыз");
+      setError("Выберите имя и персонажа");
       return;
     }
     if (!myUserID) return;
@@ -134,7 +134,7 @@ export default function LobbyPage() {
     };
 
     ws.onerror = () => {
-      setError("Байланыш катасы. Интернетти же кодду текшериңиз.");
+      setError("Ошибка соединения. Проверьте интернет или код.");
       setStep("name");
     };
   };
@@ -147,9 +147,8 @@ export default function LobbyPage() {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-slate-gray px-4 py-6">
         <div className="glass-card w-full max-w-md rounded-2xl p-5 sm:p-8">
-          <div className="mb-2 text-center text-4xl">🎮</div>
           <h1 className="mb-1 text-center text-xl font-extrabold text-midnight_text">
-            Тестке кирүү
+            Вход в тест
           </h1>
           <p className="mb-5 text-center text-sm text-grey">
             Код:{" "}
@@ -160,18 +159,18 @@ export default function LobbyPage() {
             <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">{error}</div>
           )}
 
-          <label className="mb-1 block text-sm font-semibold text-midnight_text">Атыңыз</label>
+          <label className="mb-1 block text-sm font-semibold text-midnight_text">Ваше имя</label>
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && connect()}
             className="mb-4 w-full rounded-xl border border-black/10 bg-white/80 px-3 py-3 text-midnight_text focus:border-primary focus:outline-none"
             maxLength={30}
-            placeholder="Атыңызды жазыңыз"
+            placeholder="Введите ваше имя"
           />
 
           <label className="mb-2 block text-sm font-semibold text-midnight_text">
-            Персонажыңызды тандаңыз
+            Выберите персонажа
           </label>
           <div className="mb-5 grid max-h-44 grid-cols-4 gap-2 overflow-y-auto pr-1 sm:grid-cols-5">
             {characters.map((ch, i) => (
@@ -200,7 +199,7 @@ export default function LobbyPage() {
             disabled={!displayName.trim() || !picked || !myUserID}
             className="w-full rounded-xl bg-primary py-3 font-bold text-white disabled:opacity-50 active:scale-95 transition-all"
           >
-            Кирүү →
+            Войти →
           </button>
         </div>
       </div>
@@ -229,7 +228,7 @@ export default function LobbyPage() {
         {/* Code display */}
         <div className="mb-6">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-white/60">
-            Кирүү коду
+            Код для входа
           </p>
           <div className="inline-block rounded-2xl bg-white/10 px-6 py-3 backdrop-blur-sm sm:px-8 sm:py-4">
             <span className="font-mono text-3xl font-extrabold tracking-[0.25em] text-white sm:text-5xl">
@@ -239,10 +238,10 @@ export default function LobbyPage() {
         </div>
 
         <h1 className="mb-2 text-xl font-extrabold text-white sm:text-2xl">
-          {test?.title || "Жүктөлүүдө..."}
+          {test?.title || "Загрузка..."}
         </h1>
         <p className="mb-6 text-sm text-white/60">
-          {joined ? `${sessions.length} катышуучу кошулду` : "Кошулуп жатат..."}
+          {joined ? `${sessions.length} участников подключилось` : "Подключение..."}
         </p>
 
         {/* Players grid */}
@@ -261,7 +260,7 @@ export default function LobbyPage() {
             </div>
           ))}
           {sessions.length === 0 && (
-            <p className="text-sm text-white/40">Катышуучулар күтүлүүдө...</p>
+            <p className="text-sm text-white/40">Ожидание участников...</p>
           )}
         </div>
 
@@ -271,12 +270,12 @@ export default function LobbyPage() {
             disabled={sessions.length === 0}
             className="rounded-2xl bg-white px-10 py-4 text-lg font-extrabold text-primary shadow-lg transition-all hover:scale-105 disabled:opacity-50"
           >
-            🚀 Тестти баштоо ({sessions.length})
+            🚀 Начать тест ({sessions.length})
           </button>
         ) : (
           <div className="rounded-2xl bg-white/10 px-6 py-4 text-white/80 backdrop-blur-sm">
             <div className="mb-1 text-2xl">{picked?.emoji}</div>
-            <p className="text-sm">Мугалим тестти баштаганын күтүп жатасыз...</p>
+            <p className="text-sm">Ждём, когда учитель начнёт тест...</p>
           </div>
         )}
       </div>

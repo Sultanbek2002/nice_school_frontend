@@ -150,7 +150,7 @@ export default function PlayPage() {
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-primary">
         <div className="text-center text-white">
           <div className="mb-3 text-5xl">⏳</div>
-          <p className="text-base font-semibold">Суроо күтүлүүдө...</p>
+          <p className="text-base font-semibold">Ожидание вопроса...</p>
         </div>
       </div>
     );
@@ -179,8 +179,8 @@ export default function PlayPage() {
           />
         </div>
         <div className="mt-1 flex justify-between text-xs text-white/50">
-          <span>{current.question.points} упай</span>
-          <span className="font-bold text-white/80">Жыйынтык: {score}</span>
+          <span>{current.question.points} баллов</span>
+          <span className="font-bold text-white/80">Счёт: {score}</span>
         </div>
       </div>
 
@@ -198,16 +198,16 @@ export default function PlayPage() {
         <div className={`mx-3 mb-2 rounded-2xl p-3 text-center ${ack ? (ack.is_correct ? "bg-green-500/80" : "bg-red-500/80") : "bg-orange-500/80"} text-white`}>
           {ack ? (
             <>
-              <div className="text-base font-bold">{ack.is_correct ? `✅ Туура! +${ack.points_awarded} упай` : "❌ Туура эмес"}</div>
+              <div className="text-base font-bold">{ack.is_correct ? `✅ Верно! +${ack.points_awarded} баллов` : "❌ Неверно"}</div>
               {!ack.is_correct && correctList.length > 0 && (
-                <div className="mt-1 text-sm opacity-90">Туура жооп: <span className="font-bold">{correctList.join(", ")}</span></div>
+                <div className="mt-1 text-sm opacity-90">Правильный ответ: <span className="font-bold">{correctList.join(", ")}</span></div>
               )}
             </>
           ) : (
             <>
-              <div className="text-base font-bold">⏰ Убакыт бүттү</div>
+              <div className="text-base font-bold">⏰ Время вышло</div>
               {correctList.length > 0 && (
-                <div className="mt-1 text-sm opacity-90">Туура жооп: <span className="font-bold">{correctList.join(", ")}</span></div>
+                <div className="mt-1 text-sm opacity-90">Правильный ответ: <span className="font-bold">{correctList.join(", ")}</span></div>
               )}
             </>
           )}
@@ -278,7 +278,7 @@ export default function PlayPage() {
               onClick={() => submitAnswer(JSON.stringify(selectedMulti))}
               className="w-full rounded-2xl bg-white py-4 font-bold text-primary disabled:opacity-50 active:scale-95"
             >
-              Тастыктоо
+              Подтвердить
             </button>
           </div>
         )}
@@ -304,7 +304,9 @@ export default function PlayPage() {
                   }}
                 >
                   <span className="mb-1 text-3xl">{v === "Туура" ? "✅" : "❌"}</span>
-                  <span className="text-base">{v}</span>
+                  {/* Значение (v), отправляемое на сервер, остаётся "Туура"/"Жалган" —
+                      совместимость со старыми вопросами в базе; переводим только подпись */}
+                  <span className="text-base">{v === "Туура" ? "Верно" : "Неверно"}</span>
                 </button>
               );
             })}
@@ -317,7 +319,7 @@ export default function PlayPage() {
               value={textAnswer}
               onChange={(e) => setTextAnswer(e.target.value)}
               disabled={answered}
-              placeholder="Жооптуңузду жазыңыз..."
+              placeholder="Введите ваш ответ..."
               className="w-full rounded-2xl bg-white/10 px-4 py-4 text-center text-base text-white placeholder:text-white/40 border border-white/20 focus:border-white focus:outline-none"
             />
             <button
@@ -325,7 +327,7 @@ export default function PlayPage() {
               onClick={() => submitAnswer(textAnswer)}
               className="w-full rounded-2xl bg-white py-4 font-bold text-primary disabled:opacity-50 active:scale-95"
             >
-              Жооп берүү
+              Ответить
             </button>
           </div>
         )}

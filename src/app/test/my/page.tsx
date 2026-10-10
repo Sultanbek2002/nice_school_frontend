@@ -46,7 +46,7 @@ export default function MyTestsPage() {
   }, []);
 
   const deleteTest = async (code: string) => {
-    if (!confirm("Чын эле жок кылайынбы?")) return;
+    if (!confirm("Точно удалить?")) return;
     await fetch(`${GO_API_URL}/api/live-test/${code}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
@@ -59,30 +59,30 @@ export default function MyTestsPage() {
       <div className="mx-auto max-w-3xl">
         <div className="mb-5 flex items-center gap-3">
           <button onClick={() => router.push("/test")} className="shrink-0 text-grey hover:text-midnight_text">
-            ← Артка
+            ← Назад
           </button>
-          <h1 className="min-w-0 flex-1 truncate text-xl font-extrabold text-midnight_text sm:text-2xl">Менин тесттерим</h1>
+          <h1 className="min-w-0 flex-1 truncate text-xl font-extrabold text-midnight_text sm:text-2xl">Мои тесты</h1>
           <Link
             href="/test/create"
             className="ml-auto shrink-0 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white active:scale-95 sm:px-4"
           >
-            + Жаңы
+            + Новый
           </Link>
         </div>
 
         {loading && (
-          <div className="py-20 text-center text-grey">Жүктөлүүдө...</div>
+          <div className="py-20 text-center text-grey">Загрузка...</div>
         )}
 
         {!loading && tests.length === 0 && (
           <div className="glass-card rounded-2xl py-16 text-center">
             <div className="mb-3 text-5xl">📝</div>
-            <p className="text-grey mb-4">Тест жок. Биринчи тесттиңизди түзүңүз!</p>
+            <p className="text-grey mb-4">Тестов пока нет. Создайте первый тест!</p>
             <Link
               href="/test/create"
               className="rounded-xl bg-primary px-6 py-3 font-semibold text-white hover:bg-primary/90"
             >
-              Тест түзүү
+              Создать тест
             </Link>
           </div>
         )}
@@ -113,7 +113,7 @@ export default function MyTestsPage() {
                     href={`/test/create?code=${t.code}`}
                     className="rounded-lg bg-primary/10 px-3 py-2 text-xs font-semibold text-primary active:scale-95"
                   >
-                    Түзөтүү
+                    Редактировать
                   </Link>
                 )}
                 {(t.status === "waiting" || t.status === "live") && (
@@ -129,14 +129,14 @@ export default function MyTestsPage() {
                     href={`/test/${t.code}/results`}
                     className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 active:scale-95"
                   >
-                    Жыйынтыктар
+                    Результаты
                   </Link>
                 )}
                 <button
                   onClick={() => deleteTest(t.code)}
                   className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-500 active:scale-95"
                 >
-                  Жок кыл
+                  Удалить
                 </button>
               </div>
             </div>
