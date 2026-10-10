@@ -78,10 +78,10 @@ function useCountdown(startTime: string | null) {
 // Per-card countdown component
 function Countdown({ startTime }: { startTime: string | null }) {
   const v = useCountdown(startTime)
-  if (!startTime || !v) return <span className="text-xs text-slate-400">Убакыт белгиленген жок</span>
+  if (!startTime || !v) return <span className="text-xs text-slate-400">Время не указано</span>
   if (v.started) return (
     <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />Башталды
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />Началось
     </span>
   )
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -97,16 +97,16 @@ function Countdown({ startTime }: { startTime: string | null }) {
 
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Калды:</span>
+      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Осталось:</span>
       {v.d > 0 && (
         <span className="flex flex-col items-center bg-violet-50 border border-violet-200 rounded-lg px-2 py-0.5 min-w-[32px]">
           <span className="text-sm font-black text-violet-700 leading-none">{v.d}</span>
-          <span className="text-[8px] text-violet-400 font-bold uppercase">күн</span>
+          <span className="text-[8px] text-violet-400 font-bold uppercase">дн</span>
         </span>
       )}
       <span className="flex flex-col items-center bg-slate-50 border border-slate-200 rounded-lg px-2 py-0.5 min-w-[32px]">
         <span className="text-sm font-black text-slate-700 leading-none">{pad(v.h)}</span>
-        <span className="text-[8px] text-slate-400 font-bold uppercase">саат</span>
+        <span className="text-[8px] text-slate-400 font-bold uppercase">ч</span>
       </span>
       <span className="text-slate-300 font-black text-xs">:</span>
       <span className="flex flex-col items-center bg-slate-50 border border-slate-200 rounded-lg px-2 py-0.5 min-w-[32px]">
@@ -123,15 +123,15 @@ function Countdown({ startTime }: { startTime: string | null }) {
 }
 
 const STATUS_META = {
-  pending:  { label: 'Каралууда',  bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-700',  icon: 'solar:clock-circle-bold-duotone',        iconColor: 'text-amber-500' },
-  approved: { label: 'Бекитилди', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: 'solar:check-circle-bold-duotone',         iconColor: 'text-emerald-500' },
-  rejected: { label: 'Четке',     bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-700',    icon: 'solar:close-circle-bold-duotone',         iconColor: 'text-red-500'  },
+  pending:  { label: 'На рассмотрении',  bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-700',  icon: 'solar:clock-circle-bold-duotone',        iconColor: 'text-amber-500' },
+  approved: { label: 'Одобрено', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: 'solar:check-circle-bold-duotone',         iconColor: 'text-emerald-500' },
+  rejected: { label: 'Отклонено',     bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-700',    icon: 'solar:close-circle-bold-duotone',         iconColor: 'text-red-500'  },
 }
 
 const menuItems = [
-  { icon: 'solar:home-2-bold-duotone',    label: 'Башкы бет',   href: '/',          color: 'text-primary'    },
-  { icon: 'solar:cup-bold-duotone',       label: 'Олимпиадалар', href: '/olympiads', color: 'text-amber-500'  },
-  { icon: 'solar:diploma-bold-duotone',   label: 'Мугалимдер',  href: '/teachers',  color: 'text-emerald-500'},
+  { icon: 'solar:home-2-bold-duotone',    label: 'Главная',   href: '/',          color: 'text-primary'    },
+  { icon: 'solar:cup-bold-duotone',       label: 'Олимпиады', href: '/olympiads', color: 'text-amber-500'  },
+  { icon: 'solar:diploma-bold-duotone',   label: 'Учителя',  href: '/teachers',  color: 'text-emerald-500'},
 ]
 
 export default function ProfilePage() {
@@ -192,12 +192,12 @@ export default function ProfilePage() {
     <div className="flex h-screen items-center justify-center">
       <div className="text-center">
         <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin mx-auto" />
-        <p className="mt-4 text-gray-400 text-sm font-medium">Жүктөлүүдө...</p>
+        <p className="mt-4 text-gray-400 text-sm font-medium">Загрузка...</p>
       </div>
     </div>
   )
 
-  const roleLabel = user?.role === 'student' ? 'Окуучу' : user?.role === 'admin' ? 'Администратор' : user?.role === 'superadmin' ? 'Супер Администратор' : 'Колдонуучу'
+  const roleLabel = user?.role === 'student' ? 'Ученик' : user?.role === 'admin' ? 'Администратор' : user?.role === 'superadmin' ? 'Супер Администратор' : 'Пользователь'
   const roleColor = user?.role === 'student' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-amber-50 text-amber-600 border-amber-200'
 
   const pendingCount  = apps.filter(a => a.status === 'pending').length
@@ -223,7 +223,7 @@ export default function ProfilePage() {
               </MD>
               <button onClick={handleLogout}
                 className="flex items-center gap-2 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-2xl text-sm font-bold border border-red-100 transition-colors cursor-pointer">
-                {mounted && <Icon icon="solar:logout-3-bold-duotone" width={18} />}Чыгуу
+                {mounted && <Icon icon="solar:logout-3-bold-duotone" width={18} />}Выйти
               </button>
             </div>
             <div className="space-y-1">
@@ -250,7 +250,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-lg font-black text-midnight_text leading-none">{apps.length}</p>
-                  <p className="text-[10px] text-gray-400 font-medium">Олимпиада өтүнүчтөрү</p>
+                  <p className="text-[10px] text-gray-400 font-medium">Заявок на олимпиады</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 bg-emerald-50 p-3 rounded-2xl">
@@ -259,7 +259,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-lg font-black text-midnight_text leading-none">{approvedCount}</p>
-                  <p className="text-[10px] text-gray-400 font-medium">Бекитилген</p>
+                  <p className="text-[10px] text-gray-400 font-medium">Одобрено</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl">
@@ -268,7 +268,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-lg font-black text-midnight_text leading-none">{pendingCount}</p>
-                  <p className="text-[10px] text-gray-400 font-medium">Каралууда</p>
+                  <p className="text-[10px] text-gray-400 font-medium">На рассмотрении</p>
                 </div>
               </div>
               {totalResults > 0 && (
@@ -278,7 +278,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <p className="text-lg font-black text-midnight_text leading-none">{totalResults}</p>
-                    <p className="text-[10px] text-gray-400 font-medium">Тест өттүм</p>
+                    <p className="text-[10px] text-gray-400 font-medium">Тестов пройдено</p>
                   </div>
                 </div>
               )}
@@ -309,7 +309,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50">
                   {mounted && <Icon icon="solar:verified-check-bold-duotone" className="text-xl text-green-500" />}
-                  <div><p className="text-[10px] text-gray-400 font-medium">Статус</p><p className="text-sm font-bold text-green-600">Активдүү</p></div>
+                  <div><p className="text-[10px] text-gray-400 font-medium">Статус</p><p className="text-sm font-bold text-green-600">Активен</p></div>
                 </div>
               </div>
             </div>
@@ -322,14 +322,14 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between">
               <h2 className="text-base font-black text-midnight_text flex items-center gap-2">
                 {mounted && <Icon icon="solar:cup-star-bold-duotone" className="text-amber-500 text-xl" />}
-                Менин олимпиадаларым
+                Мои олимпиады
                 {apps.length > visibleApps.length && (
                   <span className="text-xs font-semibold text-gray-400">({visibleApps.length}/{apps.length})</span>
                 )}
               </h2>
               <Link href="/olympiads"
                 className="text-xs font-bold text-primary hover:text-secondary flex items-center gap-1 transition-colors">
-                Бардык олимпиадалар
+                Все олимпиады
                 {mounted && <Icon icon="solar:arrow-right-linear" width={14} />}
               </Link>
             </div>
@@ -337,18 +337,18 @@ export default function ProfilePage() {
             {appsLoading ? (
               <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-10 text-center">
                 <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin mx-auto mb-3" />
-                <p className="text-sm text-gray-400 font-medium">Жүктөлүүдө...</p>
+                <p className="text-sm text-gray-400 font-medium">Загрузка...</p>
               </div>
             ) : apps.length === 0 ? (
               <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-10 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
                   {mounted && <Icon icon="solar:cup-bold-duotone" className="text-4xl text-amber-200" />}
                 </div>
-                <p className="text-slate-500 font-bold text-sm mb-1">Олимпиадага өтүнүч бересиз жок</p>
-                <p className="text-xs text-slate-400 mb-4">Катышкыңыз келген олимпиаданы тандаңыз</p>
+                <p className="text-slate-500 font-bold text-sm mb-1">Вы пока не подавали заявки на олимпиады</p>
+                <p className="text-xs text-slate-400 mb-4">Выберите олимпиаду, в которой хотите участвовать</p>
                 <Link href="/olympiads"
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-2xl hover:bg-secondary transition-colors shadow-sm shadow-primary/20">
-                  {mounted && <Icon icon="solar:cup-bold-duotone" />}Олимпиадаларды көрүү
+                  {mounted && <Icon icon="solar:cup-bold-duotone" />}Смотреть олимпиады
                 </Link>
               </div>
             ) : (
@@ -406,19 +406,19 @@ export default function ProfilePage() {
                         {app.status === 'pending' && (
                           <p className="text-[11px] text-amber-600 font-semibold flex items-center gap-1">
                             {mounted && <Icon icon="solar:info-circle-bold-duotone" width={12} />}
-                            Администратор маалыматтарыңызды текшерет, күтүп туруңуз
+                            Администратор проверяет ваши данные, подождите
                           </p>
                         )}
                         {app.status === 'approved' && !started && (
                           <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
                             {mounted && <Icon icon="solar:check-circle-bold-duotone" width={12} />}
-                            Катышуу бекитилди! Убакыт жеткенде тестке кириңиз
+                            Участие подтверждено! Когда наступит время, зайдите на тест
                           </p>
                         )}
                         {app.status === 'rejected' && app.reject_reason && (
                           <p className="text-[11px] text-red-600 font-semibold flex items-center gap-1">
                             {mounted && <Icon icon="solar:danger-circle-bold-duotone" width={12} />}
-                            Себеп: {app.reject_reason}
+                            Причина: {app.reject_reason}
                           </p>
                         )}
 
@@ -427,21 +427,21 @@ export default function ProfilePage() {
                           <Link href={`/olympiads/${app.olympiad_id}/test`}
                             className="inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black transition-all hover:scale-[1.01] active:scale-[0.99] shadow-sm shadow-emerald-200">
                             {mounted && <Icon icon="solar:play-circle-bold-duotone" width={14} />}
-                            Тестке кирүү
+                            Перейти к тесту
                           </Link>
                         )}
 
                         {app.status === 'approved' && started && closed && (
                           <p className="text-sm text-slate-600 font-black flex items-center gap-1.5">
                             {mounted && <Icon icon="solar:lock-circle-bold-duotone" width={16} />}
-                            Олимпиаданын убактысы аяктады
+                            Время олимпиады истекло
                           </p>
                         )}
 
                         {/* Link to olympiad page */}
                         <Link href={`/olympiads/${app.olympiad_id}`}
                           className={`inline-flex items-center gap-1 text-[11px] font-black ${sm.text} hover:underline underline-offset-2`}>
-                          Олимпиада барагына өтүү
+                          Перейти на страницу олимпиады
                           {mounted && <Icon icon="solar:arrow-right-up-linear" width={11} />}
                         </Link>
                       </div>
@@ -454,7 +454,7 @@ export default function ProfilePage() {
                   <button onClick={() => setShowAllApps(v => !v)}
                     className="w-full py-2.5 rounded-2xl border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors flex items-center justify-center gap-2">
                     {mounted && <Icon icon={showAllApps ? "solar:alt-arrow-up-bold" : "solar:alt-arrow-down-bold"} width={14} />}
-                    {showAllApps ? 'Жашыруу' : `Дагы ${apps.length - defaultApps.length} олимпиаданы көрүү`}
+                    {showAllApps ? 'Скрыть' : `Показать ещё ${apps.length - defaultApps.length} олимпиад`}
                   </button>
                 )}
               </div>
@@ -465,7 +465,7 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-base font-black text-midnight_text flex items-center gap-2">
                     {mounted && <Icon icon="solar:chart-bold-duotone" className="text-indigo-500 text-xl" />}
-                    Тест натыйжалары
+                    Результаты тестов
                   </h2>
                 </div>
                 {visibleResults.map((r, i) => {
@@ -504,16 +504,16 @@ export default function ProfilePage() {
                         <div className="flex-shrink-0 flex flex-col items-end gap-2">
                           {r.admin_verified ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-600 border border-emerald-200">
-                              {mounted && <Icon icon="solar:check-circle-bold-duotone" width={12} />}Тастыкталды
+                              {mounted && <Icon icon="solar:check-circle-bold-duotone" width={12} />}Подтверждено
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-600 border border-amber-200">
-                              {mounted && <Icon icon="solar:clock-circle-bold-duotone" width={12} />}Текшерилүүдө
+                              {mounted && <Icon icon="solar:clock-circle-bold-duotone" width={12} />}На проверке
                             </span>
                           )}
                           <Link href={`/my-results/${r.id}`}
                             className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-500 hover:text-indigo-700 hover:underline underline-offset-2">
-                            Жооптор
+                            Ответы
                             {mounted && <Icon icon="solar:arrow-right-up-linear" width={11} />}
                           </Link>
                         </div>
@@ -527,7 +527,7 @@ export default function ProfilePage() {
                   <button onClick={() => setShowAllResults(v => !v)}
                     className="w-full py-2.5 rounded-2xl border border-slate-200 bg-white text-xs font-black text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors flex items-center justify-center gap-2">
                     {mounted && <Icon icon={showAllResults ? "solar:alt-arrow-up-bold" : "solar:alt-arrow-down-bold"} width={14} />}
-                    {showAllResults ? 'Жашыруу' : `Дагы ${testResults.length - 3} натыйжаны көрүү`}
+                    {showAllResults ? 'Скрыть' : `Показать ещё ${testResults.length - 3} результатов`}
                   </button>
                 )}
               </div>
