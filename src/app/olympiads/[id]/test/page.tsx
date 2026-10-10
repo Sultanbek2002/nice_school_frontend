@@ -274,7 +274,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
             startCamera();
             loadMediaPipe();
         } else if (stage === "testing") {
-            startCamera(true).then(() => {
+            const beginRecording = () => {
                 if (!streamRef.current || mediaRecorderRef.current) {
                     console.warn("[REC] cannot start: stream=", !!streamRef.current, "alreadyRecording=", !!mediaRecorderRef.current);
                     return;
@@ -306,7 +306,18 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                     mediaRecorderRef.current = mr;
                     console.log("[REC] recording started ✓, state:", mr.state);
                 } catch (e) { console.error("[REC] MediaRecorder failed:", e); }
-            });
+            };
+            // Поток с камеры уже есть с этапа проверки лица — начинаем запись сразу,
+            // синхронно, не дожидаясь асинхронного переподключения к <video>. Раньше
+            // запись стартовала только внутри startCamera(true).then(...), и на коротких
+            // тестах можно было успеть отправить ответы раньше, чем запись вообще начнётся —
+            // видео получалось пустым.
+            if (streamRef.current) {
+                beginRecording();
+                startCamera(true); // переподключаем поток к video-элементу теста, не блокируя запись
+            } else {
+                startCamera(true).then(beginRecording);
+            }
         } else if (stage !== "permission") {
             // Final stages (submitted, blocked, no-access) — stop camera
             stopCamera();
