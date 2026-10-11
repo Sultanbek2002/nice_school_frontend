@@ -55,7 +55,7 @@ function VideoUploadingOverlay() {
             <div className="bg-white rounded-2xl p-6 max-w-sm text-center shadow-2xl">
                 <div className="text-4xl mb-3 animate-pulse">📹</div>
                 <p className="font-black text-slate-800 mb-1">Видео жазуу сакталып жатат</p>
-                <p className="text-sm text-slate-500">Бул баракты жаппаңыз, бир аз күтүңүз...</p>
+                <p className="text-sm text-slate-500">Не закрывайте страницу, подождите немного...</p>
             </div>
         </div>
     );
@@ -108,7 +108,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
     // ── 1. Load olympiad + check access ──────────────────
     useEffect(() => {
         const token = getToken();
-        if (!token) { setNoAccessMsg("Кирүү талап кылынат"); setStage("no-access"); return; }
+        if (!token) { setNoAccessMsg("Требуется вход"); setStage("no-access"); return; }
 
         const safeFetch = (url: string, opts?: RequestInit) =>
             fetch(url, opts)
@@ -124,7 +124,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 headers: { Authorization: `Bearer ${token}` },
             }),
         ]).then(([olym, app, existingResult]) => {
-            if (!olym) { setNoAccessMsg("Олимпиада табылган жок"); setStage("no-access"); return; }
+            if (!olym) { setNoAccessMsg("Олимпиада не найдена"); setStage("no-access"); return; }
             setOlympiad(olym);
             setTimeLeft((olym.time_limit || 60) * 60);
 
@@ -137,7 +137,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
             if (olym.start_time) {
                 const deadline = new Date(olym.start_time).getTime() + (olym.time_limit || 60) * 60000;
                 if (Date.now() > deadline) {
-                    setNoAccessMsg("Олимпиаданын убактысы аяктады");
+                    setNoAccessMsg("Время олимпиады истекло");
                     setStage("no-access");
                     return;
                 }
@@ -145,15 +145,15 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
 
             if (!app || app.status !== "approved") {
                 setNoAccessMsg(
-                    !app ? "Сиз бул олимпиадага катталган жоксуз" :
-                    app.status === "pending" ? "Өтүнүчүңүз дагы эле текшерилүүдө" :
-                    "Өтүнүчүңүз четке кагылды"
+                    !app ? "Вы не зарегистрированы на эту олимпиаду" :
+                    app.status === "pending" ? "Ваша заявка ещё на рассмотрении" :
+                    "Ваша заявка отклонена"
                 );
                 setStage("no-access");
                 return;
             }
-            // Эгер бул олимпиада жүздү текшерүүнү талап кылбаса — камерага такыр
-            // кайрылбай эле түз тестке киргизебиз (прокторинг видеосу да жазылбайт)
+            // Если эта олимпиада не требует верификации лица — вообще не трогаем камеру
+            // и сразу пускаем в тест (видео прокторинга тоже не записывается)
             if (!olym.require_face_verification) {
                 fetch(`${GO_API_URL}/api/olympiads/${id}/test-questions`, {
                     headers: { Authorization: `Bearer ${token}` },
@@ -164,7 +164,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                       setStage("testing");
                   })
                   .catch(() => {
-                      setNoAccessMsg("Суроолорду жүктөөдө ката кетти. Баракты кайра жүктөңүз.");
+                      setNoAccessMsg("Ошибка при загрузке вопросов. Обновите страницу.");
                       setStage("no-access");
                   });
                 return;
@@ -174,7 +174,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
             nextStageRef.current = target;
             setStage("permission");
         }).catch(() => {
-            setNoAccessMsg("Маалыматтарды жүктөөдө ката кетти. Баракты кайра жүктөңүз.");
+            setNoAccessMsg("Ошибка при загрузке данных. Обновите страницу.");
             setStage("no-access");
         });
     }, [id]);
@@ -197,7 +197,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 numFaces: 1,
             });
             setMpReady(true);
-        } catch { setCamError("AI моделин жүктөөдө ката. Интернет туташуусун текшериңиз."); }
+        } catch { setCamError("Ошибка загрузки AI-модели. Проверьте подключение к интернету."); }
         finally { setMpLoading(false); }
     }, [mpLoading]);
 
@@ -242,9 +242,9 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                         video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
                     });
                     await attachStream(s);
-                } catch { setCamError("Камерага уруксат жок. Браузер жөндөөлөрүнөн уруксат бериңиз."); }
+                } catch { setCamError("Нет доступа к камере. Разрешите в настройках браузера."); }
             } else {
-                setCamError("Камерага уруксат жок. Браузер жөндөөлөрүнөн уруксат бериңиз.");
+                setCamError("Нет доступа к камере. Разрешите в настройках браузера.");
             }
         }
     }, []);
@@ -283,7 +283,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 streamRef.current = s;
                 setStage(nextStageRef.current);
             } catch {
-                setCamError("Камерага уруксат берилген жок. Браузер жөндөөлөрүнөн уруксат бериңиз.");
+                setCamError("Доступ к камере не предоставлен. Разрешите в настройках браузера.");
                 setStage(nextStageRef.current);
             }
         }
@@ -419,7 +419,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         cdRunRef.current = false;
         stableRef.current = 0;
         setVerifying(true);
-        setFaceMsg(isSetup ? "Жүзүңүз сакталууда..." : "Жүзүңүз текшерилүүдө...");
+        setFaceMsg(isSetup ? "Сохранение лица..." : "Проверка лица...");
         setFaceMsgType("info");
 
         try {
@@ -430,14 +430,14 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
 
             if (!det) {
                 if (isSetup) {
-                    setFaceMsg("Жүзүңүз аныкталган жок. Жарык жерде, камерага жакыныраак туруңуз.");
+                    setFaceMsg("Лицо не обнаружено. Встаньте ближе к камере в освещённом месте.");
                     setFaceMsgType("error");
                     return;
                 }
                 attemptsRef.current += 1;
                 const a = attemptsRef.current;
                 setAttempts(a);
-                setFaceMsg(`Жүзүңүз аныкталган жок. Жарык жерде, камерага жакыныраак туруңуз. (${a}/${MAX_ATTEMPTS})`);
+                setFaceMsg(`Лицо не обнаружено. Встаньте ближе к камере в освещённом месте. (${a}/${MAX_ATTEMPTS})`);
                 setFaceMsgType("error");
                 if (a >= MAX_ATTEMPTS) { blockedRef.current = true; setStage("blocked"); }
                 return;
@@ -453,14 +453,14 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 });
                 if (res.status === 403) {
                     const data = await res.json().catch(() => null);
-                    setNoAccessMsg(data?.error || "Олимпиаданын убактысы аяктады");
+                    setNoAccessMsg(data?.error || "Время олимпиады истекло");
                     setStage("no-access");
                 } else if (res.ok) {
-                    setFaceMsg("Жүз маалыматы сакталды! Эми верификациядан өтүңүз.");
+                    setFaceMsg("Данные лица сохранены! Теперь пройдите верификацию.");
                     setFaceMsgType("ok");
                     setTimeout(() => setStage("face-check"), 1000);
                 } else {
-                    setFaceMsg("Сактоодо ката. Кайра аракет кылыңыз.");
+                    setFaceMsg("Ошибка при сохранении. Попробуйте снова.");
                     setFaceMsgType("error");
                 }
                 return;
@@ -476,13 +476,13 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
 
             if (res.status === 403) {
                 blockedRef.current = true;
-                setNoAccessMsg(data.error || "Олимпиаданын убактысы аяктады");
+                setNoAccessMsg(data.error || "Время олимпиады истекло");
                 setStage("no-access");
                 return;
             }
 
             if (res.ok && data.match) {
-                setFaceMsg("Верификация ийгиликтүү! Тест башталды.");
+                setFaceMsg("Верификация успешна! Тест начался.");
                 setFaceMsgType("ok");
                 // Load questions then go to testing
                 const qRes = await fetch(`${GO_API_URL}/api/olympiads/${id}/test-questions`, {
@@ -499,10 +499,10 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 const a = attemptsRef.current;
                 setAttempts(a);
                 if (!res.ok) {
-                    setFaceMsg(data.error || "Текшерүүдө ката. Кайра аракет кылыңыз.");
+                    setFaceMsg(data.error || "Ошибка при проверке. Попробуйте снова.");
                 } else {
-                    const score = data.score != null ? ` (айырма: ${data.score.toFixed(3)})` : "";
-                    setFaceMsg(`Жүзүңүз дал келген жок${score}. Камерага жакын келип, жакшы жарыкта туруңуз. (${a}/${MAX_ATTEMPTS})`);
+                    const score = data.score != null ? ` (разница: ${data.score.toFixed(3)})` : "";
+                    setFaceMsg(`Лицо не совпадает${score}. Подойдите ближе к камере, встаньте в хорошо освещённом месте. (${a}/${MAX_ATTEMPTS})`);
                 }
                 setFaceMsgType("error");
                 if (a >= MAX_ATTEMPTS) {
@@ -516,7 +516,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
             }
         } catch (e) {
             console.error(e);
-            setFaceMsg("Текшерүүдө ката кетти. Кайра аракет кылыңыз.");
+            setFaceMsg("Произошла ошибка при проверке. Попробуйте снова.");
             setFaceMsgType("error");
             if (!isSetup) {
                 attemptsRef.current += 1;
@@ -640,7 +640,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         <div className="min-h-screen flex items-center justify-center" style={{ background:"linear-gradient(145deg,#f0f4ff,#faf5ff)" }}>
             <div className="text-center">
                 <div className="animate-spin w-10 h-10 border-2 border-violet-400 border-t-transparent rounded-full mx-auto mb-3" />
-                <p className="text-slate-500 font-bold">Жүктөлүүдө...</p>
+                <p className="text-slate-500 font-bold">Загрузка...</p>
             </div>
         </div>
     );
@@ -649,10 +649,10 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         <div className="min-h-screen flex items-center justify-center" style={{ background:"linear-gradient(145deg,#f0f4ff,#faf5ff)" }}>
             <div className="bg-white rounded-3xl p-10 shadow-xl text-center max-w-md w-full mx-4">
                 <div className="text-6xl mb-4">🔒</div>
-                <h2 className="text-2xl font-black text-slate-800 mb-3">Уруксат жок</h2>
+                <h2 className="text-2xl font-black text-slate-800 mb-3">Нет доступа</h2>
                 <p className="text-slate-500 font-medium mb-6">{noAccessMsg}</p>
                 <a href={`/olympiads/${id}`} className="inline-block px-6 py-3 rounded-2xl text-white font-bold" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                    ← Олимпиадага кайтуу
+                    ← Вернуться к олимпиаде
                 </a>
             </div>
         </div>
@@ -662,10 +662,10 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         <div className="min-h-screen flex items-center justify-center" style={{ background:"linear-gradient(145deg,#f0f4ff,#faf5ff)" }}>
             <div className="bg-white rounded-3xl p-10 shadow-xl text-center max-w-md w-full mx-4">
                 <div className="text-6xl mb-4">✅</div>
-                <h2 className="text-2xl font-black text-slate-800 mb-2">Тест тапшырылган</h2>
-                <p className="text-slate-500 mb-6">Сиз бул тестти мурун тапшырдыңыз</p>
+                <h2 className="text-2xl font-black text-slate-800 mb-2">Тест уже сдан</h2>
+                <p className="text-slate-500 mb-6">Вы уже сдавали этот тест</p>
                 <a href={`/olympiads/${id}`} className="inline-block px-6 py-3 rounded-2xl text-white font-bold" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                    ← Кайтуу
+                    ← Назад
                 </a>
             </div>
         </div>
@@ -675,11 +675,11 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         <div className="min-h-screen flex items-center justify-center" style={{ background:"linear-gradient(145deg,#fff0f0,#faf0ff)" }}>
             <div className="bg-white rounded-3xl p-10 shadow-xl text-center max-w-md w-full mx-4">
                 <div className="text-6xl mb-4">🚫</div>
-                <h2 className="text-2xl font-black text-red-700 mb-3">Кирүү бөгөттөлдү</h2>
-                <p className="text-slate-500 font-medium mb-2">{MAX_ATTEMPTS} жолу верификация ийгиликсиз болду.</p>
-                <p className="text-sm text-slate-400 mb-6">Администратор менен байланышыңыз.</p>
+                <h2 className="text-2xl font-black text-red-700 mb-3">Доступ заблокирован</h2>
+                <p className="text-slate-500 font-medium mb-2">Верификация не удалась {MAX_ATTEMPTS} раза.</p>
+                <p className="text-sm text-slate-400 mb-6">Свяжитесь с администратором.</p>
                 <a href={`/olympiads/${id}`} className="inline-block px-6 py-3 rounded-2xl text-white font-bold bg-red-500 hover:bg-red-600 transition-colors">
-                    ← Кайтуу
+                    ← Назад
                 </a>
             </div>
         </div>
@@ -694,7 +694,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                     <div className="text-5xl mb-3">
                         {result.percentage >= 80 ? "🏆" : result.percentage >= 60 ? "🎉" : result.percentage >= 40 ? "📚" : "💪"}
                     </div>
-                    <h2 className="text-2xl font-black mb-1">Тест аяктады!</h2>
+                    <h2 className="text-2xl font-black mb-1">Тест завершён!</h2>
                     <p className="text-white/80 text-sm">{olympiad?.title}</p>
                 </div>
                 <div className="p-8 space-y-5">
@@ -713,15 +713,15 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
                                 <span className="text-2xl font-black text-slate-800">{Math.round(result.percentage)}%</span>
-                                <span className="text-xs text-slate-400 font-bold">УПАЙ</span>
+                                <span className="text-xs text-slate-400 font-bold">БАЛЛ</span>
                             </div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                         {[
-                            { label: "Туура жооп",  value: `${result.score} / ${result.max_score}`, icon: "✓" },
-                            { label: "Пайыздык",    value: `${Math.round(result.percentage)}%`,      icon: "%" },
+                            { label: "Правильный ответ",  value: `${result.score} / ${result.max_score}`, icon: "✓" },
+                            { label: "Процент",    value: `${Math.round(result.percentage)}%`,      icon: "%" },
                         ].map(({ label, value, icon }) => (
                             <div key={label} className="bg-slate-50 rounded-2xl p-4 text-center">
                                 <div className="text-2xl font-black text-violet-600 mb-0.5">{icon}</div>
@@ -733,10 +733,10 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
 
                     <div className={`p-4 rounded-2xl text-center ${result.percentage >= 60 ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
                         <p className="font-black text-sm">
-                            {result.percentage >= 80 ? "🌟 Мыкты натыйжа! Сиз сонун аткардыңыз." :
-                             result.percentage >= 60 ? "👍 Жакшы натыйжа! Улантыңыз." :
-                             result.percentage >= 40 ? "📖 Дагы бир аз окуу керек." :
-                             "💪 Кайра аракет кылыңыз! Кийинкисинде жакшыраак болот."}
+                            {result.percentage >= 80 ? "🌟 Отличный результат! Вы прекрасно справились." :
+                             result.percentage >= 60 ? "👍 Хороший результат! Продолжайте в том же духе." :
+                             result.percentage >= 40 ? "📖 Нужно ещё немного поучиться." :
+                             "💪 Попробуйте ещё раз! В следующий раз будет лучше."}
                         </p>
                     </div>
 
@@ -745,7 +745,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                        aria-disabled={videoUploading}
                        className={`block w-full py-4 rounded-2xl font-black text-white text-center ${videoUploading ? "opacity-50 cursor-not-allowed" : ""}`}
                        style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                        {videoUploading ? "Күтүңүз..." : "Аяктоо"}
+                        {videoUploading ? "Подождите..." : "Завершить"}
                     </a>
                 </div>
             </div>
@@ -758,28 +758,28 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
             <div className="bg-white rounded-3xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
                 <div className="p-8 text-white text-center" style={{ background:"linear-gradient(135deg,#f59e0b,#f97316)" }}>
                     <div className="text-5xl mb-3">⏳</div>
-                    <h2 className="text-2xl font-black mb-1">Тест тапшырылды!</h2>
+                    <h2 className="text-2xl font-black mb-1">Тест отправлен!</h2>
                     <p className="text-white/80 text-sm">{olympiad?.title}</p>
                 </div>
                 <div className="p-8 space-y-5">
                     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center space-y-2">
                         <p className="text-3xl">📝</p>
-                        <p className="font-black text-amber-800 text-base">Натыйжа баалоону күтүүдө</p>
+                        <p className="font-black text-amber-800 text-base">Ожидание оценки результата</p>
                         <p className="text-sm text-amber-600 leading-relaxed">
-                            Сиздин жообуңузда ачык суроолор бар. Администратор текшергенден кийин жыйынтык белгилүү болот.
+                            В ваших ответах есть открытые вопросы. Итог станет известен после проверки администратором.
                         </p>
                     </div>
                     <div className="bg-slate-50 rounded-2xl p-4 text-center">
-                        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Автоматтык упай</p>
+                        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Автоматический балл</p>
                         <p className="text-2xl font-black text-slate-700">{result?.score} <span className="text-base text-slate-400">/ {result?.max_score}</span></p>
-                        <p className="text-xs text-slate-400 mt-1">Ачык суроолор баалангандан кийин жаңыртылат</p>
+                        <p className="text-xs text-slate-400 mt-1">Обновится после оценки открытых вопросов</p>
                     </div>
                     <a href={videoUploading ? undefined : `/olympiads/${id}`}
                        onClick={e => { if (videoUploading) e.preventDefault(); }}
                        aria-disabled={videoUploading}
                        className={`block w-full py-4 rounded-2xl font-black text-white text-center ${videoUploading ? "opacity-50 cursor-not-allowed" : ""}`}
                        style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                        {videoUploading ? "Күтүңүз..." : "Аяктоо"}
+                        {videoUploading ? "Подождите..." : "Завершить"}
                     </a>
                 </div>
             </div>
@@ -792,18 +792,18 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
             <div className="bg-white rounded-3xl shadow-xl max-w-sm w-full overflow-hidden">
                 <div className="p-6 text-white text-center" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
                     <div className="text-5xl mb-3">📷</div>
-                    <h2 className="text-xl font-black mb-1">Уруксат керек</h2>
+                    <h2 className="text-xl font-black mb-1">Нужно разрешение</h2>
                     <p className="text-white/80 text-sm">{olympiad?.title}</p>
                 </div>
                 <div className="p-6 space-y-4">
                     <p className="text-sm text-slate-600 text-center leading-relaxed">
-                        Тестке кирүү үчүн <strong>камера</strong> жана <strong>микрофон</strong> уруксаты зарыл
+                        Для входа в тест необходим доступ к <strong>камере</strong> и <strong>микрофону</strong>
                     </p>
                     <div className="space-y-2.5">
                         {[
-                            { icon:"📷", title:"Камера", desc:"Жүзүңүздү верификациялоо жана тест учурунда жазуу үчүн" },
-                            { icon:"🎙️", title:"Микрофон", desc:"Академиялык чынчылдыкты камсыз кылуу үчүн" },
-                            { icon:"🛡️", title:"Коопсуздук", desc:"Маалыматтар шифрленген форматта сакталат" },
+                            { icon:"📷", title:"Камера", desc:"Для верификации лица и записи во время теста" },
+                            { icon:"🎙️", title:"Микрофон", desc:"Для обеспечения академической честности" },
+                            { icon:"🛡️", title:"Безопасность", desc:"Данные сохраняются в зашифрованном виде" },
                         ].map(({ icon, title, desc }) => (
                             <div key={title} className="flex items-start gap-3 bg-slate-50 rounded-2xl p-3.5">
                                 <span className="text-2xl flex-shrink-0">{icon}</span>
@@ -816,7 +816,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                     </div>
                     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3">
                         <p className="text-xs text-amber-700 font-semibold text-center">
-                            ⚠️ Браузер уруксат сурайт — <strong>"Уруксат берүү"</strong> дегенди басыңыз
+                            ⚠️ Браузер запросит разрешение — нажмите <strong>"Разрешить"</strong>
                         </p>
                     </div>
                     <button
@@ -824,11 +824,11 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                         className="w-full py-4 rounded-2xl font-black text-white text-base transition-transform active:scale-[0.98]"
                         style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)", boxShadow:"0 10px 30px rgba(124,58,237,0.3)" }}
                     >
-                        📷 Уруксат берүү жана улантуу
+                        📷 Разрешить и продолжить
                     </button>
                     <a href={`/olympiads/${id}`}
                         className="block text-center text-xs text-slate-400 hover:text-slate-600 font-semibold py-1">
-                        ← Артка кайтуу
+                        ← Назад
                     </a>
                 </div>
             </div>
@@ -840,14 +840,14 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         <div className="min-h-screen flex items-center justify-center pb-10 pt-20" style={{ background:"linear-gradient(145deg,#f0f4ff,#faf5ff)" }}>
             <div className="bg-white rounded-3xl shadow-xl max-w-sm w-full mx-4 overflow-hidden">
                 <div className="p-5 border-b border-slate-100">
-                    <h2 className="text-lg font-black text-slate-800 mb-1">Жүзүңүздү сактаңыз</h2>
+                    <h2 className="text-lg font-black text-slate-800 mb-1">Сохраните лицо</h2>
                     <p className="text-xs text-slate-500">{olympiad?.title}</p>
                 </div>
 
                 <div className="p-5 space-y-4">
                     <div className="bg-violet-50 border border-violet-200 rounded-xl p-3">
                         <p className="text-xs font-bold text-violet-700">
-                            ℹ️ Тестке кирүү үчүн жүз маалыматыңыз кайра сакталышы керек. Камерага тике карап туруңуз — авто тартылат.
+                            ℹ️ Для входа в тест нужно заново сохранить данные лица. Смотрите прямо в камеру — снимок сделается автоматически.
                         </p>
                     </div>
 
@@ -857,7 +857,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                             <p className="text-sm font-bold text-red-600 mb-4">{camError}</p>
                             <button onClick={() => { startCamera(); loadMediaPipe(); }}
                                 className="px-5 py-2 bg-red-500 text-white rounded-xl font-bold text-sm">
-                                Кайра аракет
+                                Попробовать снова
                             </button>
                         </div>
                     ) : (
@@ -887,13 +887,13 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                             {verifying && (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 pointer-events-none">
                                     <div className="animate-spin w-10 h-10 border-2 border-violet-400 border-t-transparent rounded-full mb-3" />
-                                    <p className="text-white text-sm font-bold">Сакталууда...</p>
+                                    <p className="text-white text-sm font-bold">Сохранение...</p>
                                 </div>
                             )}
 
                             <div className="absolute top-3 left-0 right-0 flex justify-center pointer-events-none">
                                 <div className="bg-black/50 backdrop-blur-sm text-white text-xs font-bold px-4 py-2 rounded-full">
-                                    {verifying ? "Сабыр кылыңыз..." : capturing ? "Жүзүңүздү кармап туруңуз..." : "Камерага тике карап туруңуз"}
+                                    {verifying ? "Подождите..." : capturing ? "Держите лицо..." : "Смотрите прямо в камеру"}
                                 </div>
                             </div>
                         </div>
@@ -902,7 +902,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                     {mpLoading && (
                         <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 flex items-center gap-3">
                             <div className="animate-spin w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full flex-shrink-0" />
-                            <p className="text-xs font-bold text-violet-600">AI модели жүктөлүүдө...</p>
+                            <p className="text-xs font-bold text-violet-600">Загрузка AI-модели...</p>
                         </div>
                     )}
 
@@ -921,7 +921,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                             onClick={() => { stableRef.current = 0; cdRunRef.current = true; setCapturing(true); setCountdown(3); }}
                             className="w-full py-3 rounded-2xl font-black text-white text-sm"
                             style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                            📸 Кол менен тартуу
+                            📸 Сделать снимок вручную
                         </button>
                     )}
                 </div>
@@ -936,8 +936,8 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 {/* Header */}
                 <div className="p-5 border-b border-slate-100">
                     <div className="flex items-center justify-between mb-1">
-                        <h2 className="text-lg font-black text-slate-800">Жүз верификациясы</h2>
-                        <span className="text-xs font-bold text-slate-400">{MAX_ATTEMPTS - attempts} аракет калды</span>
+                        <h2 className="text-lg font-black text-slate-800">Верификация лица</h2>
+                        <span className="text-xs font-bold text-slate-400">Осталось попыток: {MAX_ATTEMPTS - attempts}</span>
                     </div>
                     <p className="text-xs text-slate-500">{olympiad?.title}</p>
                     {/* Attempt dots */}
@@ -956,7 +956,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                             <p className="text-sm font-bold text-red-600 mb-4">{camError}</p>
                             <button onClick={() => { startCamera(); loadMediaPipe(); }}
                                 className="px-5 py-2 bg-red-500 text-white rounded-xl font-bold text-sm">
-                                Кайра аракет
+                                Попробовать снова
                             </button>
                         </div>
                     ) : (
@@ -989,14 +989,14 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                             {verifying && (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 pointer-events-none">
                                     <div className="animate-spin w-10 h-10 border-2 border-violet-400 border-t-transparent rounded-full mb-3" />
-                                    <p className="text-white text-sm font-bold">Текшерилүүдө...</p>
+                                    <p className="text-white text-sm font-bold">Проверяется...</p>
                                 </div>
                             )}
 
                             {/* Instruction */}
                             <div className="absolute top-3 left-0 right-0 flex justify-center pointer-events-none">
                                 <div className="bg-black/50 backdrop-blur-sm text-white text-xs font-bold px-4 py-2 rounded-full">
-                                    {verifying ? "Сабыр кылыңыз..." : capturing ? "Жүзүңүздү кармап туруңуз..." : "Камерага тике карап туруңуз"}
+                                    {verifying ? "Подождите..." : capturing ? "Держите лицо..." : "Смотрите прямо в камеру"}
                                 </div>
                             </div>
                         </div>
@@ -1006,7 +1006,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                     {mpLoading && (
                         <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 flex items-center gap-3">
                             <div className="animate-spin w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full flex-shrink-0" />
-                            <p className="text-xs font-bold text-violet-600">AI модели жүктөлүүдө...</p>
+                            <p className="text-xs font-bold text-violet-600">Загрузка AI-модели...</p>
                         </div>
                     )}
 
@@ -1027,13 +1027,13 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                             onClick={() => { stableRef.current = 0; cdRunRef.current = true; setCapturing(true); setCountdown(3); }}
                             className="w-full py-3 rounded-2xl font-black text-white text-sm"
                             style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                            📸 Кол менен тартуу
+                            📸 Сделать снимок вручную
                         </button>
                     )}
 
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                         <p className="text-xs font-bold text-amber-700">
-                            ⚠️ Каттоо учурундагы бир эле адам верификациядан өтүшү керек
+                            ⚠️ Верификацию должен проходить тот же человек, что и при регистрации
                         </p>
                     </div>
                 </div>
@@ -1088,7 +1088,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                         </div>
                         <div className="min-w-0">
                             <p className="font-black text-gray-800 text-sm truncate">{olympiad?.title}</p>
-                            <p className="text-xs text-gray-400">{questions.length} суроо</p>
+                            <p className="text-xs text-gray-400">{questions.length} вопросов</p>
                         </div>
                     </div>
                     <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm flex-shrink-0 ${urgent ? "bg-red-100 text-red-600 animate-pulse" : "bg-gray-100 text-gray-700"}`}>
@@ -1100,7 +1100,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 <header className="lg:hidden flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
                     <div className="flex items-center gap-3 px-4 py-3">
                         <div className="font-black text-gray-800 text-sm whitespace-nowrap">
-                            Суроо {currentIdx + 1}/{questions.length}
+                            Вопрос {currentIdx + 1}/{questions.length}
                         </div>
                         <p className="flex-1 text-xs text-gray-400 font-semibold truncate">{olympiad?.title}</p>
                         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs flex-shrink-0 ${urgent ? "bg-red-100 text-red-600 animate-pulse" : "bg-gray-100 text-gray-700"}`}>
@@ -1150,7 +1150,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                                 <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm font-black text-gray-800">
-                                            Суроо {currentIdx + 1}
+                                            Вопрос {currentIdx + 1}
                                         </span>
                                         <span className="text-sm text-gray-400">/ {questions.length}</span>
                                         <span className="text-xs text-gray-400 ml-1">· {q.points} балл</span>
@@ -1160,7 +1160,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                                             isFlagged ? "bg-amber-100 text-amber-600" : "bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-500"
                                         }`}
                                     >
-                                        🚩 {isFlagged ? "Белгиленген" : "Белгилөө"}
+                                        🚩 {isFlagged ? "Отмечено" : "Отметить"}
                                     </button>
                                 </div>
 
@@ -1196,7 +1196,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                                     ) : (
                                         <textarea
                                             rows={4}
-                                            placeholder="Жообуңузду жазыңыз..."
+                                            placeholder="Напишите свой ответ..."
                                             value={answers[q.id] || ""}
                                             onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
                                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base text-gray-700 focus:outline-none focus:border-indigo-400 resize-none placeholder:text-gray-300 font-medium"
@@ -1216,17 +1216,17 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                                     disabled={currentIdx === 0}
                                     className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-all"
                                 >
-                                    ← Мурунку
+                                    ← Назад
                                 </button>
                                 <span className="text-xs text-gray-400 font-semibold hidden sm:block">
-                                    {answeredCnt}/{questions.length} жооп берилди
+                                    {answeredCnt}/{questions.length} отвечено
                                 </span>
                                 {currentIdx < questions.length - 1 ? (
                                     <button
                                         onClick={() => setCurrentIdx(i => i + 1)}
                                         className="flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-bold text-white transition-all"
                                     >
-                                        Кийинки →
+                                        Далее →
                                     </button>
                                 ) : (
                                     <button
@@ -1234,7 +1234,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                                         disabled={submitting}
                                         className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 rounded-xl text-sm font-bold text-white disabled:opacity-50 transition-all"
                                     >
-                                        {submitting ? "Жиберилүүдө..." : "Тапшыруу ✓"}
+                                        {submitting ? "Отправка..." : "Отправить ✓"}
                                     </button>
                                 )}
                             </div>
@@ -1274,15 +1274,15 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                             <div className="flex flex-col gap-1.5 mt-4">
                                 <div className="flex items-center gap-2">
                                     <div className="w-4 h-4 rounded bg-indigo-100 flex-shrink-0" />
-                                    <span className="text-xs text-gray-500">жооп берилген</span>
+                                    <span className="text-xs text-gray-500">отвечено</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="w-4 h-4 rounded bg-indigo-600 flex-shrink-0" />
-                                    <span className="text-xs text-gray-500">учурдагы</span>
+                                    <span className="text-xs text-gray-500">текущий</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="w-4 h-4 rounded bg-amber-100 border border-amber-300 flex-shrink-0" />
-                                    <span className="text-xs text-gray-500">белгиленген</span>
+                                    <span className="text-xs text-gray-500">отмеченный</span>
                                 </div>
                             </div>
                         </div>
@@ -1294,7 +1294,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                                 disabled={submitting}
                                 className="w-full py-3.5 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white font-black rounded-xl text-sm transition-all"
                             >
-                                {submitting ? "Жиберилүүдө..." : "Тестти аяктоо"}
+                                {submitting ? "Отправка..." : "Завершить тест"}
                             </button>
                         </div>
                     </aside>
@@ -1316,8 +1316,8 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                         className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black rounded-xl text-sm transition-all"
                     >
                         {currentIdx < questions.length - 1
-                            ? "Кийинки →"
-                            : submitting ? "Жиберилүүдө..." : "Тапшыруу ✓"
+                            ? "Далее →"
+                            : submitting ? "Отправка..." : "Отправить ✓"
                         }
                     </button>
                 </div>

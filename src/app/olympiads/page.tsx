@@ -408,7 +408,7 @@ export default function OlympiadsPage() {
                         {item.title}
                       </h3>
                       <p className="text-xs leading-relaxed line-clamp-2 text-slate-500">
-                        {item.description || "Бул олимпиада боюнча кошумча маалымат жакында жарыяланат."}
+                        {item.description || "Дополнительная информация об этой олимпиаде скоро будет опубликована."}
                       </p>
 
                       {/* Meta info */}

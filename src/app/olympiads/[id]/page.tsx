@@ -731,11 +731,11 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 border-t border-slate-200/60 pt-12">
                     <div className="lg:col-span-2 space-y-8">
                         <div className="glass-card p-8 rounded-[2rem]">
-                            <h3 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">{mounted && <Icon icon="solar:info-circle-bold-duotone" className="text-violet-500" width={22} />}Олимпиада тууралуу</h3>
+                            <h3 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">{mounted && <Icon icon="solar:info-circle-bold-duotone" className="text-violet-500" width={22} />}Об олимпиаде</h3>
                             <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">{olympiad.description || "Подробная информация об олимпиаде скоро появится."}</p>
                         </div>
                         <div className="p-8 rounded-[2rem] border border-amber-200" style={{ background:"linear-gradient(135deg,#fffbeb,#fff7ed)" }}>
-                            <h3 className="text-xl font-black text-amber-700 mb-6 flex items-center gap-2">{mounted && <Icon icon="solar:cup-bold-duotone" width={24} className="text-amber-500" />}Жеңүүчүлөргө сыйлыктар</h3>
+                            <h3 className="text-xl font-black text-amber-700 mb-6 flex items-center gap-2">{mounted && <Icon icon="solar:cup-bold-duotone" width={24} className="text-amber-500" />}Призы победителям</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 {prizes.map(p => (
                                     <div key={p.label} className={`bg-gradient-to-br ${p.bg} border ${p.border} p-5 rounded-2xl text-center`}>
@@ -748,7 +748,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                         </div>
                     </div>
                     <div className="glass-card rounded-[2rem] p-8">
-                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">{mounted && <Icon icon="solar:shield-check-bold-duotone" className="text-violet-500" width={22} />}Негизги эрежелер</h4>
+                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">{mounted && <Icon icon="solar:shield-check-bold-duotone" className="text-violet-500" width={22} />}Основные правила</h4>
                         <div className="space-y-3">
                             {["Опоздание после начала олимпиады недопустимо.", "Участник должен принести ручку и блокнот.", "Результаты будут опубликованы в течение 3 рабочих дней."].map((rule, i) => (
                                 <div key={i} className="flex items-start gap-3 bg-slate-50 p-4 rounded-2xl">
@@ -1110,7 +1110,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                     ) : camPermission === "requesting" ? (
                                                         <div className="bg-violet-50 border border-violet-200 rounded-2xl p-8 text-center">
                                                             <div className="animate-spin w-10 h-10 border-2 border-violet-400 border-t-transparent rounded-full mx-auto mb-4" />
-                                                            <p className="text-sm font-bold text-violet-700">Уруксат сурануудa...</p>
+                                                            <p className="text-sm font-bold text-violet-700">Запрос разрешения...</p>
                                                             <p className="text-xs text-violet-400 mt-1">Нажмите 'Разрешить' в запросе браузера</p>
                                                         </div>
                                                     ) : (
@@ -1320,7 +1320,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
                                                     {Object.keys(capturedFaces).length > 0 && (
                                                         <button onClick={() => { setCapturedFaces({}); setFacePhaseIdx(0); setCountdown(0); stableRef.current = 0; countdownRunningRef.current = false; setAutoCapturing(false); }}
                                                             className="px-4 py-3 bg-slate-100 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">
-                                                            Баштан
+                                                            Сначала
                                                         </button>
                                                     )}
                                                 </div>
