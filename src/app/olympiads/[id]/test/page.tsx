@@ -49,6 +49,18 @@ function recDebug(tag: string, data?: Record<string, unknown>) {
     } catch {}
 }
 
+function VideoUploadingOverlay() {
+    return (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-sm text-center shadow-2xl">
+                <div className="text-4xl mb-3 animate-pulse">📹</div>
+                <p className="font-black text-slate-800 mb-1">Видео жазуу сакталып жатат</p>
+                <p className="text-sm text-slate-500">Бул баракты жаппаңыз, бир аз күтүңүз...</p>
+            </div>
+        </div>
+    );
+}
+
 // ─── Component ────────────────────────────────────────────
 export default function TestPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = React.use(params);
@@ -88,6 +100,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
     const [timeLeft,   setTimeLeft]   = useState(0);
     const [startedAt,  setStartedAt]  = useState(0);
     const [submitting, setSubmitting] = useState(false);
+    const [videoUploading, setVideoUploading] = useState(false);
     const [result,     setResult]     = useState<SubmitResult | null>(null);
     const [currentIdx, setCurrentIdx] = useState(0);
     const [flagged,    setFlagged]    = useState<Set<number>>(new Set());
@@ -527,6 +540,13 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stage]);
 
+    useEffect(() => {
+        if (!videoUploading) return;
+        const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+        window.addEventListener("beforeunload", handler);
+        return () => window.removeEventListener("beforeunload", handler);
+    }, [videoUploading]);
+
     const stopRecordingAndGetBlob = (): Promise<Blob | null> => new Promise(resolve => {
         const mr = mediaRecorderRef.current;
         const mime = recordedMimeRef.current || "video/webm";
@@ -562,12 +582,15 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
             if (res.ok) {
                 setResult(data);
                 setStage(data.has_open_questions ? "pending-review" : "submitted");
-                // Upload recording in background
                 if (videoBlob && videoBlob.size > 0 && data.result_id) {
                     const ext = videoBlob.type.includes("mp4") ? "mp4" : "webm";
                     recDebug("uploading video blob", { bytes: videoBlob.size, type: videoBlob.type, ext, result_id: data.result_id });
-                    // Use dedicated streaming API route to avoid Next.js proxy body size limit
-                    fetch(`/api/upload-video/${data.result_id}`, {
+                    // Use dedicated streaming API route to avoid Next.js proxy body size limit.
+                    // Awaited (with a retry) + beforeunload warning so the tab isn't closed
+                    // mid-upload — a fire-and-forget fetch was getting killed by mobile
+                    // browsers when the user left the page right after submitting.
+                    setVideoUploading(true);
+                    const doUpload = () => fetch(`/api/upload-video/${data.result_id}`, {
                         method: "POST",
                         headers: {
                             Authorization: `Bearer ${getToken()}`,
@@ -575,8 +598,25 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                             "X-Filename": `recording.${ext}`,
                         },
                         body: videoBlob,
-                    }).then(r => recDebug("upload status", { status: r.status }))
-                      .catch(e => recDebug("upload error", { error: String(e) }));
+                    });
+                    try {
+                        const uploadRes = await doUpload();
+                        recDebug("upload status", { status: uploadRes.status });
+                        if (!uploadRes.ok) {
+                            const retryRes = await doUpload();
+                            recDebug("upload retry status", { status: retryRes.status });
+                        }
+                    } catch (e) {
+                        recDebug("upload error", { error: String(e) });
+                        try {
+                            const retryRes = await doUpload();
+                            recDebug("upload retry status", { status: retryRes.status });
+                        } catch (e2) {
+                            recDebug("upload retry error", { error: String(e2) });
+                        }
+                    } finally {
+                        setVideoUploading(false);
+                    }
                 } else {
                     recDebug("no video blob or result_id", {
                         hasBlob: !!videoBlob, blobSize: videoBlob?.size ?? 0, result_id: data.result_id,
@@ -647,6 +687,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
 
     if (stage === "submitted" && result) return (
         <div className="min-h-screen flex items-center justify-center pb-10 pt-20" style={{ background:"linear-gradient(145deg,#f0f4ff,#faf5ff)" }}>
+            {videoUploading && <VideoUploadingOverlay />}
             <div className="bg-white rounded-3xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
                 {/* Result header */}
                 <div className="p-8 text-white text-center" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
@@ -699,8 +740,12 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                         </p>
                     </div>
 
-                    <a href={`/olympiads/${id}`} className="block w-full py-4 rounded-2xl font-black text-white text-center" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                        Аяктоо
+                    <a href={videoUploading ? undefined : `/olympiads/${id}`}
+                       onClick={e => { if (videoUploading) e.preventDefault(); }}
+                       aria-disabled={videoUploading}
+                       className={`block w-full py-4 rounded-2xl font-black text-white text-center ${videoUploading ? "opacity-50 cursor-not-allowed" : ""}`}
+                       style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
+                        {videoUploading ? "Күтүңүз..." : "Аяктоо"}
                     </a>
                 </div>
             </div>
@@ -709,6 +754,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
 
     if (stage === "pending-review") return (
         <div className="min-h-screen flex items-center justify-center pb-10 pt-20" style={{ background:"linear-gradient(145deg,#f0f4ff,#faf5ff)" }}>
+            {videoUploading && <VideoUploadingOverlay />}
             <div className="bg-white rounded-3xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
                 <div className="p-8 text-white text-center" style={{ background:"linear-gradient(135deg,#f59e0b,#f97316)" }}>
                     <div className="text-5xl mb-3">⏳</div>
@@ -728,8 +774,12 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                         <p className="text-2xl font-black text-slate-700">{result?.score} <span className="text-base text-slate-400">/ {result?.max_score}</span></p>
                         <p className="text-xs text-slate-400 mt-1">Ачык суроолор баалангандан кийин жаңыртылат</p>
                     </div>
-                    <a href={`/olympiads/${id}`} className="block w-full py-4 rounded-2xl font-black text-white text-center" style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
-                        Аяктоо
+                    <a href={videoUploading ? undefined : `/olympiads/${id}`}
+                       onClick={e => { if (videoUploading) e.preventDefault(); }}
+                       aria-disabled={videoUploading}
+                       className={`block w-full py-4 rounded-2xl font-black text-white text-center ${videoUploading ? "opacity-50 cursor-not-allowed" : ""}`}
+                       style={{ background:"linear-gradient(135deg,#7c3aed,#0ea5e9)" }}>
+                        {videoUploading ? "Күтүңүз..." : "Аяктоо"}
                     </a>
                 </div>
             </div>
