@@ -34,6 +34,21 @@ const MAX_ATTEMPTS = 3;
 
 function getToken() { return Cookies.get("auth_token") || ""; }
 
+// Временно: шлём диагностику записи видео-прокторинга на сервер, чтобы видеть её
+// в логах бэкенда, не полагаясь на то, что кто-то успеет открыть консоль браузера
+// в моменте. Убрать после того, как причина пустого video_url будет найдена.
+function recDebug(tag: string, data?: Record<string, unknown>) {
+    console.log(`[REC] ${tag}`, data ?? "");
+    try {
+        fetch(`${GO_API_URL}/api/debug-log`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+            body: JSON.stringify({ tag, data, ts: Date.now() }),
+            keepalive: true,
+        }).catch(() => {});
+    } catch {}
+}
+
 // ─── Component ────────────────────────────────────────────
 export default function TestPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = React.use(params);
@@ -208,7 +223,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
             await attachStream(s);
         } catch (err) {
             if (withAudio) {
-                console.warn("[REC] audio unavailable, falling back to video-only:", err);
+                recDebug("audio unavailable, falling back to video-only", { error: String(err) });
                 try {
                     const s = await navigator.mediaDevices.getUserMedia({
                         video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
@@ -276,7 +291,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         } else if (stage === "testing") {
             const beginRecording = () => {
                 if (!streamRef.current || mediaRecorderRef.current) {
-                    console.warn("[REC] cannot start: stream=", !!streamRef.current, "alreadyRecording=", !!mediaRecorderRef.current);
+                    recDebug("cannot start", { stream: !!streamRef.current, alreadyRecording: !!mediaRecorderRef.current });
                     return;
                 }
                 const chunks: Blob[] = [];
@@ -292,7 +307,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                         : "";
                     const actualMime = mimeType || "video/webm";
                     recordedMimeRef.current = actualMime;
-                    console.log("[REC] starting MediaRecorder, mimeType:", actualMime, "tracks:", streamRef.current.getTracks().map(t => t.kind));
+                    recDebug("starting MediaRecorder", { mimeType: actualMime, tracks: streamRef.current.getTracks().map(t => t.kind) });
                     const mr = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : undefined);
                     mr.ondataavailable = e => {
                         if (e.data.size > 0) chunks.push(e.data);
@@ -304,8 +319,8 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                         mr.start(); // no timeslice — all data delivered on stop
                     }
                     mediaRecorderRef.current = mr;
-                    console.log("[REC] recording started ✓, state:", mr.state);
-                } catch (e) { console.error("[REC] MediaRecorder failed:", e); }
+                    recDebug("recording started", { state: mr.state });
+                } catch (e) { recDebug("MediaRecorder failed", { error: String(e) }); }
             };
             // Поток с камеры уже есть с этапа проверки лица — начинаем запись сразу,
             // синхронно, не дожидаясь асинхронного переподключения к <video>. Раньше
@@ -550,7 +565,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 // Upload recording in background
                 if (videoBlob && videoBlob.size > 0 && data.result_id) {
                     const ext = videoBlob.type.includes("mp4") ? "mp4" : "webm";
-                    console.log("[REC] uploading video blob:", videoBlob.size, "bytes, type:", videoBlob.type, "ext:", ext);
+                    recDebug("uploading video blob", { bytes: videoBlob.size, type: videoBlob.type, ext, result_id: data.result_id });
                     // Use dedicated streaming API route to avoid Next.js proxy body size limit
                     fetch(`/api/upload-video/${data.result_id}`, {
                         method: "POST",
@@ -560,10 +575,13 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                             "X-Filename": `recording.${ext}`,
                         },
                         body: videoBlob,
-                    }).then(r => console.log("[REC] upload status:", r.status))
-                      .catch(e => console.error("[REC] upload error:", e));
+                    }).then(r => recDebug("upload status", { status: r.status }))
+                      .catch(e => recDebug("upload error", { error: String(e) }));
                 } else {
-                    console.warn("[REC] no video blob or result_id", { videoBlob: !!videoBlob, result_id: data.result_id });
+                    recDebug("no video blob or result_id", {
+                        hasBlob: !!videoBlob, blobSize: videoBlob?.size ?? 0, result_id: data.result_id,
+                        hadRecorder: !!mediaRecorderRef.current, chunksRecorded: recordedChunksRef.current.length,
+                    });
                 }
             }
         } finally { setSubmitting(false); }
