@@ -6,11 +6,11 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nice.kg').
 
 export const SITE_NAME = 'NICE International School'
 
-export const DEFAULT_TITLE = `${SITE_NAME} — международная школа в Оше`
+export const DEFAULT_TITLE = `${SITE_NAME} — частная международная школа в Оше`
 
 // ~150 символов: Google обрезает описание в выдаче примерно на 155-160
 export const DEFAULT_DESCRIPTION =
-  'Современная международная школа в Оше (Кыргызстан): сильные учителя, олимпиады, интерактивные уроки и учебные игры. Запишитесь на тур по школе.'
+  'Частная международная школа в Оше (Кыргызстан): сильные учителя, олимпиады, интерактивные уроки и учебные игры. Запишитесь на тур по школе.'
 
 // Данные школы — их же использует блок «Найдите нас» (SchoolMap) и разметка для Google
 export const SCHOOL = {
@@ -26,7 +26,7 @@ export const OG_IMAGE = {
   url: '/images/og-cover.png',
   width: 1200,
   height: 630,
-  alt: `${SITE_NAME} — международная школа в Оше`,
+  alt: `${SITE_NAME} — частная международная школа в Оше`,
 }
 
 // Тот же алгоритм, что в карточках учителей и курсов (Home/Mentor, componentsMenu/teachers, courses)
