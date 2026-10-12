@@ -230,7 +230,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         }
         try {
             const s = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                video: { facingMode: "user", width: { ideal: 640, max: 640 }, height: { ideal: 480, max: 480 } },
                 audio: withAudio,
             });
             await attachStream(s);
@@ -239,7 +239,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                 recDebug("audio unavailable, falling back to video-only", { error: String(err) });
                 try {
                     const s = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                        video: { facingMode: "user", width: { ideal: 640, max: 640 }, height: { ideal: 480, max: 480 } },
                     });
                     await attachStream(s);
                 } catch { setCamError("Нет доступа к камере. Разрешите в настройках браузера."); }
@@ -269,7 +269,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         try {
             // Request camera + mic in one call — keeps stream alive, no second getUserMedia needed
             const s = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                video: { facingMode: "user", width: { ideal: 640, max: 640 }, height: { ideal: 480, max: 480 } },
                 audio: true,
             });
             streamRef.current = s; // store — startCamera() will reuse it without calling getUserMedia again
@@ -278,7 +278,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
             // Fallback: camera only (mic might be blocked on some devices)
             try {
                 const s = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                    video: { facingMode: "user", width: { ideal: 640, max: 640 }, height: { ideal: 480, max: 480 } },
                 });
                 streamRef.current = s;
                 setStage(nextStageRef.current);
@@ -321,7 +321,15 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                     const actualMime = mimeType || "video/webm";
                     recordedMimeRef.current = actualMime;
                     recDebug("starting MediaRecorder", { mimeType: actualMime, tracks: streamRef.current.getTracks().map(t => t.kind) });
-                    const mr = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : undefined);
+                    // Capped bitrate — without it some phones record at their native resolution
+                    // regardless of the "ideal" camera constraint, producing 300-800MB files for
+                    // a 20-minute test that then fail to upload over mobile data (413 / timeouts).
+                    // 250kbps video is plenty for proctoring review, not meant to be HD footage.
+                    const mr = new MediaRecorder(streamRef.current, {
+                        ...(mimeType ? { mimeType } : {}),
+                        videoBitsPerSecond: 250_000,
+                        audioBitsPerSecond: 32_000,
+                    });
                     mr.ondataavailable = e => {
                         if (e.data.size > 0) chunks.push(e.data);
                     };

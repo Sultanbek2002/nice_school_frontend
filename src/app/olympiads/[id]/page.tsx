@@ -195,7 +195,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
         setCameraError("");
         try {
             const s = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                video: { facingMode: "user", width: { ideal: 640, max: 640 }, height: { ideal: 480, max: 480 } },
             });
             streamRef.current = s;
             const video = videoRef.current;
@@ -512,7 +512,7 @@ export default function OlympiadDetailPage({ params }: { params: Promise<{ id: s
         setCameraError("");
         try {
             const s = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                video: { facingMode: "user", width: { ideal: 640, max: 640 }, height: { ideal: 480, max: 480 } },
             });
             streamRef.current = s;
             // Set state → React renders video element → srcObject useEffect attaches stream
