@@ -21,7 +21,6 @@ interface LiveTest {
   ID: number;
   title: string;
   status: string;
-  owner_id: number;
 }
 
 const FLOAT_ANIMS = ["animate-float-1", "animate-float-2", "animate-float-3", "animate-float-4"];
@@ -49,7 +48,6 @@ export default function LobbyPage() {
   const [displayName, setDisplayName] = useState("");
   const [joined, setJoined] = useState(false);
   const [myUserID, setMyUserID] = useState(0);
-  const [isOwner, setIsOwner] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState<"name" | "lobby">("name");
 
@@ -88,7 +86,7 @@ export default function LobbyPage() {
 
   const connect = () => {
     if (!displayName.trim() || !picked) {
-      setError("Выберите имя и персонажа");
+      setError("Введите фамилию");
       return;
     }
     if (!myUserID) return;
@@ -118,9 +116,6 @@ export default function LobbyPage() {
           setTest(msg.data.test);
           setSessions(msg.data.sessions || []);
           setJoined(true);
-          if (msg.data.test && myUserID && msg.data.test.owner_id === myUserID) {
-            setIsOwner(true);
-          }
         } else if (msg.type === "question") {
           sessionStorage.setItem(`lt_q_${code}`, JSON.stringify(msg.data));
           router.push(`/test/${code}/play`);
@@ -139,10 +134,6 @@ export default function LobbyPage() {
     };
   };
 
-  const startTest = () => {
-    wsRef.current?.send(JSON.stringify({ type: "start" }));
-  };
-
   if (step === "name") {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-slate-gray px-4 py-6">
@@ -159,14 +150,14 @@ export default function LobbyPage() {
             <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">{error}</div>
           )}
 
-          <label className="mb-1 block text-sm font-semibold text-midnight_text">Ваше имя</label>
+          <label className="mb-1 block text-sm font-semibold text-midnight_text">Фамилия</label>
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && connect()}
             className="mb-4 w-full rounded-xl border border-black/10 bg-white/80 px-3 py-3 text-midnight_text focus:border-primary focus:outline-none"
             maxLength={30}
-            placeholder="Введите ваше имя"
+            placeholder="Введите фамилию"
           />
 
           <label className="mb-2 block text-sm font-semibold text-midnight_text">
@@ -264,20 +255,10 @@ export default function LobbyPage() {
           )}
         </div>
 
-        {isOwner ? (
-          <button
-            onClick={startTest}
-            disabled={sessions.length === 0}
-            className="rounded-2xl bg-white px-10 py-4 text-lg font-extrabold text-primary shadow-lg transition-all hover:scale-105 disabled:opacity-50"
-          >
-            🚀 Начать тест ({sessions.length})
-          </button>
-        ) : (
-          <div className="rounded-2xl bg-white/10 px-6 py-4 text-white/80 backdrop-blur-sm">
-            <div className="mb-1 text-2xl">{picked?.emoji}</div>
-            <p className="text-sm">Ждём, когда учитель начнёт тест...</p>
-          </div>
-        )}
+        <div className="rounded-2xl bg-white/10 px-6 py-4 text-white/80 backdrop-blur-sm">
+          <div className="mb-1 text-2xl">{picked?.emoji}</div>
+          <p className="text-sm">Ждём, когда учитель начнёт тест...</p>
+        </div>
       </div>
 
       <style>{`
