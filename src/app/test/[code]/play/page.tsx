@@ -2,32 +2,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-import { GAME_WS_URL } from "@/utils/apiData";
+import { GAME_WS_URL, GO_API_URL } from "@/utils/apiData";
 
-interface Question {
-  id: number;
-  text: string;
-  type: string;
-  options: string;
-  points: number;
-  time_limit: number;
-}
+interface Question { id: number; text: string; type: string; options: string; points: number; time_limit: number; }
+interface QMessage { question: Question; index: number; total: number; ends_at: number; }
+interface AnswerAck { is_correct: boolean; points_awarded: number; correct_answer: string; needs_review?: boolean; }
 
-interface QMessage {
-  question: Question;
-  index: number;
-  total: number;
-  ends_at: number;
-}
-
-interface AnswerAck {
-  is_correct: boolean;
-  points_awarded: number;
-  correct_answer: string;
-}
-
-const OPTION_COLORS = ["#FF6B6B", "#4ECDC4", "#FFE66D", "#6C5CE7"];
-const OPTION_LABELS = ["A", "B", "C", "D"];
+const OPTION_COLORS = ["#FF6B6B", "#4ECDC4", "#FFE66D", "#6C5CE7", "#54A0FF", "#5CE65C"];
+const OPTION_LABELS = ["A", "B", "C", "D", "E", "F"];
+const TAB_WARNING_MS = 4000;
 
 export default function PlayPage() {
   const { code } = useParams<{ code: string }>();
@@ -40,12 +23,22 @@ export default function PlayPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
   const [textAnswer, setTextAnswer] = useState("");
+  const [essayAnswer, setEssayAnswer] = useState("");
+  const [orderPicked, setOrderPicked] = useState<string[]>([]);
+  const [matchPairs, setMatchPairs] = useState<Record<number, string>>({});
+  const [matchActiveLeft, setMatchActiveLeft] = useState<number | null>(null);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [mediaUploading, setMediaUploading] = useState(false);
+  const [mediaError, setMediaError] = useState("");
   const [ack, setAck] = useState<AnswerAck | null>(null);
   const [questionEnded, setQuestionEnded] = useState<string | null>(null); // correct_answer JSON
   const [score, setScore] = useState(0);
   const [myUserID, setMyUserID] = useState(0);
   const [displayName, setDisplayName] = useState("");
+  const [tabSwitches, setTabSwitches] = useState(0);
+  const [showTabWarning, setShowTabWarning] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tabWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const token = Cookies.get("auth_token");
@@ -110,12 +103,41 @@ export default function PlayPage() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [myUserID]);
 
+  // Anti-cheat: flag (not auto-fail) when the student leaves the test tab/app.
+  // Browsers don't let JS block tab switching, so detection + reporting to the
+  // teacher is the only feasible enforcement — a hard auto-submit risks
+  // punishing accidental swipes/notifications as hard as real cheating.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== "hidden" || !current) return;
+      setTabSwitches((prev) => {
+        const next = prev + 1;
+        wsRef.current?.send(JSON.stringify({ type: "tab_switch", data: { count: 1 } }));
+        return next;
+      });
+      setShowTabWarning(true);
+      if (tabWarningTimerRef.current) clearTimeout(tabWarningTimerRef.current);
+      tabWarningTimerRef.current = setTimeout(() => setShowTabWarning(false), TAB_WARNING_MS);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (tabWarningTimerRef.current) clearTimeout(tabWarningTimerRef.current);
+    };
+  }, [current]);
+
   const applyQuestion = (q: QMessage) => {
     setCurrent(q);
     setAnswered(false);
     setSelected(null);
     setSelectedMulti([]);
     setTextAnswer("");
+    setEssayAnswer("");
+    setOrderPicked([]);
+    setMatchPairs({});
+    setMatchActiveLeft(null);
+    setMediaUrl(null);
+    setMediaError("");
     setAck(null);
     setQuestionEnded(null);
     if (timerRef.current) clearInterval(timerRef.current);
@@ -131,7 +153,9 @@ export default function PlayPage() {
   const parseOptions = (s: string): string[] => {
     try { return JSON.parse(s); } catch { return []; }
   };
-
+  const parseMatchOptions = (s: string): { left: string[]; right: string[] } => {
+    try { const o = JSON.parse(s); return { left: o.left || [], right: o.right || [] }; } catch { return { left: [], right: [] }; }
+  };
   const parseCorrect = (s: string): string[] => {
     try { return JSON.parse(s); } catch { return [s]; }
   };
@@ -145,9 +169,46 @@ export default function PlayPage() {
   const toggleMulti = (opt: string) =>
     setSelectedMulti((p) => p.includes(opt) ? p.filter((x) => x !== opt) : [...p, opt]);
 
+  const pickOrderItem = (item: string) => {
+    if (answered || orderPicked.includes(item)) return;
+    setOrderPicked((p) => [...p, item]);
+  };
+  const resetOrder = () => { if (!answered) setOrderPicked([]); };
+
+  const pickMatch = (leftIdx: number, rightVal: string) => {
+    if (answered) return;
+    setMatchPairs((prev) => {
+      const next = { ...prev };
+      // free up this right value if it was assigned to a different left item
+      for (const k of Object.keys(next)) {
+        if (next[+k] === rightVal) delete next[+k];
+      }
+      next[leftIdx] = rightVal;
+      return next;
+    });
+    setMatchActiveLeft(null);
+  };
+
+  const uploadMedia = async (file: File) => {
+    setMediaUploading(true);
+    setMediaError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`${GO_API_URL}/api/live-test/${code}/upload-answer-media`, { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Ошибка загрузки");
+      setMediaUrl(data.url);
+    } catch (e: any) {
+      setMediaError(e.message || "Ошибка загрузки");
+    } finally {
+      setMediaUploading(false);
+    }
+  };
+
   if (!current) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-primary">
+      <div className="flex h-[100dvh] items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-primary">
         <div className="text-center text-white">
           <div className="mb-3 text-5xl">⏳</div>
           <p className="text-base font-semibold">Ожидание вопроса...</p>
@@ -156,13 +217,24 @@ export default function PlayPage() {
     );
   }
 
+  const qtype = current.question.type;
   const opts = parseOptions(current.question.options);
+  const matchOpts = qtype === "matching" ? parseMatchOptions(current.question.options) : { left: [], right: [] };
+  const orderOpts = qtype === "ordering" ? opts : [];
   const timerPercent = (timeLeft / current.question.time_limit) * 100;
   const correctList = ack ? parseCorrect(ack.correct_answer) : questionEnded ? parseCorrect(questionEnded) : [];
-  const showCorrect = (ack !== null || questionEnded !== null);
+  const showResult = ack !== null || questionEnded !== null;
+  const needsReview = qtype === "essay" || qtype === "media";
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-gradient-to-br from-indigo-900 via-purple-900 to-primary">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-primary">
+
+      {/* Tab-switch warning */}
+      {showTabWarning && (
+        <div className="absolute inset-x-0 top-0 z-50 bg-red-600 px-3 py-2 text-center text-xs font-bold text-white shadow-lg sm:text-sm">
+          ⚠️ Вы покинули вкладку теста! Это фиксируется ({tabSwitches})
+        </div>
+      )}
 
       {/* Top bar */}
       <div className="shrink-0 px-3 pt-3 pb-2">
@@ -185,8 +257,8 @@ export default function PlayPage() {
       </div>
 
       {/* Question */}
-      <div className="px-3 pb-2">
-        <div className="rounded-2xl bg-white/10 p-4 text-center backdrop-blur-sm">
+      <div className="shrink-0 px-3 pb-2">
+        <div className="max-h-[22dvh] overflow-y-auto rounded-2xl bg-white/10 p-4 text-center backdrop-blur-sm">
           <p className="text-base font-bold leading-snug text-white sm:text-lg">
             {current.question.text}
           </p>
@@ -194,11 +266,15 @@ export default function PlayPage() {
       </div>
 
       {/* Answer result overlay */}
-      {showCorrect && (
-        <div className={`mx-3 mb-2 rounded-2xl p-3 text-center ${ack ? (ack.is_correct ? "bg-green-500/80" : "bg-red-500/80") : "bg-orange-500/80"} text-white`}>
-          {ack ? (
+      {showResult && (
+        <div className={`mx-3 mb-2 shrink-0 rounded-2xl p-3 text-center text-white ${
+          needsReview ? "bg-orange-500/80" : ack ? (ack.is_correct ? "bg-green-500/80" : "bg-red-500/80") : "bg-orange-500/80"
+        }`}>
+          {needsReview && ack ? (
+            <div className="text-base font-bold">⏳ Ответ отправлен — проверит преподаватель</div>
+          ) : ack ? (
             <>
-              <div className="text-base font-bold">{ack.is_correct ? `✅ Верно! +${ack.points_awarded} баллов` : "❌ Неверно"}</div>
+              <div className="text-base font-bold">{ack.is_correct ? `✅ Верно! +${ack.points_awarded} баллов` : ack.points_awarded > 0 ? `☑️ Частично верно! +${ack.points_awarded} баллов` : "❌ Неверно"}</div>
               {!ack.is_correct && correctList.length > 0 && (
                 <div className="mt-1 text-sm opacity-90">Правильный ответ: <span className="font-bold">{correctList.join(", ")}</span></div>
               )}
@@ -206,7 +282,7 @@ export default function PlayPage() {
           ) : (
             <>
               <div className="text-base font-bold">⏰ Время вышло</div>
-              {correctList.length > 0 && (
+              {!needsReview && correctList.length > 0 && (
                 <div className="mt-1 text-sm opacity-90">Правильный ответ: <span className="font-bold">{correctList.join(", ")}</span></div>
               )}
             </>
@@ -214,123 +290,255 @@ export default function PlayPage() {
         </div>
       )}
 
-      {/* Options */}
-      <div className="flex flex-1 flex-col px-3 pb-4">
-        {current.question.type === "single" && (
-          <div className="grid flex-1 grid-cols-2 gap-2 sm:gap-3">
-            {opts.map((opt, i) => {
-              const isCorrectOpt = showCorrect && correctList.includes(opt);
-              const isSelected = selected === opt;
-              return (
-                <button
-                  key={i}
-                  disabled={answered}
-                  onClick={() => { setSelected(opt); submitAnswer(opt); }}
-                  className="flex min-h-[70px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95 sm:min-h-[80px]"
-                  style={{
-                    background: isCorrectOpt
-                      ? "#22c55e99"
-                      : OPTION_COLORS[i % 4] + (isSelected ? "cc" : "44"),
-                    borderColor: isCorrectOpt
-                      ? "#22c55e"
-                      : OPTION_COLORS[i % 4] + (isSelected ? "ff" : "66"),
-                  }}
-                >
-                  <span className="mr-2 font-mono font-black text-xs opacity-70">{OPTION_LABELS[i]})</span>
-                  <span className="text-sm leading-tight">{opt}</span>
-                  {isCorrectOpt && <span className="ml-auto">✅</span>}
-                </button>
-              );
-            })}
-          </div>
-        )}
+      {/* Options — scrollable safety net, but sized to fit without needing it in the normal case */}
+      <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 
-        {current.question.type === "multiple" && (
-          <div className="flex flex-1 flex-col">
-            <div className="grid flex-1 grid-cols-2 gap-2 mb-3">
+          {qtype === "single" && (
+            <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-2 sm:gap-3">
               {opts.map((opt, i) => {
-                const isCorrectOpt = showCorrect && correctList.includes(opt);
-                const isSelected = selectedMulti.includes(opt);
+                const isCorrectOpt = showResult && correctList.includes(opt);
+                const isSelected = selected === opt;
                 return (
                   <button
                     key={i}
                     disabled={answered}
-                    onClick={() => toggleMulti(opt)}
-                    className="flex min-h-[70px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95"
+                    onClick={() => { setSelected(opt); submitAnswer(opt); }}
+                    className="flex min-h-[64px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95"
                     style={{
-                      background: isCorrectOpt
-                        ? "#22c55e99"
-                        : OPTION_COLORS[i % 4] + (isSelected ? "cc" : "44"),
-                      borderColor: isCorrectOpt
-                        ? "#22c55e"
-                        : OPTION_COLORS[i % 4] + (isSelected ? "ff" : "66"),
+                      background: isCorrectOpt ? "#22c55e99" : OPTION_COLORS[i % 6] + (isSelected ? "cc" : "44"),
+                      borderColor: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i % 6] + (isSelected ? "ff" : "66"),
                     }}
                   >
-                    <span className="mr-2 text-sm">{isSelected ? "✓" : OPTION_LABELS[i] + ")"}</span>
+                    <span className="mr-2 font-mono font-black text-xs opacity-70">{OPTION_LABELS[i]})</span>
                     <span className="text-sm leading-tight">{opt}</span>
                     {isCorrectOpt && <span className="ml-auto">✅</span>}
                   </button>
                 );
               })}
             </div>
+          )}
+
+          {qtype === "multiple" && (
+            <div className="flex flex-1 flex-col">
+              <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-2 mb-3">
+                {opts.map((opt, i) => {
+                  const isCorrectOpt = showResult && correctList.includes(opt);
+                  const isSelected = selectedMulti.includes(opt);
+                  return (
+                    <button
+                      key={i}
+                      disabled={answered}
+                      onClick={() => toggleMulti(opt)}
+                      className="flex min-h-[64px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95"
+                      style={{
+                        background: isCorrectOpt ? "#22c55e99" : OPTION_COLORS[i % 6] + (isSelected ? "cc" : "44"),
+                        borderColor: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i % 6] + (isSelected ? "ff" : "66"),
+                      }}
+                    >
+                      <span className="mr-2 text-sm">{isSelected ? "✓" : OPTION_LABELS[i] + ")"}</span>
+                      <span className="text-sm leading-tight">{opt}</span>
+                      {isCorrectOpt && <span className="ml-auto">✅</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                disabled={answered || selectedMulti.length === 0}
+                onClick={() => submitAnswer(JSON.stringify(selectedMulti))}
+                className="w-full shrink-0 rounded-2xl bg-white py-3.5 font-bold text-primary disabled:opacity-50 active:scale-95"
+              >
+                Подтвердить
+              </button>
+            </div>
+          )}
+
+          {qtype === "true_false" && (
+            <div className="grid flex-1 grid-cols-2 gap-3">
+              {["Туура", "Жалган"].map((v, i) => {
+                const isCorrectOpt = showResult && correctList.includes(v);
+                const isSelected = selected === v;
+                return (
+                  <button
+                    key={v}
+                    disabled={answered}
+                    onClick={() => { setSelected(v); submitAnswer(v); }}
+                    className="flex min-h-[100px] flex-col items-center justify-center rounded-2xl border-2 font-extrabold text-white transition-all active:scale-95"
+                    style={{
+                      background: isCorrectOpt ? "#22c55e99" : OPTION_COLORS[i] + (isSelected ? "cc" : "44"),
+                      borderColor: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i] + (isSelected ? "ff" : "66"),
+                    }}
+                  >
+                    <span className="mb-1 text-3xl">{v === "Туура" ? "✅" : "❌"}</span>
+                    {/* Значение (v), отправляемое на сервер, остаётся "Туура"/"Жалган" —
+                        совместимость со старыми вопросами в базе; переводим только подпись */}
+                    <span className="text-base">{v === "Туура" ? "Верно" : "Неверно"}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {(qtype === "text" || qtype === "fill_blank") && (
+            <div className="flex flex-1 flex-col justify-center gap-3">
+              <input
+                value={textAnswer}
+                onChange={(e) => setTextAnswer(e.target.value)}
+                disabled={answered}
+                placeholder={qtype === "fill_blank" ? "Впишите пропущенное слово..." : "Введите ваш ответ..."}
+                className="w-full rounded-2xl bg-white/10 px-4 py-4 text-center text-base text-white placeholder:text-white/40 border border-white/20 focus:border-white focus:outline-none"
+              />
+              <button
+                disabled={answered || !textAnswer.trim()}
+                onClick={() => submitAnswer(textAnswer)}
+                className="w-full rounded-2xl bg-white py-3.5 font-bold text-primary disabled:opacity-50 active:scale-95"
+              >
+                Ответить
+              </button>
+            </div>
+          )}
+
+          {qtype === "essay" && (
+            <div className="flex flex-1 flex-col gap-2">
+              <textarea
+                value={essayAnswer}
+                onChange={(e) => setEssayAnswer(e.target.value)}
+                disabled={answered}
+                placeholder="Развёрнутый ответ..."
+                className="min-h-0 flex-1 resize-none rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/40 border border-white/20 focus:border-white focus:outline-none"
+              />
+              <button
+                disabled={answered || !essayAnswer.trim()}
+                onClick={() => submitAnswer(essayAnswer)}
+                className="w-full shrink-0 rounded-2xl bg-white py-3.5 font-bold text-primary disabled:opacity-50 active:scale-95"
+              >
+                Отправить (проверит преподаватель)
+              </button>
+            </div>
+          )}
+
+          {qtype === "media" && (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3">
+              {!mediaUrl ? (
+                <>
+                  <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/30 bg-white/5 py-8 text-white/70">
+                    <span className="text-3xl">📎</span>
+                    <span className="text-sm">{mediaUploading ? "Загрузка..." : "Выбрать фото или аудио"}</span>
+                    <input
+                      type="file"
+                      accept="image/*,audio/*"
+                      disabled={answered || mediaUploading}
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && uploadMedia(e.target.files[0])}
+                    />
+                  </label>
+                  {mediaError && <p className="text-sm text-red-300">{mediaError}</p>}
+                </>
+              ) : (
+                <>
+                  {/\.(jpg|jpeg|png|webp)$/i.test(mediaUrl) ? (
+                    <img src={mediaUrl} alt="ответ" className="max-h-[30dvh] rounded-2xl object-contain" />
+                  ) : (
+                    <audio src={mediaUrl} controls className="w-full" />
+                  )}
+                  <button
+                    disabled={answered}
+                    onClick={() => submitAnswer(mediaUrl)}
+                    className="w-full shrink-0 rounded-2xl bg-white py-3.5 font-bold text-primary disabled:opacity-50 active:scale-95"
+                  >
+                    Отправить ответ
+                  </button>
+                  {!answered && (
+                    <button onClick={() => setMediaUrl(null)} className="text-xs text-white/60 underline">Выбрать другой файл</button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {qtype === "ordering" && (
+            <div className="flex flex-1 flex-col gap-2">
+              <p className="shrink-0 text-center text-xs text-white/60">Нажимайте по порядку</p>
+              <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+                {orderPicked.map((item, i) => (
+                  <div key={`picked-${item}`} className="flex items-center gap-2 rounded-xl bg-white/90 px-3 py-2">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">{i + 1}</span>
+                    <span className="text-sm font-semibold text-midnight_text">{item}</span>
+                  </div>
+                ))}
+                {orderOpts.filter((o) => !orderPicked.includes(o)).map((item) => (
+                  <button
+                    key={item}
+                    disabled={answered}
+                    onClick={() => pickOrderItem(item)}
+                    className="rounded-xl border-2 border-white/30 bg-white/10 px-3 py-2.5 text-left text-sm font-semibold text-white active:scale-95"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  disabled={answered || orderPicked.length === 0}
+                  onClick={resetOrder}
+                  className="flex-1 rounded-2xl border border-white/30 py-3 text-sm font-semibold text-white disabled:opacity-40"
+                >
+                  Сбросить
+                </button>
+                <button
+                  disabled={answered || orderPicked.length !== orderOpts.length}
+                  onClick={() => submitAnswer(JSON.stringify(orderPicked))}
+                  className="flex-[2] rounded-2xl bg-white py-3 font-bold text-primary disabled:opacity-50 active:scale-95"
+                >
+                  Подтвердить
+                </button>
+              </div>
+            </div>
+          )}
+
+          {qtype === "matching" && (
+            <div className="flex min-h-0 flex-1 gap-2 overflow-y-auto">
+              <div className="flex flex-1 flex-col gap-1.5">
+                {matchOpts.left.map((l, i) => (
+                  <button
+                    key={l}
+                    disabled={answered}
+                    onClick={() => setMatchActiveLeft(i)}
+                    className={`rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold text-white active:scale-95 ${matchActiveLeft === i ? "border-white bg-white/30" : "border-white/20 bg-white/10"}`}
+                  >
+                    {l}
+                    {matchPairs[i] && <span className="ml-2 text-xs opacity-80">→ {matchPairs[i]}</span>}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-1 flex-col gap-1.5">
+                {matchOpts.right.map((r) => {
+                  const usedBy = Object.entries(matchPairs).find(([, v]) => v === r)?.[0];
+                  return (
+                    <button
+                      key={r}
+                      disabled={answered || matchActiveLeft === null}
+                      onClick={() => matchActiveLeft !== null && pickMatch(matchActiveLeft, r)}
+                      className={`rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold text-white active:scale-95 disabled:opacity-40 ${usedBy !== undefined ? "border-green-300 bg-green-500/30" : "border-white/20 bg-white/10"}`}
+                    >
+                      {r}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="sr-only" />
+            </div>
+          )}
+          {qtype === "matching" && (
             <button
-              disabled={answered || selectedMulti.length === 0}
-              onClick={() => submitAnswer(JSON.stringify(selectedMulti))}
-              className="w-full rounded-2xl bg-white py-4 font-bold text-primary disabled:opacity-50 active:scale-95"
+              disabled={answered || Object.keys(matchPairs).length !== matchOpts.left.length}
+              onClick={() => submitAnswer(JSON.stringify(matchOpts.left.map((_, i) => matchPairs[i])))}
+              className="mt-2 w-full shrink-0 rounded-2xl bg-white py-3.5 font-bold text-primary disabled:opacity-50 active:scale-95"
             >
               Подтвердить
             </button>
-          </div>
-        )}
-
-        {current.question.type === "true_false" && (
-          <div className="grid flex-1 grid-cols-2 gap-3">
-            {["Туура", "Жалган"].map((v, i) => {
-              const isCorrectOpt = showCorrect && correctList.includes(v);
-              const isSelected = selected === v;
-              return (
-                <button
-                  key={v}
-                  disabled={answered}
-                  onClick={() => { setSelected(v); submitAnswer(v); }}
-                  className="flex min-h-[100px] flex-col items-center justify-center rounded-2xl border-2 font-extrabold text-white transition-all active:scale-95 sm:min-h-[120px]"
-                  style={{
-                    background: isCorrectOpt
-                      ? "#22c55e99"
-                      : OPTION_COLORS[i] + (isSelected ? "cc" : "44"),
-                    borderColor: isCorrectOpt
-                      ? "#22c55e"
-                      : OPTION_COLORS[i] + (isSelected ? "ff" : "66"),
-                  }}
-                >
-                  <span className="mb-1 text-3xl">{v === "Туура" ? "✅" : "❌"}</span>
-                  {/* Значение (v), отправляемое на сервер, остаётся "Туура"/"Жалган" —
-                      совместимость со старыми вопросами в базе; переводим только подпись */}
-                  <span className="text-base">{v === "Туура" ? "Верно" : "Неверно"}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {current.question.type === "text" && (
-          <div className="flex flex-1 flex-col justify-center gap-3">
-            <input
-              value={textAnswer}
-              onChange={(e) => setTextAnswer(e.target.value)}
-              disabled={answered}
-              placeholder="Введите ваш ответ..."
-              className="w-full rounded-2xl bg-white/10 px-4 py-4 text-center text-base text-white placeholder:text-white/40 border border-white/20 focus:border-white focus:outline-none"
-            />
-            <button
-              disabled={answered || !textAnswer.trim()}
-              onClick={() => submitAnswer(textAnswer)}
-              className="w-full rounded-2xl bg-white py-4 font-bold text-primary disabled:opacity-50 active:scale-95"
-            >
-              Ответить
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

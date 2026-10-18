@@ -40,6 +40,7 @@ export default function LobbyPage() {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
   const wsRef = useRef<WebSocket | null>(null);
+  const handoffRef = useRef(false);
 
   const [test, setTest] = useState<LiveTest | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -79,9 +80,13 @@ export default function LobbyPage() {
       .catch(() => {});
   }, []);
 
-  // Cleanup WS on unmount
+  // Cleanup WS on unmount — but NOT when we're handing the live connection off
+  // to the play page (window.__ltWs). Closing it there was tripping a spurious
+  // "lobby" broadcast to everyone (including the teacher's monitor) right as
+  // the test started, because the server treats every disconnect as a lobby
+  // update regardless of whether the test is actually still in the lobby.
   useEffect(() => {
-    return () => { wsRef.current?.close(); };
+    return () => { if (!handoffRef.current) wsRef.current?.close(); };
   }, []);
 
   const connect = () => {
@@ -118,6 +123,7 @@ export default function LobbyPage() {
           setJoined(true);
         } else if (msg.type === "question") {
           sessionStorage.setItem(`lt_q_${code}`, JSON.stringify(msg.data));
+          handoffRef.current = true;
           router.push(`/test/${code}/play`);
         } else if (msg.type === "cancelled") {
           router.push("/test");

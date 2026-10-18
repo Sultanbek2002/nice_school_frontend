@@ -2,8 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, Manrope } from 'next/font/google'
 import './globals.css'
 import { SITE_URL, SITE_NAME, DEFAULT_TITLE, DEFAULT_DESCRIPTION, OG_IMAGE } from '@/utils/seo'
-import Header from '@/app/components/Layout/Header'
-import Footer from '@/app/components/Layout/Footer'
+import SiteChrome from '@/app/components/Layout/SiteChrome'
 import Preloader from '@/app/components/Preloader'
 import RouteLoader from '@/app/components/RouteLoader'
 import { getSiteStructure } from '@/utils/apiData'
@@ -108,11 +107,9 @@ export default async function RootLayout({
         <div className="relative z-10">
           <Preloader />
           <RouteLoader />
-          <Header navData={navLinks} contactData={schoolInfo} />
-          <main className="pt-20">
+          <SiteChrome navData={navLinks} contactData={schoolInfo}>
             {children}
-          </main>
-          <Footer data={schoolInfo} navLinks={navLinks} />
+          </SiteChrome>
         </div>
       </body>
     </html>
