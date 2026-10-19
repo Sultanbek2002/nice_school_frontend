@@ -55,8 +55,8 @@ export default function ResultsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-primary">
-        <div className="text-center text-white"><div className="mb-2 text-4xl">⏳</div>Загрузка...</div>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-gray via-white to-deep-slate">
+        <div className="text-center text-midnight_text"><div className="mb-2 text-4xl">⏳</div>Загрузка...</div>
       </div>
     );
   }
@@ -70,28 +70,33 @@ export default function ResultsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-primary px-3 py-8">
-      <div className="mx-auto max-w-lg">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-gray via-white to-deep-slate px-3 py-8">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-secondary/10 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto max-w-lg">
 
         {/* Header */}
         <div className="mb-5 text-center">
           <div className="mb-2 text-4xl sm:text-5xl">🏆</div>
-          <h1 className="text-2xl font-extrabold text-white sm:text-3xl">{test?.title || "Результаты"}</h1>
-          <p className="mt-1 text-sm text-white/50">{sessions.length} участников</p>
+          <h1 className="text-2xl font-black text-midnight_text sm:text-3xl">{test?.title || "Результаты"}</h1>
+          <p className="mt-1 text-sm text-grey">{sessions.length} участников</p>
         </div>
 
         {/* Tabs */}
         {myResult && (
-          <div className="mb-4 flex rounded-xl bg-white/10 p-1">
+          <div className="mb-4 flex rounded-xl bg-white p-1 shadow-sm border border-slate-100">
             <button
               onClick={() => setTab("my")}
-              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${tab === "my" ? "bg-white text-primary" : "text-white/60"}`}
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${tab === "my" ? "bg-primary text-white" : "text-grey"}`}
             >
               Мои результаты
             </button>
             <button
               onClick={() => setTab("all")}
-              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${tab === "all" ? "bg-white text-primary" : "text-white/60"}`}
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${tab === "all" ? "bg-primary text-white" : "text-grey"}`}
             >
               Рейтинг
             </button>
@@ -102,24 +107,23 @@ export default function ResultsPage() {
         {tab === "my" && myResult && (
           <div className="mb-6">
             <div
-              className="mb-4 rounded-2xl p-5 text-center"
-              style={{ background: myResult.session.character_color + "33", border: `2px solid ${myResult.session.character_color}55` }}
+              className="mb-4 rounded-3xl bg-white p-5 text-center shadow-md border border-slate-100"
             >
               <div className="mb-1 text-4xl">{myResult.session.character_emoji}</div>
-              <div className="text-lg font-extrabold text-white">{myResult.session.display_name}</div>
+              <div className="text-lg font-extrabold text-midnight_text">{myResult.session.display_name}</div>
               <div className="mt-3 flex justify-center gap-6">
                 <div className="text-center">
-                  <div className="text-3xl font-extrabold text-white">{myResult.session.score}</div>
-                  <div className="text-xs text-white/50">баллов</div>
+                  <div className="text-3xl font-extrabold text-primary">{myResult.session.score}</div>
+                  <div className="text-xs text-grey">баллов</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-extrabold text-white">{correctCount}/{myResult.answers.length}</div>
-                  <div className="text-xs text-white/50">правильных ответов</div>
+                  <div className="text-3xl font-extrabold text-midnight_text">{correctCount}/{myResult.answers.length}</div>
+                  <div className="text-xs text-grey">правильных ответов</div>
                 </div>
                 {myRank > 0 && (
                   <div className="text-center">
-                    <div className="text-3xl font-extrabold text-white">{myRank < 4 ? MEDALS[myRank - 1] : `#${myRank}`}</div>
-                    <div className="text-xs text-white/50">место</div>
+                    <div className="text-3xl font-extrabold text-midnight_text">{myRank < 4 ? MEDALS[myRank - 1] : `#${myRank}`}</div>
+                    <div className="text-xs text-grey">место</div>
                   </div>
                 )}
               </div>
@@ -131,22 +135,22 @@ export default function ResultsPage() {
                 return (
                   <div
                     key={q.ID}
-                    className={`rounded-xl px-4 py-3 ${ans?.IsCorrect ? "border border-green-500/30 bg-green-500/20" : "border border-red-500/30 bg-red-500/20"}`}
+                    className={`rounded-xl bg-white px-4 py-3 shadow-sm border ${ans?.IsCorrect ? "border-green-200" : "border-red-200"}`}
                   >
                     <div className="flex items-start gap-2">
                       <span className="mt-0.5 text-lg">{ans?.IsCorrect ? "✅" : "❌"}</span>
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-white">{q.text}</p>
+                        <p className="text-sm font-semibold text-midnight_text">{q.text}</p>
                         {ans && (
-                          <p className="mt-0.5 text-xs text-white/60">
-                            Ваш ответ: <span className="text-white/80">{ans.Answer || "—"}</span>
+                          <p className="mt-0.5 text-xs text-grey">
+                            Ваш ответ: <span className="text-midnight_text">{ans.Answer || "—"}</span>
                           </p>
                         )}
                         {!ans?.IsCorrect && (
-                          <p className="mt-0.5 text-xs text-green-400">Правильный ответ: {parseCorrect(q.correct)}</p>
+                          <p className="mt-0.5 text-xs text-green-600">Правильный ответ: {parseCorrect(q.correct)}</p>
                         )}
                         {ans?.IsCorrect && (
-                          <p className="mt-0.5 text-xs text-green-400">+{ans.PointsAwarded} баллов</p>
+                          <p className="mt-0.5 text-xs text-green-600">+{ans.PointsAwarded} баллов</p>
                         )}
                       </div>
                     </div>
@@ -165,30 +169,30 @@ export default function ResultsPage() {
                 {top3[1] && (
                   <div className="flex flex-col items-center">
                     <span className="mb-1 text-2xl sm:text-3xl">{top3[1].character_emoji}</span>
-                    <span className="mb-1 w-16 truncate text-center text-xs font-bold text-white sm:w-20">{top3[1].display_name}</span>
-                    <div className="flex w-16 flex-col items-center justify-end rounded-t-xl sm:w-20" style={{ background: top3[1].character_color + "55", height: 70 }}>
+                    <span className="mb-1 w-16 truncate text-center text-xs font-bold text-midnight_text sm:w-20">{top3[1].display_name}</span>
+                    <div className="flex w-16 flex-col items-center justify-end rounded-t-xl bg-white shadow-md border border-slate-100 sm:w-20" style={{ height: 70 }}>
                       <span className="text-xl">🥈</span>
-                      <span className="text-xs font-bold text-white">{top3[1].score}</span>
+                      <span className="text-xs font-bold text-midnight_text pb-1">{top3[1].score}</span>
                     </div>
                   </div>
                 )}
                 {top3[0] && (
                   <div className="flex flex-col items-center">
                     <span className="mb-1 animate-bounce text-3xl sm:text-4xl">{top3[0].character_emoji}</span>
-                    <span className="mb-1 w-20 truncate text-center text-xs font-bold text-white sm:w-24">{top3[0].display_name}</span>
-                    <div className="flex w-20 flex-col items-center justify-end rounded-t-xl sm:w-24" style={{ background: top3[0].character_color + "77", height: 100 }}>
+                    <span className="mb-1 w-20 truncate text-center text-xs font-bold text-midnight_text sm:w-24">{top3[0].display_name}</span>
+                    <div className="flex w-20 flex-col items-center justify-end rounded-t-xl bg-white shadow-md border border-primary/20 sm:w-24" style={{ height: 100 }}>
                       <span className="text-2xl">🥇</span>
-                      <span className="text-sm font-extrabold text-white">{top3[0].score}</span>
+                      <span className="text-sm font-extrabold text-primary pb-1">{top3[0].score}</span>
                     </div>
                   </div>
                 )}
                 {top3[2] && (
                   <div className="flex flex-col items-center">
                     <span className="mb-1 text-2xl sm:text-3xl">{top3[2].character_emoji}</span>
-                    <span className="mb-1 w-16 truncate text-center text-xs font-bold text-white sm:w-20">{top3[2].display_name}</span>
-                    <div className="flex w-16 flex-col items-center justify-end rounded-t-xl sm:w-20" style={{ background: top3[2].character_color + "44", height: 50 }}>
+                    <span className="mb-1 w-16 truncate text-center text-xs font-bold text-midnight_text sm:w-20">{top3[2].display_name}</span>
+                    <div className="flex w-16 flex-col items-center justify-end rounded-t-xl bg-white shadow-md border border-slate-100 sm:w-20" style={{ height: 50 }}>
                       <span className="text-xl">🥉</span>
-                      <span className="text-xs font-bold text-white">{top3[2].score}</span>
+                      <span className="text-xs font-bold text-midnight_text pb-1">{top3[2].score}</span>
                     </div>
                   </div>
                 )}
@@ -198,29 +202,28 @@ export default function ResultsPage() {
               {sessions.map((s, i) => (
                 <div
                   key={s.ID}
-                  className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${myResult?.session.ID === s.ID ? "ring-2 ring-white/40" : ""}`}
-                  style={{ background: s.character_color + "22", border: `1.5px solid ${s.character_color}44` }}
+                  className={`flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-sm border border-slate-100 ${myResult?.session.ID === s.ID ? "ring-2 ring-primary/40" : ""}`}
                 >
-                  <span className="w-5 shrink-0 text-center text-sm font-bold text-white/60">
+                  <span className="w-5 shrink-0 text-center text-sm font-bold text-grey">
                     {i < 3 ? MEDALS[i] : `${i + 1}`}
                   </span>
                   <span className="text-xl">{s.character_emoji}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{s.display_name}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-midnight_text">{s.display_name}</span>
                   <div className="text-right">
-                    <div className="font-extrabold text-white">{s.score}</div>
-                    <div className="text-xs text-white/40">{s.answered_count} ответов</div>
+                    <div className="font-extrabold text-primary">{s.score}</div>
+                    <div className="text-xs text-grey">{s.answered_count} ответов</div>
                   </div>
                 </div>
               ))}
               {sessions.length === 0 && (
-                <div className="py-10 text-center text-sm text-white/40">Нет участников</div>
+                <div className="py-10 text-center text-sm text-grey">Нет участников</div>
               )}
             </div>
           </>
         )}
 
         <div className="text-center">
-          <Link href="/test" className="inline-block rounded-xl bg-white/20 px-6 py-3 font-semibold text-white backdrop-blur-sm active:scale-95">
+          <Link href="/test" className="inline-block rounded-full bg-primary px-6 py-3 font-semibold text-white shadow-lg hover:brightness-110 active:scale-95 transition-all">
             Главная
           </Link>
         </div>

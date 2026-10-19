@@ -204,13 +204,15 @@ export default function LobbyPage() {
   }
 
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-primary px-4 py-8">
-      {/* Floating background characters */}
+    <div className="relative min-h-[100dvh] overflow-hidden bg-gradient-to-br from-slate-gray via-white to-deep-slate px-4 py-8">
+      {/* Decorative blobs — same language as the "О школе" hero */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-secondary/10 blur-3xl" />
         {sessions.map((s, i) => (
           <div
             key={s.ID}
-            className={`absolute text-5xl opacity-20 ${FLOAT_ANIMS[i % FLOAT_ANIMS.length]}`}
+            className={`absolute text-5xl opacity-10 ${FLOAT_ANIMS[i % FLOAT_ANIMS.length]}`}
             style={{
               left: `${(i * 17 + 10) % 85}%`,
               top: `${(i * 23 + 5) % 80}%`,
@@ -224,20 +226,20 @@ export default function LobbyPage() {
       <div className="relative mx-auto max-w-2xl text-center">
         {/* Code display */}
         <div className="mb-6">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-white/60">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-grey">
             Код для входа
           </p>
-          <div className="inline-block rounded-2xl bg-white/10 px-6 py-3 backdrop-blur-sm sm:px-8 sm:py-4">
-            <span className="font-mono text-3xl font-extrabold tracking-[0.25em] text-white sm:text-5xl">
+          <div className="inline-block rounded-3xl bg-white px-6 py-3 shadow-md border border-slate-100 sm:px-8 sm:py-4">
+            <span className="font-mono text-3xl font-extrabold tracking-[0.25em] text-primary sm:text-5xl">
               {code}
             </span>
           </div>
         </div>
 
-        <h1 className="mb-2 text-xl font-extrabold text-white sm:text-2xl">
+        <h1 className="mb-2 text-xl font-black text-midnight_text sm:text-2xl">
           {test?.title || "Загрузка..."}
         </h1>
-        <p className="mb-6 text-sm text-white/60">
+        <p className="mb-6 text-sm text-grey">
           {joined ? `${sessions.length} участников подключилось` : "Подключение..."}
         </p>
 
@@ -246,24 +248,21 @@ export default function LobbyPage() {
           {sessions.map((s) => (
             <div
               key={s.ID}
-              className="flex items-center gap-2 rounded-xl px-3 py-2"
-              style={{
-                background: s.character_color + "33",
-                border: `2px solid ${s.character_color}55`,
-              }}
+              className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm"
+              style={{ border: `2px solid ${s.character_color}55` }}
             >
               <span className="text-2xl">{s.character_emoji}</span>
-              <span className="text-sm font-semibold text-white">{s.display_name}</span>
+              <span className="text-sm font-semibold text-midnight_text">{s.display_name}</span>
             </div>
           ))}
           {sessions.length === 0 && (
-            <p className="text-sm text-white/40">Ожидание участников...</p>
+            <p className="text-sm text-grey">Ожидание участников...</p>
           )}
         </div>
 
-        <div className="rounded-2xl bg-white/10 px-6 py-4 text-white/80 backdrop-blur-sm">
+        <div className="glass-card inline-block rounded-2xl px-6 py-4">
           <div className="mb-1 text-2xl">{picked?.emoji}</div>
-          <p className="text-sm">Ждём, когда учитель начнёт тест...</p>
+          <p className="text-sm text-midnight_text">Ждём, когда учитель начнёт тест...</p>
         </div>
       </div>
 

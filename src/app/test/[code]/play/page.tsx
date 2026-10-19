@@ -208,8 +208,8 @@ export default function PlayPage() {
 
   if (!current) {
     return (
-      <div className="flex h-[100dvh] items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-primary">
-        <div className="text-center text-white">
+      <div className="flex h-[100dvh] items-center justify-center overflow-hidden bg-gradient-to-br from-slate-gray via-white to-deep-slate">
+        <div className="text-center text-midnight_text">
           <div className="mb-3 text-5xl">⏳</div>
           <p className="text-base font-semibold">Ожидание вопроса...</p>
         </div>
@@ -227,7 +227,7 @@ export default function PlayPage() {
   const needsReview = qtype === "essay" || qtype === "media";
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-primary">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-gradient-to-br from-slate-gray via-white to-deep-slate">
 
       {/* Tab-switch warning */}
       {showTabWarning && (
@@ -238,28 +238,28 @@ export default function PlayPage() {
 
       {/* Top bar */}
       <div className="shrink-0 px-3 pt-3 pb-2">
-        <div className="mb-1 flex items-center justify-between text-xs text-white/60">
+        <div className="mb-1 flex items-center justify-between text-xs text-grey">
           <span>{current.index + 1} / {current.total}</span>
-          <span className={`font-bold text-sm ${timeLeft <= 5 ? "text-red-300 animate-pulse" : "text-white"}`}>
+          <span className={`font-bold text-sm ${timeLeft <= 5 ? "text-red-500 animate-pulse" : "text-midnight_text"}`}>
             {timeLeft}с
           </span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-white/20">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
           <div
-            className={`h-full rounded-full transition-all duration-1000 ${timeLeft <= 5 ? "bg-red-400" : "bg-white"}`}
+            className={`h-full rounded-full transition-all duration-1000 ${timeLeft <= 5 ? "bg-red-500" : "bg-primary"}`}
             style={{ width: `${timerPercent}%` }}
           />
         </div>
-        <div className="mt-1 flex justify-between text-xs text-white/50">
+        <div className="mt-1 flex justify-between text-xs text-grey">
           <span>{current.question.points} баллов</span>
-          <span className="font-bold text-white/80">Счёт: {score}</span>
+          <span className="font-bold text-midnight_text">Счёт: {score}</span>
         </div>
       </div>
 
       {/* Question */}
       <div className="shrink-0 px-3 pb-2">
-        <div className="max-h-[22dvh] overflow-y-auto rounded-2xl bg-white/10 p-4 text-center backdrop-blur-sm">
-          <p className="text-base font-bold leading-snug text-white sm:text-lg">
+        <div className="max-h-[22dvh] overflow-y-auto rounded-2xl bg-white p-4 text-center shadow-md border border-slate-100">
+          <p className="text-base font-bold leading-snug text-midnight_text sm:text-lg">
             {current.question.text}
           </p>
         </div>
@@ -268,7 +268,7 @@ export default function PlayPage() {
       {/* Answer result overlay */}
       {showResult && (
         <div className={`mx-3 mb-2 shrink-0 rounded-2xl p-3 text-center text-white ${
-          needsReview ? "bg-orange-500/80" : ack ? (ack.is_correct ? "bg-green-500/80" : "bg-red-500/80") : "bg-orange-500/80"
+          needsReview ? "bg-orange-500/90" : ack ? (ack.is_correct ? "bg-primary/90" : "bg-red-500/90") : "bg-orange-500/90"
         }`}>
           {needsReview && ack ? (
             <div className="text-base font-bold">⏳ Ответ отправлен — проверит преподаватель</div>
@@ -306,8 +306,8 @@ export default function PlayPage() {
                     onClick={() => { setSelected(opt); submitAnswer(opt); }}
                     className="flex min-h-[64px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95"
                     style={{
-                      background: isCorrectOpt ? "#22c55e99" : OPTION_COLORS[i % 6] + (isSelected ? "cc" : "44"),
-                      borderColor: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i % 6] + (isSelected ? "ff" : "66"),
+                      background: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i % 6] + (isSelected ? "ee" : "cc"),
+                      borderColor: isCorrectOpt ? "#16a34a" : OPTION_COLORS[i % 6],
                     }}
                   >
                     <span className="mr-2 font-mono font-black text-xs opacity-70">{OPTION_LABELS[i]})</span>
@@ -332,8 +332,8 @@ export default function PlayPage() {
                       onClick={() => toggleMulti(opt)}
                       className="flex min-h-[64px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95"
                       style={{
-                        background: isCorrectOpt ? "#22c55e99" : OPTION_COLORS[i % 6] + (isSelected ? "cc" : "44"),
-                        borderColor: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i % 6] + (isSelected ? "ff" : "66"),
+                        background: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i % 6] + (isSelected ? "ee" : "cc"),
+                        borderColor: isCorrectOpt ? "#16a34a" : OPTION_COLORS[i % 6],
                       }}
                     >
                       <span className="mr-2 text-sm">{isSelected ? "✓" : OPTION_LABELS[i] + ")"}</span>
@@ -346,7 +346,7 @@ export default function PlayPage() {
               <button
                 disabled={answered || selectedMulti.length === 0}
                 onClick={() => submitAnswer(JSON.stringify(selectedMulti))}
-                className="w-full shrink-0 rounded-2xl bg-white py-3.5 font-bold text-primary disabled:opacity-50 active:scale-95"
+                className="w-full shrink-0 rounded-2xl bg-primary py-3.5 font-bold text-white shadow-md disabled:opacity-50 active:scale-95"
               >
                 Подтвердить
               </button>
@@ -365,8 +365,8 @@ export default function PlayPage() {
                     onClick={() => { setSelected(v); submitAnswer(v); }}
                     className="flex min-h-[100px] flex-col items-center justify-center rounded-2xl border-2 font-extrabold text-white transition-all active:scale-95"
                     style={{
-                      background: isCorrectOpt ? "#22c55e99" : OPTION_COLORS[i] + (isSelected ? "cc" : "44"),
-                      borderColor: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i] + (isSelected ? "ff" : "66"),
+                      background: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i] + (isSelected ? "ee" : "cc"),
+                      borderColor: isCorrectOpt ? "#16a34a" : OPTION_COLORS[i],
                     }}
                   >
                     <span className="mb-1 text-3xl">{v === "Туура" ? "✅" : "❌"}</span>
@@ -386,12 +386,12 @@ export default function PlayPage() {
                 onChange={(e) => setTextAnswer(e.target.value)}
                 disabled={answered}
                 placeholder={qtype === "fill_blank" ? "Впишите пропущенное слово..." : "Введите ваш ответ..."}
-                className="w-full rounded-2xl bg-white/10 px-4 py-4 text-center text-base text-white placeholder:text-white/40 border border-white/20 focus:border-white focus:outline-none"
+                className="w-full rounded-2xl bg-white px-4 py-4 text-center text-base text-midnight_text placeholder:text-grey/60 border border-slate-200 shadow-sm focus:border-primary focus:outline-none"
               />
               <button
                 disabled={answered || !textAnswer.trim()}
                 onClick={() => submitAnswer(textAnswer)}
-                className="w-full rounded-2xl bg-white py-3.5 font-bold text-primary disabled:opacity-50 active:scale-95"
+                className="w-full rounded-2xl bg-primary py-3.5 font-bold text-white shadow-md disabled:opacity-50 active:scale-95"
               >
                 Ответить
               </button>
@@ -405,12 +405,12 @@ export default function PlayPage() {
                 onChange={(e) => setEssayAnswer(e.target.value)}
                 disabled={answered}
                 placeholder="Развёрнутый ответ..."
-                className="min-h-0 flex-1 resize-none rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/40 border border-white/20 focus:border-white focus:outline-none"
+                className="min-h-0 flex-1 resize-none rounded-2xl bg-white px-4 py-3 text-sm text-midnight_text placeholder:text-grey/60 border border-slate-200 shadow-sm focus:border-primary focus:outline-none"
               />
               <button
                 disabled={answered || !essayAnswer.trim()}
                 onClick={() => submitAnswer(essayAnswer)}
-                className="w-full shrink-0 rounded-2xl bg-white py-3.5 font-bold text-primary disabled:opacity-50 active:scale-95"
+                className="w-full shrink-0 rounded-2xl bg-primary py-3.5 font-bold text-white shadow-md disabled:opacity-50 active:scale-95"
               >
                 Отправить (проверит преподаватель)
               </button>
@@ -421,7 +421,7 @@ export default function PlayPage() {
             <div className="flex flex-1 flex-col items-center justify-center gap-3">
               {!mediaUrl ? (
                 <>
-                  <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/30 bg-white/5 py-8 text-white/70">
+                  <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-white py-8 text-grey">
                     <span className="text-3xl">📎</span>
                     <span className="text-sm">{mediaUploading ? "Загрузка..." : "Выбрать фото или аудио"}</span>
                     <input
@@ -432,24 +432,24 @@ export default function PlayPage() {
                       onChange={(e) => e.target.files?.[0] && uploadMedia(e.target.files[0])}
                     />
                   </label>
-                  {mediaError && <p className="text-sm text-red-300">{mediaError}</p>}
+                  {mediaError && <p className="text-sm text-red-500">{mediaError}</p>}
                 </>
               ) : (
                 <>
                   {/\.(jpg|jpeg|png|webp)$/i.test(mediaUrl) ? (
-                    <img src={mediaUrl} alt="ответ" className="max-h-[30dvh] rounded-2xl object-contain" />
+                    <img src={mediaUrl} alt="ответ" className="max-h-[30dvh] rounded-2xl object-contain shadow-md" />
                   ) : (
                     <audio src={mediaUrl} controls className="w-full" />
                   )}
                   <button
                     disabled={answered}
                     onClick={() => submitAnswer(mediaUrl)}
-                    className="w-full shrink-0 rounded-2xl bg-white py-3.5 font-bold text-primary disabled:opacity-50 active:scale-95"
+                    className="w-full shrink-0 rounded-2xl bg-primary py-3.5 font-bold text-white shadow-md disabled:opacity-50 active:scale-95"
                   >
                     Отправить ответ
                   </button>
                   {!answered && (
-                    <button onClick={() => setMediaUrl(null)} className="text-xs text-white/60 underline">Выбрать другой файл</button>
+                    <button onClick={() => setMediaUrl(null)} className="text-xs text-grey underline">Выбрать другой файл</button>
                   )}
                 </>
               )}
@@ -458,10 +458,10 @@ export default function PlayPage() {
 
           {qtype === "ordering" && (
             <div className="flex flex-1 flex-col gap-2">
-              <p className="shrink-0 text-center text-xs text-white/60">Нажимайте по порядку</p>
+              <p className="shrink-0 text-center text-xs text-grey">Нажимайте по порядку</p>
               <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
                 {orderPicked.map((item, i) => (
-                  <div key={`picked-${item}`} className="flex items-center gap-2 rounded-xl bg-white/90 px-3 py-2">
+                  <div key={`picked-${item}`} className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm border border-slate-100">
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">{i + 1}</span>
                     <span className="text-sm font-semibold text-midnight_text">{item}</span>
                   </div>
@@ -471,7 +471,7 @@ export default function PlayPage() {
                     key={item}
                     disabled={answered}
                     onClick={() => pickOrderItem(item)}
-                    className="rounded-xl border-2 border-white/30 bg-white/10 px-3 py-2.5 text-left text-sm font-semibold text-white active:scale-95"
+                    className="rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-midnight_text shadow-sm active:scale-95"
                   >
                     {item}
                   </button>
@@ -481,14 +481,14 @@ export default function PlayPage() {
                 <button
                   disabled={answered || orderPicked.length === 0}
                   onClick={resetOrder}
-                  className="flex-1 rounded-2xl border border-white/30 py-3 text-sm font-semibold text-white disabled:opacity-40"
+                  className="flex-1 rounded-2xl border border-slate-300 py-3 text-sm font-semibold text-grey disabled:opacity-40"
                 >
                   Сбросить
                 </button>
                 <button
                   disabled={answered || orderPicked.length !== orderOpts.length}
                   onClick={() => submitAnswer(JSON.stringify(orderPicked))}
-                  className="flex-[2] rounded-2xl bg-white py-3 font-bold text-primary disabled:opacity-50 active:scale-95"
+                  className="flex-[2] rounded-2xl bg-primary py-3 font-bold text-white shadow-md disabled:opacity-50 active:scale-95"
                 >
                   Подтвердить
                 </button>
@@ -504,10 +504,10 @@ export default function PlayPage() {
                     key={l}
                     disabled={answered}
                     onClick={() => setMatchActiveLeft(i)}
-                    className={`rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold text-white active:scale-95 ${matchActiveLeft === i ? "border-white bg-white/30" : "border-white/20 bg-white/10"}`}
+                    className={`rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold active:scale-95 ${matchActiveLeft === i ? "border-primary bg-primary/10 text-midnight_text" : "border-slate-200 bg-white text-midnight_text shadow-sm"}`}
                   >
                     {l}
-                    {matchPairs[i] && <span className="ml-2 text-xs opacity-80">→ {matchPairs[i]}</span>}
+                    {matchPairs[i] && <span className="ml-2 text-xs text-grey">→ {matchPairs[i]}</span>}
                   </button>
                 ))}
               </div>
@@ -519,7 +519,7 @@ export default function PlayPage() {
                       key={r}
                       disabled={answered || matchActiveLeft === null}
                       onClick={() => matchActiveLeft !== null && pickMatch(matchActiveLeft, r)}
-                      className={`rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold text-white active:scale-95 disabled:opacity-40 ${usedBy !== undefined ? "border-green-300 bg-green-500/30" : "border-white/20 bg-white/10"}`}
+                      className={`rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold active:scale-95 disabled:opacity-40 ${usedBy !== undefined ? "border-green-400 bg-green-50 text-green-700" : "border-slate-200 bg-white text-midnight_text shadow-sm"}`}
                     >
                       {r}
                     </button>
@@ -533,7 +533,7 @@ export default function PlayPage() {
             <button
               disabled={answered || Object.keys(matchPairs).length !== matchOpts.left.length}
               onClick={() => submitAnswer(JSON.stringify(matchOpts.left.map((_, i) => matchPairs[i])))}
-              className="mt-2 w-full shrink-0 rounded-2xl bg-white py-3.5 font-bold text-primary disabled:opacity-50 active:scale-95"
+              className="mt-2 w-full shrink-0 rounded-2xl bg-primary py-3.5 font-bold text-white shadow-md disabled:opacity-50 active:scale-95"
             >
               Подтвердить
             </button>
