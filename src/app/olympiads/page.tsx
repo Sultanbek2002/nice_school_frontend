@@ -109,16 +109,6 @@ function Counter({ value }: { value: number }) {
   return <span ref={ref}>{count}</span>;
 }
 
-/* ---------- Floating Particle ---------- */
-function Particle({ style }: { style: React.CSSProperties }) {
-  return (
-    <div
-      className="absolute rounded-full pointer-events-none"
-      style={style}
-    />
-  );
-}
-
 /* ---------- Subject Icon ---------- */
 function subjectIcon(subject: string): string {
   const s = subject.toLowerCase();
@@ -137,33 +127,18 @@ function subjectIcon(subject: string): string {
 
 function subjectColor(subject: string): string {
   const s = subject.toLowerCase();
-  if (s.includes("матем")) return "#a78bfa";
-  if (s.includes("инфор") || s.includes("it")) return "#34d399";
-  if (s.includes("физик")) return "#60a5fa";
-  if (s.includes("хими")) return "#f472b6";
-  if (s.includes("биол")) return "#4ade80";
-  if (s.includes("тарых") || s.includes("истор")) return "#fb923c";
-  if (s.includes("адабият") || s.includes("литер")) return "#fbbf24";
-  if (s.includes("кыргыз") || s.includes("тил")) return "#f87171";
-  if (s.includes("чет тил") || s.includes("англис")) return "#38bdf8";
-  if (s.includes("геогр")) return "#2dd4bf";
-  return "#c084fc";
+  if (s.includes("матем")) return "#17a589";
+  if (s.includes("инфор") || s.includes("it")) return "#0b6f5d";
+  if (s.includes("физик")) return "#17a589";
+  if (s.includes("хими")) return "#0b6f5d";
+  if (s.includes("биол")) return "#17a589";
+  if (s.includes("тарых") || s.includes("истор")) return "#0b6f5d";
+  if (s.includes("адабият") || s.includes("литер")) return "#17a589";
+  if (s.includes("кыргыз") || s.includes("тил")) return "#0b6f5d";
+  if (s.includes("чет тил") || s.includes("англис")) return "#17a589";
+  if (s.includes("геогр")) return "#0b6f5d";
+  return "#17a589";
 }
-
-const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
-  id: i,
-  style: {
-    width: `${Math.random() * 10 + 6}px`,
-    height: `${Math.random() * 10 + 6}px`,
-    left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 100}%`,
-    background: i % 4 === 0 ? "#7c3aed" : i % 4 === 1 ? "#06b6d4" : i % 4 === 2 ? "#f59e0b" : "#ec4899",
-    opacity: Math.random() * 0.25 + 0.08,
-    borderRadius: "50%",
-    animation: `float-${i % 3} ${6 + Math.random() * 8}s ease-in-out infinite`,
-    animationDelay: `${Math.random() * 5}s`,
-  } as React.CSSProperties,
-}));
 
 export default function OlympiadsPage() {
   const [olympiads, setOlympiads] = useState<Olympiad[]>([]);
@@ -191,17 +166,9 @@ export default function OlympiadsPage() {
   });
 
   return (
-    <main
-      className="min-h-screen relative overflow-hidden"
-      style={{ background: "linear-gradient(145deg, #f0f4ff 0%, #faf5ff 35%, #f0fdf4 65%, #fff7ed 100%)" }}
-    >
+    <main className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-gray via-white to-deep-slate">
       <style>{`
-        @keyframes float-0 { 0%,100%{transform:translateY(0px) rotate(0deg)} 50%{transform:translateY(-22px) rotate(180deg)} }
-        @keyframes float-1 { 0%,100%{transform:translateY(0px) rotate(0deg)} 50%{transform:translateY(-32px) rotate(-180deg)} }
-        @keyframes float-2 { 0%,100%{transform:translateY(0px) rotate(0deg)} 50%{transform:translateY(-16px) rotate(90deg)} }
-        @keyframes pulse-blob { 0%,100%{transform:scale(1) translate(0,0)} 33%{transform:scale(1.08) translate(20px,-15px)} 66%{transform:scale(0.95) translate(-10px,20px)} }
         @keyframes spin-slow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes hero-wave { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
         .card-shine::before {
           content:'';
           position:absolute;
@@ -216,40 +183,22 @@ export default function OlympiadsPage() {
         .card-shine:hover::before { opacity:1; }
       `}</style>
 
-      {/* Large colorful blobs */}
+      {/* Subtle decorative blobs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div style={{ position:"absolute", top:"-15%", left:"-10%", width:"650px", height:"650px", borderRadius:"50%", background:"radial-gradient(circle, rgba(167,139,250,0.35) 0%, rgba(139,92,246,0.12) 50%, transparent 75%)", filter:"blur(40px)", animation:"pulse-blob 12s ease-in-out infinite" }} />
-        <div style={{ position:"absolute", top:"20%", right:"-12%", width:"500px", height:"500px", borderRadius:"50%", background:"radial-gradient(circle, rgba(6,182,212,0.3) 0%, rgba(14,165,233,0.1) 50%, transparent 75%)", filter:"blur(50px)", animation:"pulse-blob 15s ease-in-out infinite", animationDelay:"3s" }} />
-        <div style={{ position:"absolute", bottom:"5%", left:"15%", width:"560px", height:"400px", borderRadius:"50%", background:"radial-gradient(circle, rgba(245,158,11,0.25) 0%, rgba(251,191,36,0.08) 50%, transparent 75%)", filter:"blur(50px)", animation:"pulse-blob 18s ease-in-out infinite", animationDelay:"6s" }} />
-        <div style={{ position:"absolute", bottom:"20%", right:"5%", width:"400px", height:"400px", borderRadius:"50%", background:"radial-gradient(circle, rgba(236,72,153,0.2) 0%, rgba(244,114,182,0.06) 50%, transparent 75%)", filter:"blur(50px)", animation:"pulse-blob 13s ease-in-out infinite", animationDelay:"9s" }} />
-      </div>
-
-      {/* Subtle dot grid */}
-      <div className="pointer-events-none fixed inset-0" style={{ backgroundImage:"radial-gradient(circle, rgba(99,102,241,0.12) 1px, transparent 1px)", backgroundSize:"36px 36px" }} />
-
-      {/* Floating particles */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        {PARTICLES.map((p) => (
-          <Particle key={p.id} style={p.style} />
-        ))}
+        <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute top-20 -right-20 h-96 w-96 rounded-full bg-secondary/10 blur-3xl" />
       </div>
 
       <div className="relative z-10 pt-32 pb-24 container mx-auto px-4">
 
         {/* ── HERO ── */}
         <div className="text-center mb-16 space-y-6">
-          <div
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-sm"
-            style={{ background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(6,182,212,0.1))", border: "1.5px solid rgba(124,58,237,0.25)", color: "#7c3aed" }}
-          >
-            {mounted && <Icon icon="solar:cup-bold-duotone" width={16} />}
+          <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-md bg-white border border-primary/10 text-midnight_text">
+            {mounted && <Icon icon="solar:cup-bold-duotone" width={16} className="text-primary" />}
             NICE International School
           </div>
 
-          <h1
-            className="text-5xl md:text-7xl font-black tracking-tighter leading-none"
-            style={{ background: "linear-gradient(135deg, #7c3aed 0%, #0ea5e9 45%, #10b981 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundSize: "200% 200%", animation: "hero-wave 6s ease infinite" }}
-          >
+          <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-[1.05] text-midnight_text">
             Олимпиадалар
           </h1>
 
@@ -261,9 +210,9 @@ export default function OlympiadsPage() {
           {!loading && olympiads.length > 0 && (
             <div className="flex justify-center gap-8 pt-4">
               {[
-                { label: "Олимпиад", value: olympiads.length, color: "#7c3aed", bg: "rgba(124,58,237,0.08)" },
-                { label: "Предметов", value: subjects.length - 1, color: "#0ea5e9", bg: "rgba(14,165,233,0.08)" },
-                { label: "Онлайн", value: olympiads.filter(o => o.format === "Онлайн").length, color: "#10b981", bg: "rgba(16,185,129,0.08)" },
+                { label: "Олимпиад", value: olympiads.length, color: "#17a589", bg: "rgba(23,165,137,0.08)" },
+                { label: "Предметов", value: subjects.length - 1, color: "#0b6f5d", bg: "rgba(11,111,93,0.08)" },
+                { label: "Онлайн", value: olympiads.filter(o => o.format === "Онлайн").length, color: "#17a589", bg: "rgba(23,165,137,0.08)" },
               ].map((stat) => (
                 <div key={stat.label} className="text-center px-6 py-4 rounded-2xl shadow-sm" style={{ background: stat.bg, border: `1.5px solid ${stat.color}22` }}>
                   <div className="text-3xl font-black" style={{ color: stat.color }}>
@@ -288,13 +237,7 @@ export default function OlympiadsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск олимпиад..."
-              className="w-full pl-11 pr-4 py-3 rounded-2xl text-sm font-medium outline-none text-slate-700 placeholder-slate-400"
-              style={{
-                background: "rgba(255,255,255,0.85)",
-                border: "1.5px solid rgba(124,58,237,0.2)",
-                boxShadow: "0 4px 20px rgba(124,58,237,0.08)",
-                backdropFilter: "blur(10px)",
-              }}
+              className="w-full pl-11 pr-4 py-3 rounded-2xl text-sm font-medium outline-none text-midnight_text placeholder-slate-400 bg-white/90 border border-slate-200 shadow-md backdrop-blur-sm focus:border-primary/40"
             />
           </div>
 
@@ -302,7 +245,7 @@ export default function OlympiadsPage() {
           <div className="flex flex-wrap justify-center gap-3">
             {subjects.map((subj) => {
               const isActive = activeSubject === subj;
-              const color = subj === "Все" ? "#7c3aed" : subjectColor(subj);
+              const color = subj === "Все" ? "#17a589" : subjectColor(subj);
               return (
                 <button
                   key={subj}
@@ -311,7 +254,7 @@ export default function OlympiadsPage() {
                   style={{
                     background: isActive ? color : "rgba(255,255,255,0.8)",
                     border: `1.5px solid ${isActive ? color : "rgba(0,0,0,0.08)"}`,
-                    color: isActive ? "#fff" : "#64748b",
+                    color: isActive ? "#fff" : "#3f5570",
                     boxShadow: isActive ? `0 8px 24px ${color}44` : "0 2px 8px rgba(0,0,0,0.05)",
                     transform: isActive ? "translateY(-3px) scale(1.03)" : "none",
                   }}
@@ -334,7 +277,7 @@ export default function OlympiadsPage() {
         {/* ── LOADING ── */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
-            <div className="w-12 h-12 rounded-full border-3 border-transparent" style={{ borderTopColor: "#7c3aed", borderWidth: "3px", animation: "spin-slow 1s linear infinite" }} />
+            <div className="w-12 h-12 rounded-full border-3 border-transparent" style={{ borderTopColor: "#17a589", borderWidth: "3px", animation: "spin-slow 1s linear infinite" }} />
             <p className="text-sm font-bold text-slate-400">Загрузка...</p>
           </div>
         )}
@@ -343,7 +286,7 @@ export default function OlympiadsPage() {
         {!loading && filtered.length === 0 && (
           <div className="text-center py-32 space-y-3">
             <div className="text-6xl">🔍</div>
-            <p className="text-xl font-black text-slate-700">Ничего не найдено</p>
+            <p className="text-xl font-black text-midnight_text">Ничего не найдено</p>
             <p className="text-sm text-slate-400">Попробуйте другой предмет или поиск</p>
           </div>
         )}
@@ -358,9 +301,8 @@ export default function OlympiadsPage() {
               return (
                 <TiltCard key={item.ID} className="h-full">
                   <div
-                    className="card-shine relative h-full flex flex-col rounded-[2rem] overflow-hidden"
+                    className="card-shine relative h-full flex flex-col rounded-3xl overflow-hidden bg-white shadow-md"
                     style={{
-                      background: "#fff",
                       border: `1.5px solid ${color}30`,
                       boxShadow: `0 4px 30px ${color}18, 0 1px 4px rgba(0,0,0,0.05)`,
                     }}
@@ -383,12 +325,12 @@ export default function OlympiadsPage() {
                         className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl backdrop-blur-md text-[10px] font-black uppercase tracking-wider"
                         style={{
                           background: "rgba(255,255,255,0.92)",
-                          border: `1px solid ${isOnline ? "#a78bfa" : "#60a5fa"}44`,
-                          color: isOnline ? "#7c3aed" : "#0ea5e9",
+                          border: `1px solid ${isOnline ? "#17a589" : "#0b6f5d"}44`,
+                          color: isOnline ? "#17a589" : "#0b6f5d",
                           boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
                         }}
                       >
-                        <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: isOnline ? "#a78bfa" : "#60a5fa" }} />
+                        <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: isOnline ? "#17a589" : "#0b6f5d" }} />
                         {item.format}
                       </div>
 
@@ -404,7 +346,7 @@ export default function OlympiadsPage() {
 
                     {/* Content */}
                     <div className="flex flex-col flex-grow p-6 space-y-4 relative z-10">
-                      <h3 className="text-base font-black text-slate-800 leading-snug line-clamp-2">
+                      <h3 className="text-base font-black text-midnight_text leading-snug line-clamp-2">
                         {item.title}
                       </h3>
                       <p className="text-xs leading-relaxed line-clamp-2 text-slate-500">
@@ -424,7 +366,7 @@ export default function OlympiadsPage() {
                           </div>
                         )}
                         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 truncate">
-                          {mounted && <Icon icon="solar:map-point-bold-duotone" width={14} className="text-rose-400 flex-shrink-0" />}
+                          {mounted && <Icon icon="solar:map-point-bold-duotone" width={14} className="text-secondary flex-shrink-0" />}
                           <span className="truncate">{item.location || "Адрес уточняется"}</span>
                         </div>
                       </div>
@@ -434,8 +376,7 @@ export default function OlympiadsPage() {
                         {item.file_url && (
                           <button
                             onClick={() => openPDF(item.file_url)}
-                            className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105"
-                            style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#059669" }}
+                            className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105 bg-primary/10 border border-primary/30 text-primary"
                           >
                             {mounted && <Icon icon="solar:document-download-bold-duotone" width={14} />}
                             PDF
@@ -443,8 +384,7 @@ export default function OlympiadsPage() {
                         )}
                         <Link
                           href={`/olympiads/${item.ID}`}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-black transition-all relative overflow-hidden group hover:scale-[1.02]"
-                          style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)`, color: "#fff", boxShadow: `0 4px 16px ${color}44` }}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-black transition-all relative overflow-hidden group hover:scale-[1.02] bg-primary hover:brightness-110 text-white shadow-lg"
                         >
                           <span className="relative z-10 flex items-center gap-1.5">
                             {mounted && <Icon icon="solar:arrow-right-bold-duotone" width={14} />}
@@ -468,22 +408,19 @@ export default function OlympiadsPage() {
         {!loading && olympiads.length > 0 && (
           <div className="mt-20 text-center">
             <div
-              className="inline-flex flex-col items-center gap-4 px-12 py-10 rounded-[2.5rem]"
+              className="inline-flex flex-col items-center gap-4 px-12 py-10 rounded-[2.5rem] bg-white shadow-md"
               style={{
-                background: "linear-gradient(135deg, rgba(124,58,237,0.07) 0%, rgba(6,182,212,0.06) 100%)",
-                border: "1.5px solid rgba(124,58,237,0.15)",
-                boxShadow: "0 20px 60px rgba(124,58,237,0.1)",
+                border: "1.5px solid rgba(23,165,137,0.15)",
               }}
             >
               <div className="text-4xl">🏆</div>
-              <h3 className="text-2xl font-black text-slate-800">Готовы участвовать?</h3>
+              <h3 className="text-2xl font-black text-midnight_text">Готовы участвовать?</h3>
               <p className="text-sm max-w-sm text-center text-slate-500">
                 Каждый ученик школы может участвовать в олимпиаде и доказать свои знания.
               </p>
               <Link
                 href="/#contact"
-                className="px-8 py-3 rounded-2xl text-sm font-black text-white transition-all hover:scale-105"
-                style={{ background: "linear-gradient(135deg, #7c3aed, #0ea5e9)", boxShadow: "0 10px 30px rgba(124,58,237,0.35)" }}
+                className="px-8 py-3 rounded-full text-sm font-black text-white transition-all hover:scale-105 bg-primary hover:brightness-110 shadow-lg"
               >
                 Записаться в школу
               </Link>

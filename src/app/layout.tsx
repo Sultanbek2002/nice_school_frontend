@@ -5,6 +5,7 @@ import { SITE_URL, SITE_NAME, DEFAULT_TITLE, DEFAULT_DESCRIPTION, OG_IMAGE } fro
 import SiteChrome from '@/app/components/Layout/SiteChrome'
 import Preloader from '@/app/components/Preloader'
 import RouteLoader from '@/app/components/RouteLoader'
+import VisitTracker from '@/app/components/VisitTracker'
 import { getSiteStructure } from '@/utils/apiData'
 
 const spaceGrotesk = Space_Grotesk({
@@ -107,6 +108,7 @@ export default async function RootLayout({
         <div className="relative z-10">
           <Preloader />
           <RouteLoader />
+          <VisitTracker />
           <SiteChrome navData={navLinks} contactData={schoolInfo}>
             {children}
           </SiteChrome>
