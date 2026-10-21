@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { GAME_WS_URL, GO_API_URL } from "@/utils/apiData";
 
-interface Question { id: number; text: string; type: string; options: string; points: number; time_limit: number; }
+interface Question { id: number; text: string; image_url?: string; type: string; options: string; points: number; time_limit: number; }
 interface QMessage { question: Question; index: number; total: number; ends_at: number; }
 interface AnswerAck { is_correct: boolean; points_awarded: number; correct_answer: string; needs_review?: boolean; }
 
@@ -258,7 +258,14 @@ export default function PlayPage() {
 
       {/* Question */}
       <div className="shrink-0 px-3 pb-2">
-        <div className="max-h-[22dvh] overflow-y-auto rounded-2xl bg-white p-4 text-center shadow-md border border-slate-100">
+        <div className="max-h-[26dvh] overflow-y-auto rounded-2xl bg-white p-4 text-center shadow-md border border-slate-100">
+          {current.question.image_url && (
+            <img
+              src={current.question.image_url.startsWith("http") ? current.question.image_url : `${GO_API_URL}${current.question.image_url}`}
+              alt=""
+              className="mx-auto mb-3 max-h-[15dvh] rounded-xl object-contain"
+            />
+          )}
           <p className="text-base font-bold leading-snug text-midnight_text sm:text-lg">
             {current.question.text}
           </p>
@@ -379,7 +386,33 @@ export default function PlayPage() {
             </div>
           )}
 
-          {(qtype === "text" || qtype === "fill_blank") && (
+          {qtype === "fill_blank" && opts.length > 0 && (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3">
+              <div className="flex flex-wrap justify-center gap-2.5">
+                {opts.map((opt, i) => {
+                  const isCorrectOpt = showResult && correctList.includes(opt);
+                  const isSelected = selected === opt;
+                  return (
+                    <button
+                      key={i}
+                      disabled={answered}
+                      onClick={() => { setSelected(opt); submitAnswer(opt); }}
+                      className="rounded-2xl border-2 px-5 py-3 text-base font-bold text-white transition-all active:scale-95"
+                      style={{
+                        background: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i % 6] + (isSelected ? "ee" : "cc"),
+                        borderColor: isCorrectOpt ? "#16a34a" : OPTION_COLORS[i % 6],
+                      }}
+                    >
+                      {opt}
+                      {isCorrectOpt && <span className="ml-2">✅</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {(qtype === "text" || (qtype === "fill_blank" && opts.length === 0)) && (
             <div className="flex flex-1 flex-col justify-center gap-3">
               <input
                 value={textAnswer}
