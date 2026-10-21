@@ -244,9 +244,7 @@ export default function PlayPage() {
       <div className="shrink-0 px-3 pt-3 pb-2">
         <div className="mb-1 flex items-center justify-between text-xs text-grey">
           <span>{current.index + 1} / {current.total}</span>
-          <span className={`font-bold text-sm ${timeLeft <= 5 ? "text-red-500 animate-pulse" : "text-midnight_text"}`}>
-            {timeLeft}с
-          </span>
+          <span>{current.question.points} баллов</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
           <div
@@ -254,15 +252,14 @@ export default function PlayPage() {
             style={{ width: `${timerPercent}%` }}
           />
         </div>
-        <div className="mt-1 flex justify-between text-xs text-grey">
-          <span>{current.question.points} баллов</span>
+        <div className="mt-1 flex justify-end text-xs text-grey">
           <span className="font-bold text-midnight_text">Счёт: {score}</span>
         </div>
       </div>
 
-      {/* Question */}
-      <div className="shrink-0 px-3 pb-2">
-        <div className="max-h-[26dvh] overflow-y-auto rounded-2xl bg-white p-4 text-center shadow-md border border-slate-100">
+      {/* Question + side timer */}
+      <div className="flex shrink-0 items-stretch gap-2 px-3 pb-2">
+        <div className="min-w-0 max-h-[26dvh] flex-1 overflow-y-auto rounded-2xl bg-white p-4 text-center shadow-md border border-slate-100">
           {current.question.image_url && (
             <img
               src={current.question.image_url.startsWith("http") ? current.question.image_url : `${GO_API_URL}${current.question.image_url}`}
@@ -270,9 +267,26 @@ export default function PlayPage() {
               className="mx-auto mb-3 max-h-[15dvh] rounded-xl object-contain"
             />
           )}
-          <p className="text-base font-bold leading-snug text-midnight_text sm:text-lg">
+          <p className="text-xl font-black leading-snug text-midnight_text sm:text-2xl">
             {current.question.text}
           </p>
+        </div>
+
+        {/* Big side timer */}
+        <div className="flex shrink-0 items-center">
+          <div
+            className="flex items-center justify-center rounded-full shadow-lg"
+            style={{
+              width: 76, height: 76,
+              background: `conic-gradient(${timeLeft <= 5 ? "#ef4444" : "#17a589"} ${timerPercent}%, #e2e8f0 0)`,
+            }}
+          >
+            <div className="flex h-[66px] w-[66px] items-center justify-center rounded-full bg-white">
+              <span className={`text-3xl font-black tabular-nums ${timeLeft <= 5 ? "text-red-500 animate-pulse" : "text-midnight_text"}`}>
+                {timeLeft}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -318,15 +332,15 @@ export default function PlayPage() {
                     key={i}
                     disabled={answered}
                     onClick={() => { setSelected(opt); submitAnswer(opt); }}
-                    className="flex min-h-[64px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95"
+                    className="flex min-h-[64px] items-center justify-center rounded-2xl border-2 text-center font-semibold text-white transition-all active:scale-95"
                     style={{
                       background: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i % 6] + (isSelected ? "ee" : "cc"),
                       borderColor: isCorrectOpt ? "#16a34a" : OPTION_COLORS[i % 6],
                     }}
                   >
-                    <span className="mr-2 font-mono font-black text-xs opacity-70">{OPTION_LABELS[i]})</span>
-                    <span className="text-sm leading-tight">{opt}</span>
-                    {isCorrectOpt && <span className="ml-auto">✅</span>}
+                    <span className="mr-1.5 font-mono font-black text-sm opacity-70">{OPTION_LABELS[i]})</span>
+                    <span className="text-lg leading-tight sm:text-xl">{opt}</span>
+                    {isCorrectOpt && <span className="ml-1.5">✅</span>}
                   </button>
                 );
               })}
@@ -344,15 +358,15 @@ export default function PlayPage() {
                       key={i}
                       disabled={answered}
                       onClick={() => toggleMulti(opt)}
-                      className="flex min-h-[64px] items-center rounded-2xl border-2 p-3 text-left font-semibold text-white transition-all active:scale-95"
+                      className="flex min-h-[64px] items-center justify-center rounded-2xl border-2 text-center font-semibold text-white transition-all active:scale-95"
                       style={{
                         background: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i % 6] + (isSelected ? "ee" : "cc"),
                         borderColor: isCorrectOpt ? "#16a34a" : OPTION_COLORS[i % 6],
                       }}
                     >
-                      <span className="mr-2 text-sm">{isSelected ? "✓" : OPTION_LABELS[i] + ")"}</span>
-                      <span className="text-sm leading-tight">{opt}</span>
-                      {isCorrectOpt && <span className="ml-auto">✅</span>}
+                      <span className="mr-1.5 font-black">{isSelected ? "✓" : OPTION_LABELS[i] + ")"}</span>
+                      <span className="text-lg leading-tight sm:text-xl">{opt}</span>
+                      {isCorrectOpt && <span className="ml-1.5">✅</span>}
                     </button>
                   );
                 })}
@@ -383,10 +397,10 @@ export default function PlayPage() {
                       borderColor: isCorrectOpt ? "#16a34a" : OPTION_COLORS[i],
                     }}
                   >
-                    <span className="mb-1 text-3xl">{v === "Туура" ? "✅" : "❌"}</span>
+                    <span className="mb-1 text-4xl">{v === "Туура" ? "✅" : "❌"}</span>
                     {/* Значение (v), отправляемое на сервер, остаётся "Туура"/"Жалган" —
                         совместимость со старыми вопросами в базе; переводим только подпись */}
-                    <span className="text-base">{v === "Туура" ? "Верно" : "Неверно"}</span>
+                    <span className="text-xl sm:text-2xl">{v === "Туура" ? "Верно" : "Неверно"}</span>
                   </button>
                 );
               })}
@@ -404,7 +418,7 @@ export default function PlayPage() {
                       key={i}
                       disabled={answered}
                       onClick={() => { setSelected(opt); submitAnswer(opt); }}
-                      className="rounded-2xl border-2 px-5 py-3 text-base font-bold text-white transition-all active:scale-95"
+                      className="rounded-2xl border-2 px-3 py-2 text-xl font-bold text-white transition-all active:scale-95 sm:text-2xl"
                       style={{
                         background: isCorrectOpt ? "#22c55e" : OPTION_COLORS[i % 6] + (isSelected ? "ee" : "cc"),
                         borderColor: isCorrectOpt ? "#16a34a" : OPTION_COLORS[i % 6],
@@ -501,9 +515,9 @@ export default function PlayPage() {
               <p className="shrink-0 text-center text-xs text-grey">Нажимайте по порядку</p>
               <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
                 {orderPicked.map((item, i) => (
-                  <div key={`picked-${item}`} className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm border border-slate-100">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">{i + 1}</span>
-                    <span className="text-sm font-semibold text-midnight_text">{item}</span>
+                  <div key={`picked-${item}`} className="flex items-center gap-2 rounded-xl bg-white px-2 py-1.5 shadow-sm border border-slate-100">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">{i + 1}</span>
+                    <span className="text-lg font-semibold text-midnight_text">{item}</span>
                   </div>
                 ))}
                 {orderOpts.filter((o) => !orderPicked.includes(o)).map((item) => (
@@ -511,7 +525,7 @@ export default function PlayPage() {
                     key={item}
                     disabled={answered}
                     onClick={() => pickOrderItem(item)}
-                    className="rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-midnight_text shadow-sm active:scale-95"
+                    className="rounded-xl border-2 border-slate-200 bg-white px-2 py-1.5 text-left text-lg font-semibold text-midnight_text shadow-sm active:scale-95"
                   >
                     {item}
                   </button>
@@ -544,7 +558,7 @@ export default function PlayPage() {
                     key={l}
                     disabled={answered}
                     onClick={() => setMatchActiveLeft(i)}
-                    className={`rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold active:scale-95 ${matchActiveLeft === i ? "border-primary bg-primary/10 text-midnight_text" : "border-slate-200 bg-white text-midnight_text shadow-sm"}`}
+                    className={`rounded-xl border-2 px-2 py-1.5 text-left text-base font-semibold active:scale-95 sm:text-lg ${matchActiveLeft === i ? "border-primary bg-primary/10 text-midnight_text" : "border-slate-200 bg-white text-midnight_text shadow-sm"}`}
                   >
                     {l}
                     {matchPairs[i] && <span className="ml-2 text-xs text-grey">→ {matchPairs[i]}</span>}
@@ -559,7 +573,7 @@ export default function PlayPage() {
                       key={r}
                       disabled={answered || matchActiveLeft === null}
                       onClick={() => matchActiveLeft !== null && pickMatch(matchActiveLeft, r)}
-                      className={`rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold active:scale-95 disabled:opacity-40 ${usedBy !== undefined ? "border-green-400 bg-green-50 text-green-700" : "border-slate-200 bg-white text-midnight_text shadow-sm"}`}
+                      className={`rounded-xl border-2 px-2 py-1.5 text-left text-base font-semibold active:scale-95 disabled:opacity-40 sm:text-lg ${usedBy !== undefined ? "border-green-400 bg-green-50 text-green-700" : "border-slate-200 bg-white text-midnight_text shadow-sm"}`}
                     >
                       {r}
                     </button>
