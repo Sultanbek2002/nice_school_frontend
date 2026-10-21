@@ -6,7 +6,10 @@ import { GAME_WS_URL, GO_API_URL } from "@/utils/apiData";
 
 interface Question { id: number; text: string; image_url?: string; type: string; options: string; points: number; time_limit: number; }
 interface QMessage { question: Question; index: number; total: number; ends_at: number; }
-interface AnswerAck { is_correct: boolean; points_awarded: number; correct_answer: string; needs_review?: boolean; }
+interface QuestionResult {
+  session_id: number; user_id: number; display_name: string;
+  answered: boolean; is_correct: boolean; points_awarded: number; needs_review: boolean;
+}
 
 const OPTION_COLORS = ["#FF6B6B", "#4ECDC4", "#FFE66D", "#6C5CE7", "#54A0FF", "#5CE65C"];
 const OPTION_LABELS = ["A", "B", "C", "D", "E", "F"];
@@ -30,8 +33,8 @@ export default function PlayPage() {
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaUploading, setMediaUploading] = useState(false);
   const [mediaError, setMediaError] = useState("");
-  const [ack, setAck] = useState<AnswerAck | null>(null);
   const [questionEnded, setQuestionEnded] = useState<string | null>(null); // correct_answer JSON
+  const [questionResults, setQuestionResults] = useState<QuestionResult[]>([]);
   const [score, setScore] = useState(0);
   const [myUserID, setMyUserID] = useState(0);
   const [displayName, setDisplayName] = useState("");
@@ -86,12 +89,12 @@ export default function PlayPage() {
           setQuestionEnded(null);
           applyQuestion(msg.data as QMessage);
         } else if (msg.type === "question_ended") {
+          const results: QuestionResult[] = msg.data.results || [];
           setQuestionEnded(msg.data.correct_answer);
+          setQuestionResults(results);
           if (!answered) setAnswered(true);
-        } else if (msg.type === "answer_ack") {
-          const a = msg.data as AnswerAck;
-          setAck(a);
-          setScore((prev) => prev + a.points_awarded);
+          const mine = results.find((r) => r.user_id === myUserID);
+          if (mine) setScore((prev) => prev + mine.points_awarded);
         } else if (msg.type === "finished") {
           router.push(`/test/${code}/results`);
         } else if (msg.type === "cancelled") {
@@ -138,8 +141,8 @@ export default function PlayPage() {
     setMatchActiveLeft(null);
     setMediaUrl(null);
     setMediaError("");
-    setAck(null);
     setQuestionEnded(null);
+    setQuestionResults([]);
     if (timerRef.current) clearInterval(timerRef.current);
     const tick = () => {
       const left = Math.max(0, q.ends_at - Date.now() / 1000);
@@ -222,9 +225,10 @@ export default function PlayPage() {
   const matchOpts = qtype === "matching" ? parseMatchOptions(current.question.options) : { left: [], right: [] };
   const orderOpts = qtype === "ordering" ? opts : [];
   const timerPercent = (timeLeft / current.question.time_limit) * 100;
-  const correctList = ack ? parseCorrect(ack.correct_answer) : questionEnded ? parseCorrect(questionEnded) : [];
-  const showResult = ack !== null || questionEnded !== null;
+  const correctList = questionEnded ? parseCorrect(questionEnded) : [];
+  const showResult = questionEnded !== null;
   const needsReview = qtype === "essay" || qtype === "media";
+  const myResult = questionResults.find((r) => r.user_id === myUserID);
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-gradient-to-br from-slate-gray via-white to-deep-slate">
@@ -272,24 +276,27 @@ export default function PlayPage() {
         </div>
       </div>
 
-      {/* Answer result overlay */}
+      {/* Answer result overlay — only appears once the question is revealed
+          (time's up or the teacher moved on), never right after answering */}
       {showResult && (
         <div className={`mx-3 mb-2 shrink-0 rounded-2xl p-3 text-center text-white ${
-          needsReview ? "bg-orange-500/90" : ack ? (ack.is_correct ? "bg-primary/90" : "bg-red-500/90") : "bg-orange-500/90"
+          needsReview ? "bg-orange-500/90" : myResult?.is_correct ? "bg-primary/90" : "bg-red-500/90"
         }`}>
-          {needsReview && ack ? (
-            <div className="text-base font-bold">⏳ Ответ отправлен — проверит преподаватель</div>
-          ) : ack ? (
+          {needsReview ? (
+            <div className="text-base font-bold">
+              {myResult?.answered ? "⏳ Ответ отправлен — проверит преподаватель" : "⏰ Время вышло — вы не ответили"}
+            </div>
+          ) : myResult?.answered ? (
             <>
-              <div className="text-base font-bold">{ack.is_correct ? `✅ Верно! +${ack.points_awarded} баллов` : ack.points_awarded > 0 ? `☑️ Частично верно! +${ack.points_awarded} баллов` : "❌ Неверно"}</div>
-              {!ack.is_correct && correctList.length > 0 && (
+              <div className="text-base font-bold">{myResult.is_correct ? `✅ Верно! +${myResult.points_awarded} баллов` : myResult.points_awarded > 0 ? `☑️ Частично верно! +${myResult.points_awarded} баллов` : "❌ Неверно"}</div>
+              {!myResult.is_correct && correctList.length > 0 && (
                 <div className="mt-1 text-sm opacity-90">Правильный ответ: <span className="font-bold">{correctList.join(", ")}</span></div>
               )}
             </>
           ) : (
             <>
-              <div className="text-base font-bold">⏰ Время вышло</div>
-              {!needsReview && correctList.length > 0 && (
+              <div className="text-base font-bold">⏰ Время вышло — вы не ответили</div>
+              {correctList.length > 0 && (
                 <div className="mt-1 text-sm opacity-90">Правильный ответ: <span className="font-bold">{correctList.join(", ")}</span></div>
               )}
             </>
