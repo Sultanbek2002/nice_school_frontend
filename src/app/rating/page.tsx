@@ -19,6 +19,12 @@ function getTrend(s: Student): Trend {
   return s.score > s.previous_score ? 'up' : 'down'
 }
 
+// Баллы хранятся как float64 с точностью до 0.1 — обычное вычитание (1.3 - 1.0)
+// даёт артефакты плавающей точки (0.29999999999999982), поэтому округляем перед показом.
+function getDelta(s: Student): number {
+  return Math.round(Math.abs(s.score - s.previous_score) * 10) / 10
+}
+
 interface ScoreLogEntry {
   ID: number; delta: number; reason: string; given_by_name: string; CreatedAt: string
 }
@@ -460,7 +466,7 @@ function TopPodium({ students }: { students: Student[] }) {
       {order.map((idx, pos) => {
         const s = students[idx]; if (!s) return null
         const color = MEDAL_COLORS[idx]
-        const trend = getTrend(s); const delta = Math.abs(s.score - s.previous_score)
+        const trend = getTrend(s); const delta = getDelta(s)
         const parts = s.fio.split(' ')
         return (
           <div key={s.ID} className="flex flex-col items-center gap-0.5 w-[30%]">
@@ -666,7 +672,7 @@ export default function RatingPage() {
                 <AnimatePresence>
                   {filtered.map((s, i) => {
                     const rank = byScore.findIndex(x => x.ID === s.ID) + 1
-                    const trend = getTrend(s); const delta = Math.abs(s.score - s.previous_score)
+                    const trend = getTrend(s); const delta = getDelta(s)
                     const barPct = (s.score / maxScore) * 100
                     const medalColor = rank === 1 ? '#FFD700' : rank === 2 ? '#9ca3af' : rank === 3 ? '#CD7F32' : null
                     const recentlyChanged = trend !== 'same'
