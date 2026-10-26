@@ -1,8 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import NextLink from "next/link";
+import { Link as LocaleLink } from "@/i18n/navigation";
 import { usePathname } from "next/navigation";
 import { HeaderType } from "@/app/types/menu";
+import { isLocaleExcludedPath } from "@/i18n/excludedPaths";
 
 const HeaderLink: React.FC<{ item: HeaderType }> = ({ item }) => {
   const [submenuOpen, setSubmenuOpen] = useState(false);
@@ -25,13 +27,15 @@ const HeaderLink: React.FC<{ item: HeaderType }> = ({ item }) => {
     setSubmenuOpen(false);
   };
 
+  const Link = isLocaleExcludedPath(item.href) ? NextLink : LocaleLink;
+
   return (
     <div
       className="relative"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      
+
       <Link
         href={item.href}
         className={`text-lg flex items-center capitalized relative transition-colors duration-200 ${

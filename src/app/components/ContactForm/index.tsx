@@ -1,9 +1,11 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { Icon } from '@iconify/react'
+import { useTranslations } from 'next-intl'
 import { GO_API_URL } from '@/utils/apiData';
 
 const ContactForm = () => {
+  const t = useTranslations('ContactForm')
   const [formData, setFormData] = useState({
     firstname: '',
     lastname: '',
@@ -58,11 +60,11 @@ const ContactForm = () => {
         setTimeout(() => setShowThanks(false), 5000)
       } else {
         const errorData = await res.json()
-        alert(`Произошла ошибка: ${errorData.message || 'Не удалось отправить данные на сервер'}`)
+        alert(t('errorWithMessage', { message: errorData.message || t('sendFailed') }))
       }
     } catch (error) {
       console.error('Ошибка при отправке:', error)
-      alert('Сетевая ошибка. Пожалуйста, проверьте подключение к интернету.')
+      alert(t('networkError'))
     } finally {
       setLoader(false)
     }
@@ -79,10 +81,10 @@ const ContactForm = () => {
               <div className='text-center mb-10'>
                 {/* text-2xl для мобильных, md:text-4xl для планшетов и выше */}
                 <h2 className='text-white text-2xl md:text-4xl font-semibold mb-3'>
-                  Свяжитесь с нами
+                  {t('title')}
                 </h2>
                 <p className='text-white/75 text-sm md:text-base capitalize'>
-                  Если у вас возникли вопросы, оставьте сообщение, и мы ответим вам в ближайшее время.
+                  {t('subtitle')}
                 </p>
               </div>
 
@@ -91,7 +93,7 @@ const ContactForm = () => {
                   <input
                     type='text'
                     name='firstname'
-                    placeholder='Ваше имя'
+                    placeholder={t('firstName')}
                     value={formData.firstname}
                     onChange={handleChange}
                     className='py-4 px-8 text-lg w-full bg-white text-black rounded-full border border-white/10 focus:outline-none focus:border-secondary duration-300 shadow-input-shadow'
@@ -99,7 +101,7 @@ const ContactForm = () => {
                   <input
                     type='text'
                     name='lastname'
-                    placeholder='Ваша фамилия'
+                    placeholder={t('lastName')}
                     value={formData.lastname}
                     onChange={handleChange}
                     className='py-4 px-8 text-lg w-full bg-white text-black rounded-full border border-white/10 focus:outline-none focus:border-secondary duration-300 shadow-input-shadow'
@@ -110,7 +112,7 @@ const ContactForm = () => {
                   <input
                     type='email'
                     name='email'
-                    placeholder='Электронная почта'
+                    placeholder={t('email')}
                     value={formData.email}
                     onChange={handleChange}
                     className='py-4 px-8 text-lg w-full bg-white text-black rounded-full border border-white/10 focus:outline-none focus:border-secondary duration-300 shadow-input-shadow'
@@ -118,7 +120,7 @@ const ContactForm = () => {
                   <input
                     type='tel'
                     name='phnumber'
-                    placeholder='Номер вашего телефона'
+                    placeholder={t('phone')}
                     value={formData.phnumber}
                     onChange={handleChange}
                     className='py-4 px-8 text-lg w-full bg-white text-black rounded-full border border-white/10 focus:outline-none focus:border-secondary duration-300 shadow-input-shadow'
@@ -128,7 +130,7 @@ const ContactForm = () => {
                 <div className='relative'>
                   <textarea
                     name='Message'
-                    placeholder='Ваше сообщение...'
+                    placeholder={t('message')}
                     rows={3}
                     value={formData.Message}
                     onChange={handleChange}
@@ -158,7 +160,7 @@ const ContactForm = () => {
               {showThanks && (
                 <div className='mt-6 text-center animate-bounce'>
                   <span className='bg-green-500 text-white px-6 py-2 rounded-full text-sm font-bold'>
-                    Успешно отправлено! Спасибо.
+                    {t('success')}
                   </span>
                 </div>
               )}

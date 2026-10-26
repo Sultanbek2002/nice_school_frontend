@@ -1,11 +1,13 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import Image from 'next/image'
 import { Icon } from '@iconify/react'
 import { motion, useInView } from 'framer-motion'
 import { fixImageUrl } from '@/utils/apiData'
+import { enumLabel } from '@/i18n/enumLabels'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const MD = motion.div as any
@@ -61,6 +63,8 @@ function TiltCard({ children, className }: { children: React.ReactNode; classNam
 }
 
 const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
+  const t = useTranslations('OlympiadBlock')
+  const tEnums = useTranslations('Enums')
   const [mounted, setMounted] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref as React.RefObject<Element>, { once: true, margin: '-80px' })
@@ -90,13 +94,13 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/8 text-primary rounded-full text-xs font-black tracking-widest uppercase border border-primary/20">
             {mounted && <Icon icon="solar:cup-bold-duotone" width={16} />}
-            Школьные олимпиады
+            {t('badge')}
           </div>
           <h2 className="text-3xl md:text-4xl font-black text-midnight_text tracking-tight">
-            Проверь свои знания!
+            {t('title')}
           </h2>
           <p className="text-gray-500 text-sm leading-relaxed">
-            Участвуй в олимпиадах, повышай интеллектуальный уровень и выигрывай ценные призы.
+            {t('subtitle')}
           </p>
         </MD>
 
@@ -137,14 +141,14 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                         }`}>
                           <span className={`h-2 w-2 rounded-full ${isOnline ? 'bg-purple-500' : 'bg-blue-500'} animate-pulse`} />
                           <p className="text-[10px] font-black uppercase tracking-wider">
-                            {item.format}
+                            {enumLabel(tEnums, item.format)}
                           </p>
                         </div>
 
                         {/* Предмет бейдж */}
                         <div className="absolute bottom-4 right-4 bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/25">
                           <p className="text-white text-[10px] font-black uppercase tracking-wider">
-                            {item.subject}
+                            {enumLabel(tEnums, item.subject)}
                           </p>
                         </div>
                       </div>
@@ -157,7 +161,7 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                           {item.title}
                         </h4>
                         <p className="text-xs text-gray-400 mt-2.5 line-clamp-2 leading-relaxed">
-                          {item.description || 'Дополнительная информация об этой олимпиаде скоро появится.'}
+                          {item.description || t('descriptionSoon')}
                         </p>
                       </div>
 
@@ -170,7 +174,7 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                         <div className="flex items-center gap-2.5 text-slate-600 truncate">
                           {mounted && <Icon icon="solar:map-point-bold-duotone" className="text-rose-500 text-xl flex-shrink-0" />}
                           <span className="text-xs font-medium truncate" title={item.location}>
-                            {item.location || 'Адрес уточняется'}
+                            {item.location || t('locationTbd')}
                           </span>
                         </div>
                       </div>
@@ -182,7 +186,7 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                           className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-primary/5 hover:bg-primary/10 rounded-xl text-xs font-bold text-primary transition-colors border border-primary/15 cursor-pointer"
                         >
                           {mounted && <Icon icon="solar:document-download-bold-duotone" width={16} className="text-emerald-500" />}
-                          Положение об олимпиаде (.pdf)
+                          {t('regulationsPdf')}
                         </button>
                       )}
 
@@ -191,7 +195,7 @@ const OlympiadComponent: React.FC<OlympiadProps> = ({ data }) => {
                         href={detailUrl}
                         className="relative mt-5 w-full py-3.5 bg-primary text-white font-black rounded-2xl text-center shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:bg-secondary transition-all duration-300 block text-sm active:scale-[0.98] overflow-hidden group/btn"
                       >
-                        <span className="relative z-10">Участвовать и Подробнее</span>
+                        <span className="relative z-10">{t('participate')}</span>
                         <span className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />
                       </Link>
                     </div>

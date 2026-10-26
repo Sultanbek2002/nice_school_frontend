@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import Logo from '../Header/Logo'
 import { Icon } from '@iconify/react'
 
@@ -9,15 +10,6 @@ interface FooterProps {
   data?: any
   navLinks?: { label: string; href: string }[]
 }
-
-const FIXED_LINKS = [
-  { label: 'Рейтинг',      href: '/rating' },
-  { label: 'Олимпиада',    href: '/olympiads' },
-  { label: 'Ресурсы',      href: '/resources' },
-  { label: 'Игры',         href: '/games' },
-  { label: 'Тур по школе', href: '/school-tour' },
-  { label: 'Управление',   href: '/management' },
-]
 
 const SOCIALS = [
   { key: 'instagram', icon: 'tabler:brand-instagram', label: 'Instagram' },
@@ -27,7 +19,16 @@ const SOCIALS = [
 ]
 
 const Footer: React.FC<FooterProps> = ({ data, navLinks = [] }) => {
+  const t = useTranslations('Footer')
   const school = data || {}
+  const FIXED_LINKS = [
+    { label: t('nav.rating'),      href: '/rating' },
+    { label: t('nav.olympiad'),    href: '/olympiads' },
+    { label: t('nav.resources'),   href: '/resources' },
+    { label: t('nav.games'),       href: '/games' },
+    { label: t('nav.schoolTour'),  href: '/school-tour' },
+    { label: t('nav.management'),  href: '/management' },
+  ]
   const allNavLinks = [...FIXED_LINKS, ...navLinks]
   const [moreOpen, setMoreOpen] = useState(false)
   const hasExtra = allNavLinks.length > 8
@@ -44,7 +45,7 @@ const Footer: React.FC<FooterProps> = ({ data, navLinks = [] }) => {
           <div>
             <Logo />
             <p className="text-black/50 text-sm mt-3 mb-4 leading-relaxed max-w-[220px]">
-              Современная международная школа с инновационным подходом к обучению.
+              {t('description')}
             </p>
             <div className="flex items-center gap-3">
               {SOCIALS.map(({ key, icon, label, href }) => {
@@ -63,7 +64,7 @@ const Footer: React.FC<FooterProps> = ({ data, navLinks = [] }) => {
 
           {/* 2. Контакты */}
           <div>
-            <p className="text-black font-bold text-sm uppercase tracking-wider mb-4">Контакты</p>
+            <p className="text-black font-bold text-sm uppercase tracking-wider mb-4">{t('contacts')}</p>
             <div className="space-y-3">
               {school.address && (
                 <div className="flex items-start gap-2">
@@ -92,7 +93,7 @@ const Footer: React.FC<FooterProps> = ({ data, navLinks = [] }) => {
 
           {/* 3. Навигация — 2 колонки по 5, если >10 то "Еще" */}
           <div>
-            <p className="text-black font-bold text-sm uppercase tracking-wider mb-4">Меню</p>
+            <p className="text-black font-bold text-sm uppercase tracking-wider mb-4">{t('menu')}</p>
 
             <div className="flex gap-6">
               {/* Колонка 1: первые 5 */}
@@ -122,7 +123,7 @@ const Footer: React.FC<FooterProps> = ({ data, navLinks = [] }) => {
                         onClick={() => setMoreOpen(v => !v)}
                         className="flex items-center gap-1 text-primary text-sm font-medium hover:underline"
                       >
-                        <span>{moreOpen ? 'Скрыть' : 'Еще'}</span>
+                        <span>{moreOpen ? t('hide') : t('more')}</span>
                         <Icon icon={moreOpen ? 'solar:alt-arrow-up-bold' : 'solar:alt-arrow-down-bold'} width={14} />
                       </button>
                     </li>
@@ -162,14 +163,14 @@ const Footer: React.FC<FooterProps> = ({ data, navLinks = [] }) => {
         {/* Нижняя панель */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-black/10 mt-6 pt-5">
           <p className="text-black/35 text-xs">
-            © {new Date().getFullYear()} NICE International School. Все права защищены.
+            {t('copyright', { year: new Date().getFullYear() })}
           </p>
           <div className="flex gap-4">
             <Link href="/privacy" className="text-black/35 hover:text-primary text-xs transition-colors">
-              Политика конфиденциальности
+              {t('privacyPolicy')}
             </Link>
             <Link href="/terms" className="text-black/35 hover:text-primary text-xs transition-colors">
-              Условия использования
+              {t('termsOfUse')}
             </Link>
           </div>
         </div>

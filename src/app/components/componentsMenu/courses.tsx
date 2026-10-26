@@ -1,9 +1,11 @@
 'use client'
 
 import React, { useState } from 'react'
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import Image from 'next/image'
 import { Icon } from '@iconify/react'
+import { makeSlug } from '@/utils/apiData'
 
 interface CoursesProps {
     data?: any;
@@ -11,6 +13,7 @@ interface CoursesProps {
 }
 
 const CourseComponent: React.FC<CoursesProps> = ({ data, title }) => {
+    const t = useTranslations('Courses');
     const courses = Array.isArray(data) ? data : [];
     const [search, setSearch] = useState('');
 
@@ -43,7 +46,7 @@ const CourseComponent: React.FC<CoursesProps> = ({ data, title }) => {
                             type='text'
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            placeholder='Поиск по названию или навыкам...'
+                            placeholder={t('searchPlaceholder')}
                             className='w-full pl-10 pr-9 py-2.5 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-gray-300 shadow-sm'
                         />
                         {search && (
@@ -60,15 +63,13 @@ const CourseComponent: React.FC<CoursesProps> = ({ data, title }) => {
                 {filtered.length === 0 ? (
                     <div className='text-center py-14'>
                         <div className='text-5xl mb-3'>🔍</div>
-                        <p className='text-gray-400 font-bold'>Ничего не найдено по запросу «{search}»</p>
+                        <p className='text-gray-400 font-bold'>{t('noResults', { query: search })}</p>
                     </div>
                 ) : (
                 <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'>
                     {filtered.map((item: any, i: number) => {
                         // 2. Генерируем slug внутри map для каждого курса отдельно
-                        const courseSlug = encodeURIComponent(
-                            item.title.toLowerCase().trim().replace(/\s+/g, '-')
-                        );
+                        const courseSlug = item._slug ?? makeSlug(item.title);
                         const detailUrl = `/courses/${courseSlug}`;
                         
 
@@ -89,7 +90,7 @@ const CourseComponent: React.FC<CoursesProps> = ({ data, title }) => {
 
                                         <div className='absolute bottom-3 left-3 bg-white/80 backdrop-blur-md px-3 py-1 rounded-xl shadow-sm'>
                                             <p className='text-midnight_text text-[10px] font-bold uppercase tracking-tight'>
-                                                {item.targetAud} жаш +
+                                                {t('ageFrom', { age: item.targetAud })}
                                             </p>
                                         </div>
                                     </div>
@@ -110,7 +111,7 @@ const CourseComponent: React.FC<CoursesProps> = ({ data, title }) => {
                                             <div className='flex items-center gap-2'>
                                                 <Icon icon='solar:clock-circle-bold' className='text-primary text-2xl' />
                                                 <span className='text-sm font-bold text-midnight_text uppercase tracking-tight'>
-                                                    {item.duration} ай окутуу
+                                                    {t('durationMonths', { months: item.duration })}
                                                 </span>
                                             </div>
                                             {item.isPublic && (
@@ -124,7 +125,7 @@ const CourseComponent: React.FC<CoursesProps> = ({ data, title }) => {
                                                 className='text-primary text-xl flex-shrink-0'
                                             />
                                             <p className='text-[11px] font-bold text-gray-400 uppercase leading-none truncate'>
-                                                {item.skills || "Жалпы билим берүү"}
+                                                {item.skills || t('generalEducation')}
                                             </p>
                                         </div>
                                     </div>
@@ -133,7 +134,7 @@ const CourseComponent: React.FC<CoursesProps> = ({ data, title }) => {
                                         href={detailUrl}
                                         className="mt-6 w-full py-4 bg-white border-2 border-primary text-primary font-bold rounded-2xl text-center group-hover:bg-primary group-hover:text-white transition-all duration-300 block"
                                     >
-                                        Толук маалымат
+                                        {t('fullInfo')}
                                     </Link>
                                 </div>
                             </div>

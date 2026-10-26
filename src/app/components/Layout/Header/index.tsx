@@ -2,14 +2,15 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { Icon } from '@iconify/react'
+import { useTranslations } from 'next-intl'
 import Logo from './Logo'
 import HeaderLink from './Navigation/HeaderLink'
 import MobileHeaderLink from './Navigation/MobileHeaderLink'
-import Link from 'next/link'
+import LanguageSwitcher from './LanguageSwitcher'
+import { Link, useRouter } from '@/i18n/navigation'
 import { HeaderType } from '@/app/types/menu'
 import Signin from '../../Auth/SignIn/Signin'
 import Cookies from 'js-cookie'
-import { useRouter } from 'next/navigation'
 import { useNotifications } from '@/hooks/useNotifications'
 
 interface HeaderProps {
@@ -18,6 +19,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
+  const t = useTranslations('Header')
   const [navbarOpen, setNavbarOpen] = useState(false)
   const [sticky, setSticky] = useState(false)
   const [splitAt, setSplitAt] = useState(99)
@@ -49,16 +51,14 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
   const whatsappLink = contactData?.whatsapp ? `https://wa.me/${contactData.whatsapp.replace(/\D/g, '')}` : '#'
 
   const fixedMenus: HeaderType[] = [
-    { label: "О школе", href: "/about", submenu: [{ label: "О нас", href: "/about" }] },
-    { label: "Рейтинг", href: "/rating" },
-    { label: "Олимпиада", href: "/olympiads" },
-    { label: "Ресурсы", href: "/resources" },
-    { label: "Игры", href: "/games" },
-    { label: "Live Test", href: "/test" },
-    { label: "Тур по школе", href: "/school-tour" },
-    { label: "Управление", href: "/management" },
-
-    
+    { label: t('nav.about'), href: "/about", submenu: [{ label: t('nav.aboutUs'), href: "/about" }] },
+    { label: t('nav.rating'), href: "/rating" },
+    { label: t('nav.olympiad'), href: "/olympiads" },
+    { label: t('nav.resources'), href: "/resources" },
+    { label: t('nav.games'), href: "/games" },
+    { label: t('nav.liveTest'), href: "/test" },
+    { label: t('nav.schoolTour'), href: "/school-tour" },
+    { label: t('nav.management'), href: "/management" },
   ];
   // 2. Объединяем меню с бэкенда с постоянными пунктами меню
   const baseNavData = navData || [];
@@ -148,10 +148,10 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
 
   function timeAgo(iso: string) {
     const diff = (Date.now() - new Date(iso).getTime()) / 1000
-    if (diff < 60) return 'Сейчас'
-    if (diff < 3600) return `${Math.floor(diff / 60)} мин.`
-    if (diff < 86400) return `${Math.floor(diff / 3600)} ч.`
-    return `${Math.floor(diff / 86400)} дн.`
+    if (diff < 60) return t('timeAgo.now')
+    if (diff < 3600) return t('timeAgo.minutes', { count: Math.floor(diff / 60) })
+    if (diff < 86400) return t('timeAgo.hours', { count: Math.floor(diff / 3600) })
+    return t('timeAgo.days', { count: Math.floor(diff / 86400) })
   }
 
   return (
@@ -192,7 +192,7 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
                     onMouseLeave={closeMore}
                   >
                     <button className="flex items-center gap-1 text-midnight_text hover:text-primary transition-colors font-medium">
-                      <span>Еще</span>
+                      <span>{t('more')}</span>
                       <Icon icon="solar:alt-arrow-down-bold" width={16} />
                     </button>
                     {moreOpen && (
@@ -221,11 +221,13 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
                 <Icon icon={navbarOpen ? "solar:close-circle-bold" : "solar:hamburger-menu-broken"} width={34} />
               </button>
 
+              <LanguageSwitcher />
+
               <div className="relative" ref={notifRef}>
                 <button
                   onClick={handleAccountClick}
                   className="relative flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20"
-                  aria-label={userInitial ? 'Уведомления' : 'Войти'}
+                  aria-label={userInitial ? t('notifications') : t('signIn')}
                 >
                   {userInitial ? (
                     <span className="text-primary font-black text-base leading-none">{userInitial}</span>
@@ -244,18 +246,18 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
                   <div className="absolute right-0 top-12 w-80 rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-200" style={{background:'rgba(255,255,255,0.97)',backdropFilter:'blur(20px)'}}>
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
-                      <span className="font-black text-sm text-midnight_text">Уведомления</span>
+                      <span className="font-black text-sm text-midnight_text">{t('notifications')}</span>
                       <div className="flex items-center gap-2">
                         {unreadCount > 0 && (
                           <button onClick={markAllRead} className="text-[11px] font-bold text-primary hover:underline">
-                            Баарын окуу
+                            {t('markAllRead')}
                           </button>
                         )}
                         <button
                           onClick={() => { setNotifOpen(false); router.push('/student') }}
                           className="text-[12px] font-black text-primary hover:underline transition-colors"
                         >
-                          Кабинет →
+                          {t('cabinet')}
                         </button>
                       </div>
                     </div>
@@ -265,7 +267,7 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
                       {notifications.length === 0 ? (
                         <div className="py-10 text-center">
                           <Icon icon="solar:bell-off-bold-duotone" width={32} className="text-gray-300 mx-auto mb-2" />
-                          <p className="text-xs text-gray-400 font-semibold">Уведомлений нет</p>
+                          <p className="text-xs text-gray-400 font-semibold">{t('noNotifications')}</p>
                         </div>
                       ) : notifications.map(n => (
                         <button
@@ -348,7 +350,7 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
               className="flex items-center justify-center bg-primary text-white w-full py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-primary/20"
               onClick={() => setNavbarOpen(false)}
             >
-              Записаться
+              {t('enroll')}
             </Link>
 
             <button
@@ -356,11 +358,11 @@ const Header: React.FC<HeaderProps> = ({ navData, contactData }) => {
               className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-primary/20 bg-primary/5 text-primary font-bold text-sm hover:bg-primary/10 transition-colors"
             >
               <Icon icon="material-symbols:account-circle-outline" width={22} />
-              Личный кабинет
+              {t('personalCabinet')}
             </button>
 
             <div className="pt-2">
-              <p className="text-[10px] font-black text-primary/50 uppercase tracking-[2px] mb-3 text-center">Наши соцсети</p>
+              <p className="text-[10px] font-black text-primary/50 uppercase tracking-[2px] mb-3 text-center">{t('ourSocials')}</p>
               <div className="flex justify-center gap-6">
                 <Link href={contactData?.instagram || "#"} target="_blank"><Icon icon="skill-icons:instagram" width={30} /></Link>
                 <Link href={whatsappLink} target="_blank"><Icon icon="logos:whatsapp-icon" width={30} /></Link>

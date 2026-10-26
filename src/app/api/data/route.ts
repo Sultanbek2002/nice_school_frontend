@@ -81,13 +81,16 @@ const FooterLinkData: FooterLinkType[] = [
 ]
 
 // ГЛАВНОЕ ИЗМЕНЕНИЕ ЗДЕСЬ
-export const GET = async () => {
+export const GET = async (request: Request) => {
   let HeaderData: HeaderType[] = [];
   let TestimonialData: TestimonialType[] = [];
   let TechGaintsData: { imgSrc: string; name?: string; website?: string }[] = [];
 
+  const lang = new URL(request.url).searchParams.get('lang') || 'ru'
+  const q = `?lang=${encodeURIComponent(lang)}`
+
   try {
-    const response = await fetch(`${GO_API_URL}/api/menu`, { cache: 'no-store' });
+    const response = await fetch(`${GO_API_URL}/api/menu${q}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('Бэкенд не отвечает');
     const goData = await response.json();
 
@@ -102,7 +105,7 @@ export const GET = async () => {
   }
 
   try {
-    const res = await fetch(`${GO_API_URL}/api/testimonials`, { cache: 'no-store' });
+    const res = await fetch(`${GO_API_URL}/api/testimonials${q}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Бэкенд не отвечает');
     const data = await res.json();
     TestimonialData = (Array.isArray(data) ? data : []).map((item: any) => ({

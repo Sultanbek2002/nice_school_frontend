@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Cookies from 'js-cookie'
+import { useLocale, useTranslations } from 'next-intl'
 import { GO_API_URL } from '@/utils/apiData'
 
 declare global {
@@ -19,6 +20,8 @@ interface GoogleSignInButtonProps {
 }
 
 export default function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
+  const t = useTranslations('Auth')
+  const locale = useLocale()
   const containerRef = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
 
@@ -35,15 +38,15 @@ export default function GoogleSignInButton({ onError }: GoogleSignInButtonProps)
         })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) {
-          onError?.(data.error || 'Не удалось войти через Google')
+          onError?.(data.error || t('googleFailed'))
           return
         }
         Cookies.set('auth_token', data.token, { expires: 7, path: '/' })
-        if (data.role === 'student') window.location.href = '/student'
+        if (data.role === 'student') window.location.href = `/${locale}/student`
         else if (data.role === 'admin' || data.role === 'superadmin') window.location.href = '/admin/dashboard'
-        else window.location.href = '/'
+        else window.location.href = `/${locale}`
       } catch {
-        onError?.('Нет связи с сервером. Попробуйте ещё раз')
+        onError?.(t('networkError'))
       } finally {
         setBusy(false)
       }
@@ -63,13 +66,13 @@ export default function GoogleSignInButton({ onError }: GoogleSignInButtonProps)
       return
     }
     const script = document.createElement('script')
-    // hl=ru — язык текста самой кнопки/попапа Google; параметр locale у renderButton его не задаёт
-    script.src = 'https://accounts.google.com/gsi/client?hl=ru'
+    // hl — язык текста самой кнопки/попапа Google; параметр locale у renderButton его не задаёт
+    script.src = `https://accounts.google.com/gsi/client?hl=${locale}`
     script.async = true
     script.defer = true
     script.onload = renderButton
     document.head.appendChild(script)
-  }, [onError])
+  }, [onError, t, locale])
 
   if (!CLIENT_ID) return null
 

@@ -35,12 +35,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getJson('/api/games'),
   ])
 
+  const LOCALES = ['ru', 'ky', 'en'] as const
+
   const seen = new Set<string>()
   const entries: MetadataRoute.Sitemap = []
+  // Every page now lives under a locale prefix (/ru, /ky, /en — always, even
+  // for the default locale). Emit one sitemap entry per locale, each cross-
+  // linked via alternates.languages so search engines know they're translations
+  // of the same page.
   const add = (path: string, opts: Partial<MetadataRoute.Sitemap[number]> = {}) => {
     if (seen.has(path)) return
     seen.add(path)
-    entries.push({ url: `${SITE_URL}${path}`, ...opts })
+    const suffix = path === '/' ? '' : path
+    const languages: Record<string, string> = {}
+    for (const l of LOCALES) languages[l] = `${SITE_URL}/${l}${suffix}`
+    for (const l of LOCALES) {
+      entries.push({ url: `${SITE_URL}/${l}${suffix}`, alternates: { languages }, ...opts })
+    }
   }
 
   for (const p of STATIC_PAGES) add(p.path, { priority: p.priority, changeFrequency: p.changeFrequency })

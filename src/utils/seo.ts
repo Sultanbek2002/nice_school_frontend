@@ -30,8 +30,9 @@ export const OG_IMAGE = {
 }
 
 // Тот же алгоритм, что в карточках учителей и курсов (Home/Mentor, componentsMenu/teachers, courses)
+// Must stay identical to makeSlug in utils/apiData.ts (the stable `_slug`).
 export function teacherSlug(name: string): string {
-  return encodeURIComponent(name.toLowerCase().replace(/\s+/g, '-'))
+  return encodeURIComponent(name.toLowerCase().trim().replace(/\s+/g, '-'))
 }
 export const slugify = teacherSlug
 
@@ -112,7 +113,13 @@ interface PageMetaInput {
   // Раздел с вложенными страницами (/olympiads → /olympiads/29): без этого Next.js «теряет»
   // шаблон «%s | NICE International School» у вложенных страниц
   hasChildren?: boolean
+  // Current locale — prefixes canonical/og:url (every page lives under /ru|/ky|/en)
+  // and adds hreflang alternates. Omit only for pages outside the [locale] tree.
+  locale?: string
 }
+
+const OG_LOCALES: Record<string, string> = { ru: 'ru_RU', ky: 'ky_KG', en: 'en_US' }
+const LOCALES = ['ru', 'ky', 'en']
 
 /**
  * Собирает полный набор мета-тегов страницы: title, description, canonical,
@@ -120,7 +127,10 @@ interface PageMetaInput {
  * В Next.js openGraph страницы ПОЛНОСТЬЮ заменяет openGraph родителя (не сливается),
  * поэтому каждый раз собираем его целиком.
  */
-export function pageMetadata({ title, description = DEFAULT_DESCRIPTION, path, image, noindex, hasChildren }: PageMetaInput): Metadata {
+export function pageMetadata({ title, description = DEFAULT_DESCRIPTION, path, image, noindex, hasChildren, locale }: PageMetaInput): Metadata {
+  const suffix = path === '/' ? '' : path
+  const url = locale ? `/${locale}${suffix}` : path
+  const languages = locale ? Object.fromEntries(LOCALES.map((l) => [l, `/${l}${suffix}`])) : undefined
   const ogTitle = typeof title === 'string' ? `${title} | ${SITE_NAME}` : title?.absolute ?? DEFAULT_TITLE
   const img = image ? { url: absoluteImage(image), alt: typeof title === 'string' ? title : SITE_NAME } : OG_IMAGE
 
@@ -132,12 +142,12 @@ export function pageMetadata({ title, description = DEFAULT_DESCRIPTION, path, i
   return {
     title: metaTitle,
     description,
-    alternates: { canonical: path },
+    alternates: { canonical: url, ...(languages ? { languages } : {}) },
     openGraph: {
       type: 'website',
-      locale: 'ru_RU',
+      locale: (locale && OG_LOCALES[locale]) || 'ru_RU',
       siteName: SITE_NAME,
-      url: path,
+      url,
       title: ogTitle,
       description,
       images: [img],

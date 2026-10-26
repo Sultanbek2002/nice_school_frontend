@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, Manrope } from 'next/font/google'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale, getMessages } from 'next-intl/server'
 import './globals.css'
 import { SITE_URL, SITE_NAME, DEFAULT_TITLE, DEFAULT_DESCRIPTION, OG_IMAGE } from '@/utils/seo'
 import SiteChrome from '@/app/components/Layout/SiteChrome'
@@ -7,6 +9,13 @@ import Preloader from '@/app/components/Preloader'
 import RouteLoader from '@/app/components/RouteLoader'
 import VisitTracker from '@/app/components/VisitTracker'
 import { getSiteStructure } from '@/utils/apiData'
+
+// /test/** (Live Test) and /gamequiz/{join,host,play}/** (live WS sessions)
+// live outside the [locale] segment on purpose — this root layout wraps both
+// those and the localized routes, so the locale below comes from next-intl's
+// request-scoped getLocale() (resolved by middleware.ts), not a route param;
+// for the un-localized routes it just falls back to the default locale.
+const OG_LOCALE_MAP: Record<string, string> = { ru: 'ru_RU', ky: 'ky_KG', en: 'en_US' }
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -22,34 +31,37 @@ const manrope = Manrope({
 
 // Настройки по умолчанию для ВСЕХ страниц. Каждая страница может переопределить
 // свои title/description (через export const metadata или generateMetadata).
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: { default: DEFAULT_TITLE, template: `%s | ${SITE_NAME}` },
-  description: DEFAULT_DESCRIPTION,
-  applicationName: SITE_NAME,
-  openGraph: {
-    type: 'website',
-    locale: 'ru_RU',
-    siteName: SITE_NAME,
-    url: '/',
-    title: DEFAULT_TITLE,
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: { default: DEFAULT_TITLE, template: `%s | ${SITE_NAME}` },
     description: DEFAULT_DESCRIPTION,
-    images: [OG_IMAGE],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: DEFAULT_TITLE,
-    description: DEFAULT_DESCRIPTION,
-    images: [OG_IMAGE.url],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
-  },
-  // Подтверждение владения сайтом в Яндекс.Вебмастере (способ «метатег»).
-  // Рядом лежит и файл public/yandex_678a421166a0faaa.html — тот же код, оба способа рабочие.
-  verification: { yandex: '678a421166a0faaa' },
+    applicationName: SITE_NAME,
+    openGraph: {
+      type: 'website',
+      locale: OG_LOCALE_MAP[locale] ?? 'ru_RU',
+      siteName: SITE_NAME,
+      url: '/',
+      title: DEFAULT_TITLE,
+      description: DEFAULT_DESCRIPTION,
+      images: [OG_IMAGE],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: DEFAULT_TITLE,
+      description: DEFAULT_DESCRIPTION,
+      images: [OG_IMAGE.url],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+    },
+    // Подтверждение владения сайтом в Яндекс.Вебмастере (способ «метатег»).
+    // Рядом лежит и файл public/yandex_678a421166a0faaa.html — тот же код, оба способа рабочие.
+    verification: { yandex: '678a421166a0faaa' },
+  }
 }
 
 export const viewport: Viewport = {
@@ -61,10 +73,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = await getLocale()
+  const messages = await getMessages()
+
   let navLinks: { label: string; href: string }[] = [];
   let schoolInfo = null;
   try {
-    const response = await getSiteStructure();
+    const response = await getSiteStructure(locale);
     if (response) {
       if (Array.isArray(response.structure)) {
         navLinks = response.structure
@@ -81,8 +96,9 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang='ru' suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body className={`${spaceGrotesk.variable} ${manrope.variable} font-[family-name:var(--font-body)]`}>
+      <NextIntlClientProvider locale={locale} messages={messages}>
         {/* Ambient blobs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
           <div
@@ -113,6 +129,7 @@ export default async function RootLayout({
             {children}
           </SiteChrome>
         </div>
+      </NextIntlClientProvider>
       </body>
     </html>
   )

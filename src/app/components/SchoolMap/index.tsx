@@ -1,12 +1,15 @@
 "use client";
 import React, { useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 
 const SCHOOL_NAME = "NICE International School";
-const SCHOOL_ADDRESS = "Малабекова 56/1, Ош, Кыргызстан";
 const SCHOOL_LAT = 40.503572;
 const SCHOOL_LNG = 72.7069621;
+const MAP_UI_LANG: Record<string, string> = { ru: "ru", ky: "ru", en: "en" };
 
 export default function SchoolMap() {
+  const t = useTranslations("SchoolMap");
+  const locale = useLocale();
   const [navigating, setNavigating] = useState(false);
 
   const openDirections = () => {
@@ -37,8 +40,8 @@ export default function SchoolMap() {
       <div className="container mx-auto px-4">
         {/* Section header */}
         <div className="mb-6">
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-800">Найдите нас</h2>
-          <p className="text-slate-500 text-sm mt-1">Нажмите на карту — маршрут до школы откроется автоматически</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{t("findUs")}</h2>
+          <p className="text-slate-500 text-sm mt-1">{t("subtitle")}</p>
         </div>
 
         {/* Map card */}
@@ -46,14 +49,14 @@ export default function SchoolMap() {
           className="relative rounded-3xl overflow-hidden shadow-2xl cursor-pointer group"
           onClick={openDirections}
           role="button"
-          aria-label="Построить маршрут до школы"
+          aria-label={t("buildRoute")}
         >
           {/* Map iframe — pointer-events-none so parent gets the click */}
           <iframe
-            src={`https://maps.google.com/maps?q=${SCHOOL_LAT},${SCHOOL_LNG}&output=embed&hl=ru&z=17`}
+            src={`https://maps.google.com/maps?q=${SCHOOL_LAT},${SCHOOL_LNG}&output=embed&hl=${MAP_UI_LANG[locale] ?? "ru"}&z=17`}
             className="w-full h-[380px] md:h-[480px] pointer-events-none select-none"
             loading="lazy"
-            title="Расположение школы"
+            title={t("mapTitle")}
             referrerPolicy="no-referrer-when-downgrade"
           />
 
@@ -67,7 +70,7 @@ export default function SchoolMap() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
             </svg>
             <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">
-              {navigating ? "Определяем местоположение..." : "Нажмите, чтобы открыть маршрут"}
+              {navigating ? t("locating") : t("clickToOpenRoute")}
             </span>
             {navigating && (
               <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
@@ -85,7 +88,7 @@ export default function SchoolMap() {
               </div>
               <div className="min-w-0">
                 <p className="font-bold text-slate-800 text-sm truncate">{SCHOOL_NAME}</p>
-                <p className="text-slate-500 text-xs truncate">{SCHOOL_ADDRESS}</p>
+                <p className="text-slate-500 text-xs truncate">{t("address")}</p>
               </div>
             </div>
 
@@ -97,7 +100,7 @@ export default function SchoolMap() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
               </svg>
-              Маршрут
+              {t("route")}
             </button>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
+import { useTranslations } from 'next-intl'
 import Slider from 'react-slick'
 import 'slick-carousel/slick/slick.css'
 import 'slick-carousel/slick/slick-theme.css'
@@ -14,6 +15,7 @@ interface Sponsor {
 
 // CAROUSEL SETTINGS
 const Companies = () => {
+  const t = useTranslations('Companies')
   const [techGaint, setTechGaint] = useState<Sponsor[]>([])
 
   useEffect(() => {
@@ -79,7 +81,7 @@ const Companies = () => {
     <section className='text-center'>
       <div className='container'>
         <h6 className='text-midnight_text capitalize'>
-          Наши спонсоры
+          {t('title')}
         </h6>
         <div className='py-7 border-b'>
           <Slider {...settings}>
@@ -90,7 +92,7 @@ const Companies = () => {
                 <div className='relative mx-auto' style={{ width: 64, height: 140 }}>
                   <Image
                     src={item.imgSrc}
-                    alt={item.name || 'Спонсор'}
+                    alt={item.name || t('sponsorAlt')}
                     fill
                     sizes='64px'
                     className='object-contain'

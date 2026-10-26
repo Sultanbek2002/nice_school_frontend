@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { Icon } from '@iconify/react'
 import Slider from 'react-slick'
 import 'slick-carousel/slick/slick.css'
@@ -13,16 +14,17 @@ interface MentorProps {
 }
 
 const Mentor: React.FC<MentorProps> = ({ teachers = [] }) => {
+  const t = useTranslations('Mentor');
   const [search, setSearch] = useState('');
 
   if (!teachers || teachers.length === 0) return null;
 
   const q = search.trim().toLowerCase();
   const filtered = q
-    ? teachers.filter((t: any) =>
-        (t.fullName || '').toLowerCase().includes(q) ||
-        (t.subject || '').toLowerCase().includes(q) ||
-        String(t.experience || '').toLowerCase().includes(q)
+    ? teachers.filter((teacher: any) =>
+        (teacher.fullName || '').toLowerCase().includes(q) ||
+        (teacher.subject || '').toLowerCase().includes(q) ||
+        String(teacher.experience || '').toLowerCase().includes(q)
       )
     : teachers;
 
@@ -44,7 +46,7 @@ const Mentor: React.FC<MentorProps> = ({ teachers = [] }) => {
   };
 
   const TeacherCard = ({ item }: { item: any }) => {
-    const teacherSlug = encodeURIComponent(
+    const teacherSlug = item._slug ?? encodeURIComponent(
       (item.fullName || '').toLowerCase().trim().replace(/\s+/g, '-')
     );
     const detailUrl = `/mentors/${teacherSlug}`;
@@ -72,7 +74,7 @@ const Mentor: React.FC<MentorProps> = ({ teachers = [] }) => {
           </p>
           {item.experience && (
             <p className='text-xs font-bold text-gray-300 mt-2'>
-              СТАЖ: {item.experience} ЖЫЛ
+              {t('experience', { years: item.experience })}
             </p>
           )}
         </div>
@@ -85,7 +87,7 @@ const Mentor: React.FC<MentorProps> = ({ teachers = [] }) => {
       <div className='container relative mx-auto px-4'>
         <div className='flex flex-col sm:flex-row sm:items-end gap-4 mb-10'>
           <h2 className='text-midnight_text max-w-96 leading-12 lg:leading-14'>
-            Наши учителя
+            {t('title')}
           </h2>
           {/* Search */}
           <div className='relative sm:ml-auto sm:w-72'>
@@ -96,7 +98,7 @@ const Mentor: React.FC<MentorProps> = ({ teachers = [] }) => {
               type='text'
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder='Поиск по имени или предмету...'
+              placeholder={t('searchPlaceholder')}
               className='w-full pl-10 pr-9 py-2.5 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-gray-300 shadow-sm'
             />
             {search && (
@@ -113,7 +115,7 @@ const Mentor: React.FC<MentorProps> = ({ teachers = [] }) => {
         {filtered.length === 0 ? (
           <div className='text-center py-14'>
             <div className='text-5xl mb-3'>🔍</div>
-            <p className='text-gray-400 font-bold'>Ничего не найдено по запросу «{search}»</p>
+            <p className='text-gray-400 font-bold'>{t('noResults', { query: search })}</p>
           </div>
         ) : q ? (
           /* Grid layout when searching */

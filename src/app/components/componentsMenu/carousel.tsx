@@ -2,6 +2,7 @@
 
 import React from 'react'
 import Image from 'next/image'
+import { useTranslations } from 'next-intl'
 import { fixImageUrl } from '@/utils/apiData'
 import Slider from 'react-slick'
 import 'slick-carousel/slick/slick.css'
@@ -12,6 +13,7 @@ interface SliderProps {
 }
 
 const Carousel: React.FC<SliderProps> = ({ data }) => {
+    const t = useTranslations('Carousel')
     // 1. Проверяем данные: если это массив (из базы), используем его. 
     // Если данных нет, возвращаем null или пустой слайдер.
     const slides = Array.isArray(data) ? data : [];
@@ -54,7 +56,7 @@ const Carousel: React.FC<SliderProps> = ({ data }) => {
         <section className='text-center py-10 overflow-hidden'>
             <div className='container mx-auto px-4'>
                 <h6 className='text-midnight_text capitalize mb-5 opacity-60'>
-                    Наши партнёры и достижения
+                    {t('title')}
                 </h6>
                 <div className='py-7 border-b border-t border-gray-100'>
                     <Slider {...settings}>

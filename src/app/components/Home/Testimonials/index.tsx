@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { Icon } from '@iconify/react'
 import Slider from 'react-slick'
@@ -10,13 +11,15 @@ import { TestimonialType } from '@/app/types/testimonial'
 import TestimonialSkeleton from '../../Skeleton/Testimonial'
 
 const Testimonial = () => {
+  const t = useTranslations('Testimonials')
   const [testimonial, setTestimonial] = useState<TestimonialType[]>([])
   const [loading, setLoading] = useState(true)
+  const locale = useLocale()
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/data')
+        const res = await fetch(`/api/data?lang=${locale}`)
         if (!res.ok) throw new Error('Failed to fetch.')
         const data = await res.json()
         setTestimonial(data.TestimonialData)
@@ -27,7 +30,7 @@ const Testimonial = () => {
       }
     }
     fetchData()
-  }, [])
+  }, [locale])
 
   const settings = {
     dots: true,
@@ -91,7 +94,7 @@ const Testimonial = () => {
   return (
     <section id='testimonial'>
       <div className='container'>
-        <h2 className='text-midnight_text max-w-96'>Отзывы для школы</h2>
+        <h2 className='text-midnight_text max-w-96'>{t('title')}</h2>
         <Slider {...settings}>
           {loading
             ? Array.from({ length: 3 }).map((_, i) => (

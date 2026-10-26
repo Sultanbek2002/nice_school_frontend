@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useRef, useState } from 'react'
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import Image from 'next/image'
 import { Icon } from '@iconify/react'
 import { motion, useInView } from 'framer-motion'
-import { fixImageUrl } from '@/utils/apiData'
+import { fixImageUrl, makeSlug } from '@/utils/apiData'
 import Slider from 'react-slick'
 import 'slick-carousel/slick/slick.css'
 import 'slick-carousel/slick/slick-theme.css'
@@ -53,6 +54,7 @@ function TiltCard({ children, className }: { children: React.ReactNode; classNam
 }
 
 const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
+  const t = useTranslations('Courses')
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref as React.RefObject<Element>, { once: true, margin: '-60px' })
 
@@ -92,7 +94,7 @@ const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="text-midnight_text capitalize text-3xl md:text-4xl font-bold"
           >
-            Популярные курсы
+            {t('popular')}
           </MH2>
 
           <MD
@@ -105,7 +107,7 @@ const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
               href="/courses"
               className="hidden sm:flex items-center gap-2 text-sm font-bold text-primary hover:text-secondary transition-colors group"
             >
-              Бардык курстар
+              {t('allCourses')}
               <Icon icon="solar:arrow-right-bold" className="transition-transform group-hover:translate-x-1" />
             </Link>
           </MD>
@@ -115,9 +117,7 @@ const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
         <div ref={ref}>
           <Slider {...settings} className="course-slider -mx-3">
             {courses.map((item: any, i: number) => {
-              const courseSlug = encodeURIComponent(
-                item.title.toLowerCase().trim().replace(/\s+/g, '-')
-              )
+              const courseSlug = item._slug ?? makeSlug(item.title)
               const detailUrl = `/courses/${courseSlug}`
 
               return (
@@ -146,7 +146,7 @@ const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
                         {/* Бейдж возраста — glassmorphism */}
                         <div className="absolute right-4 top-4 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl px-3 py-1.5 shadow-lg">
                           <p className="text-white text-xs font-black uppercase tracking-wider">
-                            {item.targetAud} жаш +
+                            {t('ageFrom', { age: item.targetAud })}
                           </p>
                         </div>
 
@@ -155,7 +155,7 @@ const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
                           <div className="absolute left-4 top-4 bg-green-500/20 backdrop-blur-md border border-green-400/30 rounded-2xl px-3 py-1.5">
                             <div className="flex items-center gap-1.5">
                               <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                              <p className="text-green-300 text-[10px] font-black uppercase tracking-wider">Активдүү</p>
+                              <p className="text-green-300 text-[10px] font-black uppercase tracking-wider">{t('active')}</p>
                             </div>
                           </div>
                         )}
@@ -178,7 +178,7 @@ const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
                           <div className="flex items-center gap-2">
                             <Icon icon="solar:clock-circle-bold" className="text-primary text-xl" />
                             <p className="text-sm font-bold text-midnight_text uppercase">
-                              {item.duration} ай
+                              {t('durationShort', { months: item.duration })}
                             </p>
                           </div>
                           <div className="flex items-center gap-1.5">
@@ -191,7 +191,7 @@ const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
                         <div className="flex items-center gap-2 pt-4 mb-5">
                           <Icon icon="solar:star-fall-minimalistic-bold" className="text-primary text-lg flex-shrink-0" />
                           <p className="text-[11px] font-bold text-gray-400 uppercase truncate">
-                            {item.skills || 'Жалпы билим берүү'}
+                            {item.skills || t('generalEducation')}
                           </p>
                         </div>
 
@@ -200,7 +200,7 @@ const Courses: React.FC<CoursesProps> = ({ courses = [] }) => {
                           href={detailUrl}
                           className="relative mt-auto w-full py-3.5 bg-primary/5 border border-primary/20 text-primary font-bold rounded-2xl text-center group-hover:bg-primary group-hover:text-white group-hover:border-primary group-hover:shadow-lg group-hover:shadow-primary/20 transition-all duration-400 block text-sm overflow-hidden"
                         >
-                          <span className="relative z-10">Толук маалымат</span>
+                          <span className="relative z-10">{t('fullInfo')}</span>
                           <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />
                         </Link>
                       </div>

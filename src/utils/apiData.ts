@@ -70,7 +70,38 @@ export interface Block {
   ID: number;
   type: string;
   position: number;
-  content: string; 
+  content: string;
+  // untranslated original, sent by the backend alongside a translated `content`
+  content_source?: string;
+}
+
+// URL slug for a course/teacher. Always derived from the UNTRANSLATED title or
+// name, so /ru/courses/x, /ky/courses/x and /en/courses/x are the same page and
+// switching language keeps working.
+export function makeSlug(text: string): string {
+  return encodeURIComponent(text.toLowerCase().trim().replace(/\s+/g, '-'))
+}
+
+const SLUG_FIELD: Record<string, string> = { courses_grid: 'title', teachers_grid: 'fullName' }
+
+// Adds a stable `_slug` to every course/teacher item, computed from the same
+// item in the untranslated source (array order is identical — translation
+// preserves structure). Components and detail pages match on `_slug`.
+function attachSlugs(block: Block): Block {
+  const field = SLUG_FIELD[block.type]
+  if (!field || !block.content) return block
+  try {
+    const items = JSON.parse(block.content)
+    const source = JSON.parse(block.content_source || block.content)
+    if (!Array.isArray(items) || !Array.isArray(source)) return block
+    items.forEach((item: any, i: number) => {
+      const src = source[i]?.[field] ?? item?.[field]
+      if (item && typeof src === 'string') item._slug = makeSlug(src)
+    })
+    return { ...block, content: JSON.stringify(items) }
+  } catch {
+    return block
+  }
 }
 
 export interface MenuItem {
@@ -90,14 +121,20 @@ export interface ApiResponse {
 }
 
 // 3. Исправленная функция
-export async function getSiteStructure(): Promise<ApiResponse> {
-  const res = await fetch(`${GO_API_URL}/api/site-structure`, {
+export async function getSiteStructure(locale: string = 'ru'): Promise<ApiResponse> {
+  const res = await fetch(`${GO_API_URL}/api/site-structure?lang=${locale}`, {
     cache: 'no-store'
   });
 
   if (!res.ok) throw new Error("Failed to fetch site structure");
   
   // Важно: вызываем .json(), а не просто логируем его
-  const data = await res.json();
+  const data: ApiResponse = await res.json();
+  if (Array.isArray(data.structure)) {
+    data.structure = data.structure.map((menu) => ({
+      ...menu,
+      blocks: Array.isArray(menu.blocks) ? menu.blocks.map(attachSlugs) : menu.blocks,
+    }));
+  }
   return data;
 }

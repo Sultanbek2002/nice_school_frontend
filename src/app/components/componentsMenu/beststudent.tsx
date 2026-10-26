@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import { Icon } from '@iconify/react'
+import { useTranslations } from 'next-intl'
 
 interface BestStudentsProps {
   data?: any;
@@ -10,6 +11,7 @@ interface BestStudentsProps {
 }
 
 const BestStudents: React.FC<BestStudentsProps> = ({ data, title }) => {
+  const t = useTranslations('BestStudents');
   const students = Array.isArray(data) ? data : [];
   const [search, setSearch] = useState('');
 
@@ -43,7 +45,7 @@ const BestStudents: React.FC<BestStudentsProps> = ({ data, title }) => {
             type='text'
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder='Поиск по имени, предмету или классу...'
+            placeholder={t('searchPlaceholder')}
             className='w-full pl-10 pr-9 py-2.5 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-gray-300 shadow-sm'
           />
           {search && (
@@ -60,7 +62,7 @@ const BestStudents: React.FC<BestStudentsProps> = ({ data, title }) => {
         {filtered.length === 0 ? (
           <div className='text-center py-14'>
             <div className='text-5xl mb-3'>🔍</div>
-            <p className='text-gray-400 font-bold'>Ничего не найдено по запросу «{search}»</p>
+            <p className='text-gray-400 font-bold'>{t('noResults', { query: search })}</p>
           </div>
         ) : (
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8'>
@@ -91,7 +93,7 @@ const BestStudents: React.FC<BestStudentsProps> = ({ data, title }) => {
                 <div className="relative w-32 h-32 md:w-36 md:h-36 mx-auto rounded-full overflow-hidden border-4 border-gray-50 group-hover:border-primary/20 transition-all duration-500 shadow-inner">
                   <Image
                     src={item.photo || '/images/mentor/placeholder.webp'}
-                    alt={item.fullName || 'Ученик'}
+                    alt={item.fullName || t('studentAlt')}
                     fill
                     className='object-cover transition-transform duration-700 group-hover:scale-110'
                   />
@@ -99,7 +101,7 @@ const BestStudents: React.FC<BestStudentsProps> = ({ data, title }) => {
                 
                 {/* Возраст */}
                 <div className='absolute -right-2 bottom-2 bg-white text-midnight_text text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md border border-gray-100'>
-                  {item.age} лет
+                  {t('age', { age: item.age })}
                 </div>
               </div>
 
@@ -116,7 +118,7 @@ const BestStudents: React.FC<BestStudentsProps> = ({ data, title }) => {
                 
                 <div className="flex justify-center">
                   <span className="text-[10px] font-black bg-gray-50 text-gray-400 px-4 py-1.5 rounded-xl uppercase border border-gray-100">
-                    Ученик {item.grade} класса
+                    {t('gradeStudent', { grade: item.grade })}
                   </span>
                 </div>
 

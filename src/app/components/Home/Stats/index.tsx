@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from 'react'
 import { Icon } from '@iconify/react'
 import { motion, useInView } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 
 const MD = motion.div as any
 
@@ -73,6 +74,7 @@ function StatCard({ icon, value, suffix, label, color, bg, index, isInView }: {
 }
 
 export default function Stats({ schoolInfo }: StatsProps) {
+  const t = useTranslations('Stats')
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref as React.RefObject<Element>, { once: true, margin: '-80px' })
 
@@ -81,7 +83,7 @@ export default function Stats({ schoolInfo }: StatsProps) {
       icon: 'solar:users-group-rounded-bold',
       value: schoolInfo?.students_count ?? 1200,
       suffix: '+',
-      label: 'Студентов',
+      label: t('students'),
       color: 'text-primary',
       bg: 'bg-primary/10',
     },
@@ -89,7 +91,7 @@ export default function Stats({ schoolInfo }: StatsProps) {
       icon: 'solar:book-bold',
       value: schoolInfo?.courses_count ?? 50,
       suffix: '+',
-      label: 'Курсов',
+      label: t('courses'),
       color: 'text-secondary',
       bg: 'bg-secondary/10',
     },
@@ -97,7 +99,7 @@ export default function Stats({ schoolInfo }: StatsProps) {
       icon: 'solar:diploma-bold',
       value: schoolInfo?.teachers_count ?? 15,
       suffix: '+',
-      label: 'Учителей',
+      label: t('teachers'),
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
     },
@@ -105,7 +107,7 @@ export default function Stats({ schoolInfo }: StatsProps) {
       icon: 'solar:star-bold',
       value: schoolInfo?.satisfaction_rate ?? 98,
       suffix: '%',
-      label: 'Довольны обучением',
+      label: t('satisfied'),
       color: 'text-amber-500',
       bg: 'bg-amber-50',
     },
@@ -127,10 +129,10 @@ export default function Stats({ schoolInfo }: StatsProps) {
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/8 text-primary rounded-full text-xs font-black tracking-widest uppercase border border-primary/20 mb-4">
             <Icon icon="solar:chart-bold" width={14} />
-            Наши достижения
+            {t('badge')}
           </div>
           <h2 className="text-midnight_text text-3xl md:text-4xl font-black">
-            В цифрах
+            {t('title')}
           </h2>
         </MD>
 

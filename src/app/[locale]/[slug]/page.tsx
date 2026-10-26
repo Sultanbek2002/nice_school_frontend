@@ -1,0 +1,122 @@
+import React from "react";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import { getSiteStructure, ApiResponse } from '@/utils/apiData';
+import { pageMetadata, truncate, SITE_NAME } from '@/utils/seo';
+import TextBlock from "@/app/components/componentsMenu/text";
+import Carousel from "@/app/components/componentsMenu/carousel";
+import Teachers from "@/app/components/componentsMenu/teachers";
+import CourseComponent from "@/app/components/componentsMenu/courses";
+import Subtitle from "@/app/components/componentsMenu/subheader";
+import BestStudents from "@/app/components/componentsMenu/beststudent";
+import NewsGrid from "@/app/components/componentsMenu/newsgrid";
+import PhotoGallery from "@/app/components/componentsMenu/photogallery";
+import EventsGrid from "@/app/components/componentsMenu/eventsgrid";
+
+const COMPONENTS_MAP: Record<string, React.FC<any>> = {
+  text: TextBlock,
+  courses_grid: CourseComponent,
+  slider: Carousel,
+  teachers_grid: Teachers,
+  subtitle: Subtitle,
+  best_students: BestStudents,
+  news_grid: NewsGrid,
+  photo_gallery: PhotoGallery,
+  events_grid: EventsGrid,
+};
+
+// Заголовок страницы = её название из админки («Меню сайта»); описание — из первого текстового блока
+export async function generateMetadata({ params }: { params: Promise<{ slug: string; locale: string }> }): Promise<Metadata> {
+  const { slug, locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Meta" });
+  try {
+    const response: ApiResponse = await getSiteStructure(locale);
+    const page = response.structure.find(p => p.link?.trim() === `/${slug}`);
+    if (page) {
+      const name = page.name.trim();
+      let text = '';
+      for (const b of page.blocks || []) {
+        if (b.type !== 'text') continue;
+        try {
+          const parsed = JSON.parse(b.content || '{}');
+          text = truncate(parsed?.text || (typeof parsed === 'string' ? parsed : ''));
+        } catch { text = truncate(b.content); }
+        if (text) break;
+      }
+      return pageMetadata({
+        title: name,
+        description: text || t("pageFallbackDescription", { name, site: SITE_NAME }),
+        path: `/${slug}`,
+        locale,
+      });
+    }
+  } catch {}
+  return pageMetadata({ title: t("pageFallback"), path: `/${slug}`, noindex: true, locale });
+}
+
+export default async function DynamicPage({ params }: { params: Promise<{ slug: string; locale: string }> }) {
+  const { slug, locale } = await params;
+  // 1. Получаем объект ответа
+  const response: ApiResponse = await getSiteStructure(locale);
+  const currentPath = `/${slug}`;
+  
+  // 2. Ищем страницу внутри массива response.structure
+  // .trim() — в БД встречаются меню с пробелами в конце link (опечатка при создании),
+  // из-за чего страница не находилась даже при видимо совпадающем URL
+  const currentPage = response.structure.find(page => page.link?.trim() === currentPath);
+
+  // Настоящий HTTP 404 вместо «200 + текст ошибки»: иначе Google индексирует любые несуществующие адреса
+  if (!currentPage) notFound();
+
+  return (
+    <main className="min-h-screen pt-20 lg:pt-28 pb-10">
+      <div className="container mx-auto px-4 mb-8">
+        {/* Заголовок страницы */}
+        <h1 className="text-3xl md:text-4xl font-bold text-dark">
+          {currentPage.name}
+        </h1>
+        <div className="w-20 h-1 bg-primary mt-2 rounded-full mb-10"></div>
+      
+        {/* Рендерим блоки */}
+        <div className="flex flex-col gap-y-16">
+          {(() => {
+            const sorted = [...(currentPage.blocks || [])].sort((a: any, b: any) => a.position - b.position);
+            const skip = new Set<number>();
+            const titleFor: Record<number, string> = {};
+
+            // Если subtitle идёт прямо перед teachers_grid или best_students — объединяем
+            const ABSORB_TYPES = new Set(['teachers_grid', 'best_students', 'courses_grid']);
+            sorted.forEach((block: any, idx: number) => {
+              if (block.type === 'subtitle' && idx + 1 < sorted.length) {
+                const next = sorted[idx + 1];
+                if (ABSORB_TYPES.has(next.type)) {
+                  skip.add(block.ID);
+                  try {
+                    titleFor[next.ID] = JSON.parse(block.content || '""').replace(/^"|"$/g, '');
+                  } catch {
+                    titleFor[next.ID] = (block.content || '').replace(/^"|"$/g, '');
+                  }
+                }
+              }
+            });
+
+            return sorted.map((block: any) => {
+              if (skip.has(block.ID)) return null;
+              const Component = COMPONENTS_MAP[block.type];
+              if (!Component) return null;
+              let blockData: any;
+              try {
+                blockData = JSON.parse(block.content || "{}");
+              } catch {
+                blockData = block.content;
+              }
+              const extraProps = titleFor[block.ID] ? { title: titleFor[block.ID] } : {};
+              return <Component key={block.ID} data={blockData} {...extraProps} />;
+            });
+          })()}
+        </div>
+      </div>
+    </main>
+  );
+}

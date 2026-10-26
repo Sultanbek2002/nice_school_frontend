@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { ArrowRight, GraduationCap, Search, Star, X } from 'lucide-react'
 
 interface Teacher {
@@ -20,14 +21,15 @@ interface MentorProps {
 }
 
 function teacherSlug(name: string) {
-  return encodeURIComponent(name.toLowerCase().replace(/\s+/g, '-'))
+  return encodeURIComponent(name.toLowerCase().trim().replace(/\s+/g, '-'))
 }
 
 // ─── Single card ──────────────────────────────────────────────────────────────
 
 function MentorCard({ teacher, index }: { teacher: Teacher; index: number }) {
+  const t = useTranslations('Mentor')
   const [hovered, setHovered] = useState(false)
-  const detailUrl = `/mentors/${teacherSlug(teacher.fullName)}`
+  const detailUrl = `/mentors/${(teacher as any)._slug ?? teacherSlug(teacher.fullName)}`
 
   // Last column of 4-col grid opens reveal to the left
   const openLeft = index % 4 === 3
@@ -101,7 +103,7 @@ function MentorCard({ teacher, index }: { teacher: Teacher; index: number }) {
 
           <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
             <span className="text-xs font-bold" style={{ color: '#3f5570' }}>
-              СТАЖ: {teacher.experience} ЖЫЛ
+              {t('experience', { years: teacher.experience ?? 0 })}
             </span>
             <Link
               href={detailUrl}
@@ -151,7 +153,7 @@ function MentorCard({ teacher, index }: { teacher: Teacher; index: number }) {
           {/* Header */}
           <div className="relative flex items-start justify-between mb-4">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.2em] opacity-65 font-semibold">Ментор</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] opacity-65 font-semibold">{t('badge')}</p>
               <h4 className="mt-1 text-lg font-black leading-snug">{teacher.fullName}</h4>
             </div>
             <GraduationCap className="h-5 w-5 opacity-65 shrink-0 mt-1" />
@@ -161,7 +163,7 @@ function MentorCard({ teacher, index }: { teacher: Teacher; index: number }) {
           <p className="relative text-sm leading-relaxed opacity-90 mb-4 line-clamp-4">
             {teacher.bio
               ? teacher.bio
-              : `Опытный преподаватель ${(teacher.subject || '').toLowerCase()} с ${teacher.experience}-летним стажем работы.`
+              : t('defaultBio', { subject: (teacher.subject || '').toLowerCase(), years: teacher.experience ?? 0 })
             }
           </p>
 
@@ -172,13 +174,13 @@ function MentorCard({ teacher, index }: { teacher: Teacher; index: number }) {
           >
             <div className="text-center">
               <div className="text-xl font-black">{teacher.experience}</div>
-              <div className="text-[9px] uppercase tracking-wider opacity-70 mt-0.5">лет стажа</div>
+              <div className="text-[9px] uppercase tracking-wider opacity-70 mt-0.5">{t('yearsExperience')}</div>
             </div>
             <div className="text-center border-l border-white/20">
               <div className="text-base font-black line-clamp-1 px-1 leading-tight mt-0.5">
                 {teacher.subject}
               </div>
-              <div className="text-[9px] uppercase tracking-wider opacity-70 mt-0.5">предмет</div>
+              <div className="text-[9px] uppercase tracking-wider opacity-70 mt-0.5">{t('subject')}</div>
             </div>
           </div>
 
@@ -189,7 +191,7 @@ function MentorCard({ teacher, index }: { teacher: Teacher; index: number }) {
                 className="px-2.5 py-1 rounded-full text-[10px] font-bold"
                 style={{ background: 'rgba(255,255,255,0.15)' }}
               >
-                {teacher.age} лет
+                {t('age', { age: teacher.age })}
               </span>
             )}
           </div>
@@ -205,7 +207,7 @@ function MentorCard({ teacher, index }: { teacher: Teacher; index: number }) {
                 boxShadow: '0 4px 14px rgba(0,0,0,0.1)',
               }}
             >
-              Подробнее →
+              {t('more')}
             </Link>
           </div>
         </div>
@@ -217,6 +219,7 @@ function MentorCard({ teacher, index }: { teacher: Teacher; index: number }) {
 // ─── Section ──────────────────────────────────────────────────────────────────
 
 const Mentor: React.FC<MentorProps> = ({ data, title }) => {
+  const t = useTranslations('Mentor')
   const mentors = Array.isArray(data) ? data : []
   const [search, setSearch] = useState('')
 
@@ -224,10 +227,10 @@ const Mentor: React.FC<MentorProps> = ({ data, title }) => {
 
   const q = search.trim().toLowerCase()
   const filtered = q
-    ? mentors.filter(t =>
-        (t.fullName || '').toLowerCase().includes(q) ||
-        (t.subject || '').toLowerCase().includes(q) ||
-        String(t.experience || '').includes(q)
+    ? mentors.filter(mentor =>
+        (mentor.fullName || '').toLowerCase().includes(q) ||
+        (mentor.subject || '').toLowerCase().includes(q) ||
+        String(mentor.experience || '').includes(q)
       )
     : mentors
 
@@ -249,7 +252,7 @@ const Mentor: React.FC<MentorProps> = ({ data, title }) => {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Поиск по имени или предмету..."
+              placeholder={t('searchPlaceholder')}
               className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-gray-300 shadow-sm"
             />
             {search && (
@@ -266,7 +269,7 @@ const Mentor: React.FC<MentorProps> = ({ data, title }) => {
         {filtered.length === 0 ? (
           <div className="text-center py-14">
             <div className="text-5xl mb-3">🔍</div>
-            <p className="text-gray-400 font-bold">Ничего не найдено по запросу «{search}»</p>
+            <p className="text-gray-400 font-bold">{t('noResults', { query: search })}</p>
           </div>
         ) : (
           <div

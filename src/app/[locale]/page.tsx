@@ -1,0 +1,90 @@
+import React from "react";
+import Hero from "@/app/components/Home/Hero";
+import Companies from "@/app/components/Home/Companies";
+import Courses from "@/app/components/Home/Courses";
+import Mentor from "@/app/components/Home/Mentor";
+import Testimonial from "@/app/components/Home/Testimonials";
+import ContactForm from "@/app/components/ContactForm";
+import SchoolMap from "@/app/components/SchoolMap";
+import Newsletter from "@/app/components/Home/Newsletter";
+import Stats from "@/app/components/Home/Stats";
+import { getSiteStructure } from '@/utils/apiData';
+
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
+import OlympiadComponent from "@/app/components/componentsMenu/olympiad";
+import { pageMetadata, schoolJsonLd, jsonLdString } from "@/utils/seo";
+
+// Заголовок и описание главной берутся из общих настроек (layout.tsx / utils/seo.ts).
+// Иконки теперь лежат файлами src/app/icon.png, apple-icon.png, favicon.ico — Next.js
+// подключает их сам, внешняя ссылка на gstatic больше не нужна.
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Meta" });
+  return pageMetadata({
+    title: { absolute: t("homeTitle") },
+    description: t("homeDescription"),
+    path: '/',
+    locale,
+  });
+}
+
+
+export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const data = await getSiteStructure(locale);
+  const allTeachers: any[] = [];
+  const allCourses: any[] = [];
+
+  // Проходим по всей структуре сайта
+  data.structure.forEach((menuItem: any) => {
+    menuItem.blocks.forEach((block: any) => {
+      // 1. Собираем учителей
+      if (block.type === 'teachers_grid' && block.content) {
+        try {
+          const teachers = JSON.parse(block.content);
+          if (Array.isArray(teachers)) allTeachers.push(...teachers);
+        } catch (e) { console.error("Ошибка парсинга учителей", e); }
+      }
+
+      // 2. Собираем курсы
+      if (block.type === 'courses_grid' && block.content) {
+        try {
+          const courses = JSON.parse(block.content);
+          if (Array.isArray(courses)) allCourses.push(...courses);
+        } catch (e) { console.error("Ошибка парсинга курсов", e); }
+      }
+    });
+  });
+
+  const topTenTeachers = allTeachers.slice(0, 10);
+  const topTenCourses = allCourses.slice(0, 10);
+
+  // Только активные/открытые олимпиады, ближайшие по времени — первые
+  const activeOlympiads = (data.olympiads || [])
+    .filter((o: any) => o.status === 'active' || o.status === 'registration')
+    .sort((a: any, b: any) => {
+      if (!a.start_time) return 1;
+      if (!b.start_time) return -1;
+      return new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
+    });
+
+  return (
+    <main>
+      {/* Разметка для Google: «паспорт школы» (не виден посетителям) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdString(schoolJsonLd(data.school_info)) }}
+      />
+      <Hero bannerData={data.banner} courses={allCourses} contactData={data.school_info} />
+      <OlympiadComponent data={activeOlympiads} />
+      <Companies />
+      <Courses courses={topTenCourses} />
+      <Stats schoolInfo={data.school_info} />
+      <Mentor  teachers={topTenTeachers}/>
+      <Testimonial />
+      <ContactForm/>
+      <SchoolMap />
+    </main>
+  );
+}

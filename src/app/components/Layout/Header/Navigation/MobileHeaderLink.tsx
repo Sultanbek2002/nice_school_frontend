@@ -1,12 +1,15 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
+import NextLink from "next/link";
+import { Link as LocaleLink } from "@/i18n/navigation";
 import { usePathname } from "next/navigation";
 import { HeaderType } from "@/app/types/menu";
+import { isLocaleExcludedPath } from "@/i18n/excludedPaths";
 
 const MobileHeaderLink: React.FC<{ item: HeaderType }> = ({ item }) => {
   const [submenuOpen, setSubmenuOpen] = useState(false);
   const path = usePathname();
+  const Link = isLocaleExcludedPath(item.href) ? NextLink : LocaleLink;
 
   const isActive =
     path === item.href ||

@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { Icon } from '@iconify/react'
 import { motion } from 'framer-motion'
 import Cookies from 'js-cookie'
@@ -19,6 +20,8 @@ interface SigninProps {
 type Mode = 'login' | 'forgot' | 'reset'
 
 export default function Signin({ onClose }: SigninProps) {
+  const t = useTranslations('Auth')
+  const locale = useLocale()
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -80,16 +83,16 @@ export default function Signin({ onClose }: SigninProps) {
           setLockoutUntil(Date.now() + secs * 1000)
           setLockoutDisplay(secs)
         } else {
-          setError(data.error || 'Не удалось войти. Попробуйте ещё раз')
+          setError(data.error || t('loginFailed'))
         }
         return
       }
 
       Cookies.set('auth_token', data.token, { expires: 7, path: '/' })
 
-      if (data.role === 'student') window.location.href = '/student'
+      if (data.role === 'student') window.location.href = `/${locale}/student`
       else if (data.role === 'admin' || data.role === 'superadmin') window.location.href = '/admin/dashboard'
-      else window.location.href = '/'
+      else window.location.href = `/${locale}`
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -110,12 +113,12 @@ export default function Signin({ onClose }: SigninProps) {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(data.error || 'Не удалось отправить код. Попробуйте ещё раз')
+        setError(data.error || t('sendCodeFailed'))
         return false
       }
       return true
     } catch {
-      setError('Нет связи с сервером. Попробуйте ещё раз')
+      setError(t('networkError'))
       return false
     } finally {
       setLoading(false)
@@ -125,24 +128,24 @@ export default function Signin({ onClose }: SigninProps) {
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault()
     if (await requestCode()) {
-      setInfo('Если аккаунт с таким email существует, мы отправили на него 6-значный код')
+      setInfo(t('codeSentIfExists'))
       setMode('reset')
     }
   }
 
   const handleResend = async () => {
-    if (await requestCode()) setInfo('Код отправлен повторно')
+    if (await requestCode()) setInfo(t('codeResent'))
   }
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     if (newPassword.length < 8) {
-      setError('Новый пароль должен быть не короче 8 символов')
+      setError(t('passwordTooShort'))
       return
     }
     if (newPassword !== confirmPassword) {
-      setError('Пароли не совпадают')
+      setError(t('passwordsMismatch'))
       return
     }
     setLoading(true)
@@ -154,7 +157,7 @@ export default function Signin({ onClose }: SigninProps) {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(data.error || 'Не удалось сменить пароль. Попробуйте ещё раз')
+        setError(data.error || t('resetFailed'))
         return
       }
       // Пароль сменён — возвращаем на вход с уже заполненным email, без автологина
@@ -163,19 +166,19 @@ export default function Signin({ onClose }: SigninProps) {
       setConfirmPassword('')
       setPassword('')
       setMode('login')
-      setInfo('Пароль успешно изменён! Войдите с новым паролем.')
+      setInfo(t('passwordChanged'))
     } catch {
-      setError('Нет связи с сервером. Попробуйте ещё раз')
+      setError(t('networkError'))
     } finally {
       setLoading(false)
     }
   }
 
-  const title = mode === 'login' ? 'Добро пожаловать!' : mode === 'forgot' ? 'Сброс пароля' : 'Новый пароль'
+  const title = mode === 'login' ? t('welcome') : mode === 'forgot' ? t('resetPassword') : t('newPassword')
   const subtitle =
-    mode === 'login' ? 'Войдите в свой аккаунт'
-    : mode === 'forgot' ? 'Введите email, и мы отправим код для сброса пароля'
-    : `Код отправлен на ${email}`
+    mode === 'login' ? t('signInSubtitle')
+    : mode === 'forgot' ? t('forgotSubtitle')
+    : t('codeSentTo', { email })
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-primary/5 flex items-center justify-center px-4 py-12">
@@ -207,12 +210,12 @@ export default function Signin({ onClose }: SigninProps) {
             >
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Icon icon="solar:lock-bold-duotone" className="text-orange-500 text-2xl" />
-                <span className="text-orange-700 font-bold text-sm">Аккаунт временно заблокирован</span>
+                <span className="text-orange-700 font-bold text-sm">{t('accountLocked')}</span>
               </div>
               <div className="text-3xl font-black text-orange-600 tabular-nums">
                 {formatTime(lockoutDisplay)}
               </div>
-              <p className="text-orange-500 text-xs mt-1">попробуйте снова после окончания времени</p>
+              <p className="text-orange-500 text-xs mt-1">{t('tryAfterLockout')}</p>
             </MD>
           )}
 
@@ -249,7 +252,7 @@ export default function Signin({ onClose }: SigninProps) {
                 </div>
                 <input
                   type="email"
-                  placeholder="Введите email"
+                  placeholder={t('enterEmail')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -264,7 +267,7 @@ export default function Signin({ onClose }: SigninProps) {
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Пароль"
+                  placeholder={t('password')}
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -287,7 +290,7 @@ export default function Signin({ onClose }: SigninProps) {
                   onClick={() => switchMode('forgot')}
                   className="text-xs font-bold text-primary hover:underline"
                 >
-                  Забыли пароль?
+                  {t('forgotPassword')}
                 </button>
               </div>
 
@@ -301,17 +304,17 @@ export default function Signin({ onClose }: SigninProps) {
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
                     <Icon icon="svg-spinners:ring-resize" className="text-lg" />
-                    Вход...
+                    {t('signingIn')}
                   </span>
                 ) : isLocked ? (
                   <span className="flex items-center justify-center gap-2">
                     <Icon icon="solar:lock-bold" className="text-lg" />
-                    {formatTime(lockoutDisplay)} — заблокировано
+                    {t('lockedFor', { time: formatTime(lockoutDisplay) })}
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     <Icon icon="solar:login-bold" className="text-lg" />
-                    Войти
+                    {t('signIn')}
                   </span>
                 )}
                 <span className="absolute inset-0 -translate-x-full hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
@@ -328,7 +331,7 @@ export default function Signin({ onClose }: SigninProps) {
                 </div>
                 <input
                   type="email"
-                  placeholder="Ваш email"
+                  placeholder={t('yourEmail')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -344,7 +347,7 @@ export default function Signin({ onClose }: SigninProps) {
                 whileTap={{ scale: loading ? 1 : 0.98 }}
                 className="w-full py-3.5 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/25 hover:bg-secondary transition-colors duration-300 disabled:opacity-60 disabled:cursor-not-allowed text-sm mt-2"
               >
-                {loading ? 'Отправка...' : 'Отправить код'}
+                {loading ? t('sending') : t('sendCode')}
               </MButton>
 
               <button
@@ -353,7 +356,7 @@ export default function Signin({ onClose }: SigninProps) {
                 className="w-full text-sm text-gray-400 hover:text-primary transition-colors flex items-center justify-center gap-1 pt-1"
               >
                 <Icon icon="solar:arrow-left-linear" />
-                Назад ко входу
+                {t('backToLogin')}
               </button>
             </form>
           )}
@@ -366,7 +369,7 @@ export default function Signin({ onClose }: SigninProps) {
                   type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  placeholder="6-значный код"
+                  placeholder={t('sixDigitCode')}
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   required
@@ -381,7 +384,7 @@ export default function Signin({ onClose }: SigninProps) {
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Новый пароль (минимум 8 символов)"
+                  placeholder={t('newPasswordPlaceholder')}
                   autoComplete="new-password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -403,7 +406,7 @@ export default function Signin({ onClose }: SigninProps) {
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Повторите новый пароль"
+                  placeholder={t('repeatPassword')}
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -419,7 +422,7 @@ export default function Signin({ onClose }: SigninProps) {
                 whileTap={{ scale: loading ? 1 : 0.98 }}
                 className="w-full py-3.5 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/25 hover:bg-secondary transition-colors duration-300 disabled:opacity-60 disabled:cursor-not-allowed text-sm mt-2"
               >
-                {loading ? 'Сохранение...' : 'Сохранить новый пароль'}
+                {loading ? t('saving') : t('saveNewPassword')}
               </MButton>
 
               <div className="flex items-center justify-between text-sm pt-1">
@@ -429,14 +432,14 @@ export default function Signin({ onClose }: SigninProps) {
                   disabled={loading}
                   className="text-primary font-bold hover:underline disabled:opacity-50"
                 >
-                  Отправить код ещё раз
+                  {t('resendCode')}
                 </button>
                 <button
                   type="button"
                   onClick={() => switchMode('login')}
                   className="text-gray-400 hover:text-primary transition-colors"
                 >
-                  Назад ко входу
+                  {t('backToLogin')}
                 </button>
               </div>
             </form>
@@ -449,7 +452,7 @@ export default function Signin({ onClose }: SigninProps) {
                   <div className="w-full border-t border-slate-100" />
                 </div>
                 <div className="relative flex justify-center">
-                  <span className="bg-white px-3 text-xs text-gray-400">или</span>
+                  <span className="bg-white px-3 text-xs text-gray-400">{t('or')}</span>
                 </div>
               </div>
 
@@ -458,9 +461,9 @@ export default function Signin({ onClose }: SigninProps) {
               </div>
 
               <p className="text-center text-sm text-gray-500">
-                Нет аккаунта?{' '}
+                {t('noAccount')}{' '}
                 <Link href="/signup" onClick={onClose} className="text-primary font-bold hover:underline">
-                  Регистрация
+                  {t('register')}
                 </Link>
               </p>
             </>
@@ -470,7 +473,7 @@ export default function Signin({ onClose }: SigninProps) {
         <p className="text-center mt-4">
           <Link href="/" className="text-sm text-gray-400 hover:text-primary transition-colors flex items-center justify-center gap-1">
             <Icon icon="solar:arrow-left-linear" />
-            На главную
+            {t('toHome')}
           </Link>
         </p>
       </div>

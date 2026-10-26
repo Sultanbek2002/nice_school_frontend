@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface NewsItem {
   title: string;
@@ -48,6 +49,7 @@ function VideoModal({ url, onClose }: { url: string; onClose: () => void }) {
 }
 
 function NewsDetailModal({ item, onPlayVideo, onClose }: { item: NewsItem; onPlayVideo: (url: string) => void; onClose: () => void }) {
+  const t = useTranslations("NewsGrid");
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 sm:items-center"
@@ -97,11 +99,11 @@ function NewsDetailModal({ item, onPlayVideo, onClose }: { item: NewsItem; onPla
                   <path d="M8 5v14l11-7z" />
                 </svg>
               </span>
-              Смотреть видео
+              {t("watchVideo")}
             </button>
           )}
           <div className="text-slate-600 text-base leading-relaxed whitespace-pre-wrap">
-            {item.content || item.description || "Подробности скоро появятся."}
+            {item.content || item.description || t("detailsSoon")}
           </div>
         </div>
       </div>
@@ -110,10 +112,11 @@ function NewsDetailModal({ item, onPlayVideo, onClose }: { item: NewsItem; onPla
 }
 
 export default function NewsGrid({ data }: { data: any }) {
+  const t = useTranslations("NewsGrid");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [selected, setSelected] = useState<NewsItem | null>(null);
 
-  let sectionTitle = "Новости";
+  let sectionTitle = t("defaultTitle");
   let items: NewsItem[] = [];
 
   if (data && !Array.isArray(data) && data.items) {
@@ -194,12 +197,12 @@ export default function NewsGrid({ data }: { data: any }) {
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   </span>
-                  Смотреть видео
+                  {t("watchVideo")}
                 </button>
               )}
               {!featured.video && (
                 <span className="mt-4 inline-flex items-center gap-1 text-teal-600 font-semibold text-sm self-start">
-                  Подробнее
+                  {t("readMore")}
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
@@ -243,7 +246,7 @@ export default function NewsGrid({ data }: { data: any }) {
                         onClick={(e) => { e.stopPropagation(); setVideoUrl(item.video); }}
                         className="mt-1 text-xs text-teal-600 font-medium text-left"
                       >
-                        ▶ Видео
+                        ▶ {t("video")}
                       </button>
                     )}
                   </div>
@@ -283,7 +286,7 @@ export default function NewsGrid({ data }: { data: any }) {
                       onClick={(e) => { e.stopPropagation(); setVideoUrl(item.video); }}
                       className="mt-2 text-xs text-teal-600 font-semibold"
                     >
-                      ▶ Видео
+                      ▶ {t("video")}
                     </button>
                   )}
                 </div>

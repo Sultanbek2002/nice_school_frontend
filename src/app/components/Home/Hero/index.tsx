@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { createPortal } from 'react-dom'
 import { Icon } from '@iconify/react'
 import { motion } from 'framer-motion'
@@ -50,6 +51,7 @@ function getCourseSlug(title: string): string {
 }
 
 const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) => {
+  const t = useTranslations('Hero')
   const [mounted, setMounted] = useState(false)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -119,7 +121,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
 
   const showDropdown = open && query.trim().length > 0
 
-  const badges = ['Дружное сообщество', 'Индивидуальный путь', 'Школьная атмосфера']
+  const badges = [t('badges.community'), t('badges.individualPath'), t('badges.atmosphere')]
 
   const dropdown = showDropdown && mounted ? createPortal(
     <div
@@ -138,12 +140,12 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
       {filtered.length > 0 ? (
         <>
           <p style={{ padding: '12px 16px 4px', fontSize: 10, fontWeight: 900, color: '#17a589', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            Найдено: {filtered.length} курс(ов)
+            {t('found', { count: filtered.length })}
           </p>
           {filtered.map((course, i) => (
             <Link
               key={i}
-              href={`/courses/${getCourseSlug(course.title)}`}
+              href={`/courses/${course._slug ?? getCourseSlug(course.title)}`}
               onClick={() => { setOpen(false); setQuery('') }}
               style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid rgba(0,0,0,0.05)', textDecoration: 'none' }}
               className="hover:bg-primary/5 transition-colors group"
@@ -157,7 +159,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                   <Icon icon="solar:clock-circle-bold" style={{ color: '#17a589', fontSize: 12, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: '#9ca3af' }}>{course.duration} мес.</span>
+                  <span style={{ fontSize: 11, color: '#9ca3af' }}>{t('durationMonths', { months: course.duration })}</span>
                   {course.skills && <><span style={{ color: '#d1d5db' }}>·</span><span style={{ fontSize: 11, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course.skills}</span></>}
                 </div>
               </div>
@@ -168,7 +170,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
       ) : (
         <div style={{ padding: '20px 16px', textAlign: 'center' }}>
           <Icon icon="solar:sad-circle-bold" style={{ fontSize: 32, color: '#d1d5db', display: 'block', margin: '0 auto 8px' }} />
-          <p style={{ fontSize: 13, color: '#9ca3af', fontWeight: 500 }}>Курсы не найдены</p>
+          <p style={{ fontSize: 13, color: '#9ca3af', fontWeight: 500 }}>{t('noCourses')}</p>
         </div>
       )}
     </div>,
@@ -203,7 +205,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
               <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/5 backdrop-blur-sm">
                 <Icon icon="solar:verified-check-bold" className="text-primary text-xl" />
                 <p className="text-primary text-[10px] md:text-sm font-bold tracking-widest uppercase">
-                  Современные методы обучения
+                  {t('modernMethods')}
                 </p>
               </div>
             </MD>
@@ -241,7 +243,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
                     value={query}
                     onChange={e => { setQuery(e.target.value); setOpen(true) }}
                     onFocus={() => setOpen(true)}
-                    placeholder="Поиск курсов..."
+                    placeholder={t('searchPlaceholder')}
                     className="relative py-4 md:py-5 pl-6 md:pl-8 pr-16 md:pr-20 text-base md:text-lg w-full text-midnight_text rounded-full border border-white/70 focus:outline-none focus:border-primary duration-300 transition-all"
                     style={{ background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(18px)' }}
                   />
@@ -291,21 +293,21 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
               className="absolute -top-4 right-8 z-20 glass-card rounded-2xl px-3 py-2 flex items-center gap-2"
             >
               <Icon icon="solar:star-bold" className="text-yellow-400 text-lg" />
-              <span className="text-xs font-bold text-midnight_text">4.9 рейтинг</span>
+              <span className="text-xs font-bold text-midnight_text">{t('rating', { value: '4.9' })}</span>
             </MD>
 
             <MD animate={{ y: [0, 10, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
               className="absolute bottom-4 -left-4 z-20 glass-card rounded-2xl px-3 py-2 flex items-center gap-2"
             >
               <Icon icon="solar:users-group-rounded-bold" className="text-primary text-lg" />
-              <span className="text-xs font-bold text-midnight_text">{contactData?.students_count ? `${contactData.students_count}+` : '1200+'} студентов</span>
+              <span className="text-xs font-bold text-midnight_text">{t('studentsCount', { count: contactData?.students_count ? `${contactData.students_count}+` : '1200+' })}</span>
             </MD>
 
             <MD animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
               className="absolute bottom-12 right-0 z-20 glass-card rounded-2xl px-3 py-2 flex items-center gap-2"
             >
               <Icon icon="solar:book-bold" className="text-secondary text-lg" />
-              <span className="text-xs font-bold text-midnight_text">{contactData?.courses_count ? `${contactData.courses_count}+` : '50+'} курсов</span>
+              <span className="text-xs font-bold text-midnight_text">{t('coursesCount', { count: contactData?.courses_count ? `${contactData.courses_count}+` : '50+' })}</span>
             </MD>
 
             <div className="relative w-full max-w-[400px] sm:max-w-[540px] lg:max-w-full z-10">
@@ -386,7 +388,7 @@ const Hero: React.FC<HeroProps> = ({ bannerData, courses = [], contactData }) =>
             href="/#contact"
             className="px-4 py-2.5 rounded-2xl bg-primary text-white text-xs font-black tracking-wide uppercase shadow-lg shadow-primary/30 hover:bg-secondary hover:-translate-y-1 transition-all duration-300 whitespace-nowrap"
           >
-            Контакты
+            {t('contacts')}
           </Link>
         </div>
       )}
