@@ -607,7 +607,7 @@
   },
   "AboutPage": {
     "heroTitle": "Баланын келечеги жаралган жер",
-    "heroHighlight": "Баланын келечеги",
+    "heroHighlight": "Ар бир",
     "heroSubtitle": "NICE International School — толук күндүк жеке эл аралык мектеп.",
     "missionTitle": "Жаттатпай, ойлонууга үйрөтөбүз",
     "whyUsTitle": "Ишеним арткан мектеп",
@@ -616,7 +616,7 @@
     "reviewName": "Айгүл К.",
     "reviewRole": "4-класстын окуучусунун апасы",
     "workHours": "Дш–Жм, 08:00 – 18:00",
-    "address": "Бишкек ш., Мектеп көч. 12",
+    "address": "Кыргызстан, Ош ш., А. Малабеков к., 56/1",
     "pills": [
       {
         "text": "3 тилде окутуу"
@@ -1009,7 +1009,12 @@
     "statCabinets": "Кабинеттер",
     "statTeachers": "Мугалимдер",
     "statStandard": "Стандарт",
-    "statStudents": "Окуучулар"
+    "statStudents": "Окуучулар",
+    "model3dBadge": "3D-модель",
+    "model3dTitle": "Биздин мектеп 3D форматта",
+    "model3dSubtitle": "Кампусту ар тараптан карап көрүңүз: имараттар, спорт аянтчалары жана мектептин аймагы.",
+    "model3dLoading": "3D-модель жүктөлүүдө…",
+    "model3dHint": "Чычкан же манжа менен буруңуз · дөңгөлөк — масштаб"
   },
   "TeacherForm": {
     "linkInvalid": "Шилтеме жараксыз",

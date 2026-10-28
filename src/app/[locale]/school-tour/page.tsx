@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { GO_API_URL } from "@/utils/apiData";
+import CampusModel from "@/app/components/3d/CampusModel";
 
 const MD   = motion.div    as any;
 const MP   = motion.p      as any;
@@ -37,7 +38,8 @@ export default function SchoolTourLanding() {
   }, [locale]);
 
   return (
-    <main className="relative min-h-[100dvh] overflow-hidden flex flex-col">
+    <main>
+    <section className="relative min-h-[100dvh] overflow-hidden flex flex-col">
 
       {/* ── Фоновое фото ── */}
       <div className="absolute inset-0 z-0">
@@ -198,6 +200,21 @@ export default function SchoolTourLanding() {
           ))}
         </div>
       </MD>
+    </section>
+
+    {/* ── 3D-модель кампуса ── */}
+    <section className="bg-slate-50 py-16 sm:py-20">
+      <div className="container max-w-6xl mx-auto px-4">
+        <div className="text-center mb-8">
+          <span className="inline-block text-xs font-black uppercase tracking-[0.2em] text-teal-600 bg-teal-50 px-3 py-1 rounded-full mb-3">
+            {t("model3dBadge")}
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black text-slate-800">{t("model3dTitle")}</h2>
+          <p className="text-slate-500 mt-2 max-w-xl mx-auto">{t("model3dSubtitle")}</p>
+        </div>
+        <CampusModel />
+      </div>
+    </section>
     </main>
   );
 }

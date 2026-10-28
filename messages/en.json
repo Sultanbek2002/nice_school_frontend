@@ -607,7 +607,7 @@
   },
   "AboutPage": {
     "heroTitle": "Where a child's future is born",
-    "heroHighlight": "a child's future",
+    "heroHighlight": "each student",
     "heroSubtitle": "NICE International School is a private full-day international school.",
     "missionTitle": "We teach to think, not to memorize",
     "whyUsTitle": "A school families trust",
@@ -616,7 +616,7 @@
     "reviewName": "Aigul K.",
     "reviewRole": "mother of a 4th-grade student",
     "workHours": "Mon–Fri, 08:00 – 18:00",
-    "address": "12 Shkolnaya St., Bishkek",
+    "address": "56/1 A. Malabekov St., Osh, Kyrgyzstan",
     "pills": [
       {
         "text": "3 languages of instruction"
@@ -1009,7 +1009,12 @@
     "statCabinets": "Classrooms",
     "statTeachers": "Teachers",
     "statStandard": "Standard",
-    "statStudents": "Students"
+    "statStudents": "Students",
+    "model3dBadge": "3D model",
+    "model3dTitle": "Our school in 3D",
+    "model3dSubtitle": "Explore the campus from every angle: buildings, sports grounds and school grounds.",
+    "model3dLoading": "Loading 3D model…",
+    "model3dHint": "Drag to rotate · scroll to zoom"
   },
   "TeacherForm": {
     "linkInvalid": "The link is invalid",
