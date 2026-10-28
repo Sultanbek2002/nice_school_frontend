@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { GO_API_URL } from '@/utils/apiData'
 import { SITE_URL, teacherSlug } from '@/utils/seo'
+import { routing } from '@/i18n/routing'
 
 // Карта сайта собирается при каждом запросе из базы — новые учителя, олимпиады
 // и страницы меню попадают в неё сами, без ручной правки.
@@ -35,7 +36,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getJson('/api/games'),
   ])
 
-  const LOCALES = ['ru', 'ky', 'en'] as const
+  const LOCALES = routing.locales
 
   const seen = new Set<string>()
   const entries: MetadataRoute.Sitemap = []

@@ -1,19 +1,17 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useLocale } from "next-intl";
-import { usePathname, useRouter } from "@/i18n/navigation";
-import type { Locale } from "@/i18n/routing";
+import { routing, type Locale } from "@/i18n/routing";
 
-const LANGS: { code: Locale; label: string }[] = [
+const ALL_LANGS = [
   { code: "ru", label: "РУС" },
   { code: "ky", label: "КЫР" },
   { code: "en", label: "ENG" },
 ];
+const LANGS = ALL_LANGS.filter((l) => (routing.locales as readonly string[]).includes(l.code)) as { code: Locale; label: string }[];
 
 export default function LanguageSwitcher() {
   const locale = useLocale();
-  const pathname = usePathname();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -30,7 +28,15 @@ export default function LanguageSwitcher() {
   const switchTo = (next: Locale) => {
     setOpen(false);
     if (next === locale) return;
-    router.replace(pathname, { locale: next });
+    // Full page load, not client-side navigation: the header/footer menu and
+    // all server-fetched content must re-render in the new language. The
+    // path is rebuilt by swapping the leading locale segment (/ru/x → /en/x).
+    const { pathname, search, hash } = window.location;
+    const segs = pathname.split("/");
+    if ((routing.locales as readonly string[]).includes(segs[1]) || segs[1] === "ky") segs.splice(1, 1);
+    const rest = segs.join("/").replace(/^\/+/, "");
+    document.cookie = `NEXT_LOCALE=${next}; path=/; max-age=31536000`;
+    window.location.assign(`/${next}${rest ? "/" + rest : ""}${search}${hash}`);
   };
 
   return (

@@ -4,6 +4,13 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Kyrgyz is temporarily disabled — send old /ky links to the Russian page.
+  async redirects() {
+    return [
+      { source: '/ky', destination: '/ru', permanent: false },
+      { source: '/ky/:path*', destination: '/ru/:path*', permanent: false },
+    ]
+  },
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL || 'http://172.20.10.2:8080'
     return [
