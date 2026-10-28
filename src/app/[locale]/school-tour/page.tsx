@@ -215,14 +215,13 @@ export default function SchoolTourLanding() {
         {/* Цифры кампуса — из описания школы */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
           {[
-            { icon: "📐", value: <>11 771 <span className="text-lg sm:text-xl">{t("unitM2")}</span></>, label: t("factArea"), note: t("factAreaNote") },
-            { icon: "🏫", value: "2", label: t("factBuildings") },
-            { icon: "🏢", value: "2", label: t("factFloors") },
-            { icon: "🚪", value: "26", label: t("factRooms") },
-            { icon: "🔬", value: "4", label: t("factLabs") },
-          ].map(({ icon, value, label, note }, i) => (
+            { value: <>11 771 <span className="text-lg sm:text-xl">{t("unitM2")}</span></>, label: t("factArea"), note: t("factAreaNote") },
+            { value: "2", label: t("factBuildings") },
+            { value: "2", label: t("factFloors") },
+            { value: "26", label: t("factRooms") },
+            { value: "4", label: t("factLabs") },
+          ].map(({ value, label, note }, i) => (
             <div key={i} className={`bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5 text-center ${i === 0 ? "col-span-2 sm:col-span-1" : ""}`}>
-              <div className="text-2xl mb-1" aria-hidden>{icon}</div>
               <div className="text-2xl sm:text-3xl font-black text-teal-600 leading-tight">{value}</div>
               <div className="text-xs sm:text-sm font-semibold text-slate-600 mt-1">{label}</div>
               {note && <div className="text-[11px] text-slate-400 mt-0.5">{note}</div>}
