@@ -869,7 +869,19 @@
     "startPlaying": "Ойноону баштоо",
     "exitFullscreen": "Кичирейтүү",
     "fullscreen": "Толук экран",
-    "stop": "Токтотуу"
+    "stop": "Токтотуу",
+    "openGame": "Оюнга өтүү",
+    "download": "Жүктөп алуу",
+    "downloadGame": "Оюнду жүктөп алуу",
+    "typeLink": "Шилтеме",
+    "typeDownload": "Жүктөп алуу",
+    "linkHint": "Оюн башка сайтта жаңы өтмөктө ачылат",
+    "downloadHint": "Файлды жүктөп алып, оюнду өз түзмөгүңүздө ачыңыз",
+    "file": "Файл",
+    "size": "Көлөмү",
+    "kb": "КБ",
+    "mb": "МБ",
+    "details": "Кененирээк"
   },
   "ManagementForm": {
     "linkInvalid": "Шилтеме жараксыз",

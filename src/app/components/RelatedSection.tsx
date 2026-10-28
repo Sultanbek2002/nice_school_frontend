@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import { makeSlug } from "@/utils/apiData";
+import { gameTypeLabel } from "@/utils/games";
 
 // ─── Course mini-card ───────────────────────────────────────
 export function RelatedCourseCard({ course }: { course: any }) {
@@ -52,6 +53,7 @@ export function RelatedTeacherCard({ teacher }: { teacher: any }) {
 
 // ─── Game mini-card ─────────────────────────────────────────
 export function RelatedGameCard({ game, href }: { game: any; href: string }) {
+  const t = useTranslations("Games");
   return (
     <Link href={href} className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col">
       <div className="relative h-36 bg-slate-100 overflow-hidden">
@@ -60,7 +62,7 @@ export function RelatedGameCard({ game, href }: { game: any; href: string }) {
         ) : (
           <div className="w-full h-full flex items-center justify-center text-4xl opacity-30">🎮</div>
         )}
-        <span className="absolute top-2 left-2 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{game.game_type || "HTML"}</span>
+        <span className="absolute top-2 left-2 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{gameTypeLabel(game.game_type, t)}</span>
         <div className="absolute bottom-2 right-2 w-8 h-8 rounded-full border-2 border-white shadow bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
           <span className="text-white text-xs font-bold">{(game.developer_name || "N").charAt(0)}</span>
         </div>

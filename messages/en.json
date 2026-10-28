@@ -869,7 +869,19 @@
     "startPlaying": "Start playing",
     "exitFullscreen": "Exit full screen",
     "fullscreen": "Full screen",
-    "stop": "Stop"
+    "stop": "Stop",
+    "openGame": "Go to the game",
+    "download": "Download",
+    "downloadGame": "Download the game",
+    "typeLink": "Link",
+    "typeDownload": "Download",
+    "linkHint": "The game opens on another website in a new tab",
+    "downloadHint": "Download the file and run the game on your device",
+    "file": "File",
+    "size": "Size",
+    "kb": "KB",
+    "mb": "MB",
+    "details": "Details"
   },
   "ManagementForm": {
     "linkInvalid": "The link is invalid",

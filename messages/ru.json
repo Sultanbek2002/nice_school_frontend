@@ -869,7 +869,19 @@
     "startPlaying": "Начать игру",
     "exitFullscreen": "Свернуть",
     "fullscreen": "Полный экран",
-    "stop": "Остановить"
+    "stop": "Остановить",
+    "openGame": "Перейти к игре",
+    "download": "Скачать",
+    "downloadGame": "Скачать игру",
+    "typeLink": "Ссылка",
+    "typeDownload": "Скачать",
+    "linkHint": "Игра откроется на другом сайте в новой вкладке",
+    "downloadHint": "Скачайте файл и запустите игру на своём устройстве",
+    "file": "Файл",
+    "size": "Размер",
+    "kb": "КБ",
+    "mb": "МБ",
+    "details": "Подробнее"
   },
   "ManagementForm": {
     "linkInvalid": "Ссылка недействительна",

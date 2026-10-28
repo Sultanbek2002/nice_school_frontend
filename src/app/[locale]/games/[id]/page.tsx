@@ -7,6 +7,7 @@ import GamePlayer from "./GamePlayer";
 import { GO_API_URL, fixImageUrl } from "@/utils/apiData";
 import { RelatedGameCard, RelatedSectionBlock } from "@/app/components/RelatedSection";
 import { pageMetadata, truncate, SITE_NAME } from "@/utils/seo";
+import { formatFileSize, gameKind, gameTypeLabel, safeExternalUrl } from "@/utils/games";
 
 interface Game {
   ID: number;
@@ -16,6 +17,8 @@ interface Game {
   thumbnail: string;
   game_type: string;
   file_url: string;
+  file_name?: string;
+  file_size?: number;
   external_url: string;
   developer_name: string;
   developer_avatar: string;
@@ -71,17 +74,62 @@ export default async function GameDetailPage({ params }: { params: Promise<{ id:
   // Настоящий HTTP 404 (а не «200 + текст ошибки») — иначе Google считает такие адреса мусорными страницами
   if (!game) notFound();
 
-  const gameUrl = game.game_type === "External" ? game.external_url : fixImageUrl(game.file_url, '');
+  const kind = gameKind(game.game_type);
+  const typeLabel = gameTypeLabel(game.game_type, t);
+  const fileSize = formatFileSize(game.file_size, t);
+  const actionUrl = kind === "link" ? safeExternalUrl(game.external_url) : fixImageUrl(game.file_url, '');
 
   return (
     <main className="min-h-screen pt-24 pb-16">
-      {/* Game player — full width */}
+      {/* Game player — full width. Link and download games get a launch panel instead. */}
       <div className="w-full bg-black">
-        <GamePlayer
-          gameUrl={gameUrl}
-          title={game.title}
-          gameType={game.game_type}
-        />
+        {kind === "play" ? (
+          <GamePlayer
+            gameUrl={actionUrl}
+            title={game.title}
+            gameType={game.game_type}
+          />
+        ) : (
+          <div className="relative w-full min-h-[420px] flex flex-col items-center justify-center text-center px-4 py-16 bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 overflow-hidden">
+            {game.thumbnail && (
+              <img src={fixImageUrl(game.thumbnail, '')} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover opacity-20 blur-sm" />
+            )}
+            <div className="relative">
+              <div className="text-6xl mb-4">{kind === "link" ? "🔗" : "📦"}</div>
+              <h2 className="text-white text-2xl md:text-3xl font-black mb-2">{game.title}</h2>
+              <p className="text-slate-300 text-sm mb-8 max-w-md mx-auto">
+                {kind === "link" ? t("linkHint") : t("downloadHint")}
+              </p>
+              {!actionUrl ? (
+                <p className="text-slate-400">{t("noFile")}</p>
+              ) : kind === "link" ? (
+                <a
+                  href={actionUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-3 bg-teal-500 hover:bg-teal-400 text-white px-10 py-4 rounded-2xl font-black text-lg shadow-xl shadow-teal-900/50 transition-all active:scale-95"
+                >
+                  {t("openGame")}
+                  <span aria-hidden>↗</span>
+                </a>
+              ) : (
+                <a
+                  href={actionUrl}
+                  download={game.file_name || true}
+                  className="inline-flex items-center gap-3 bg-teal-500 hover:bg-teal-400 text-white px-10 py-4 rounded-2xl font-black text-lg shadow-xl shadow-teal-900/50 transition-all active:scale-95"
+                >
+                  <span aria-hidden>⬇</span>
+                  {t("downloadGame")}
+                </a>
+              )}
+              {kind === "download" && game.file_name && (
+                <p className="text-slate-400 text-xs mt-4">
+                  {game.file_name}{fileSize ? ` · ${fileSize}` : ""}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Game info below player */}
@@ -99,7 +147,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ id:
           <div className="md:col-span-2 space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="bg-teal-50 text-teal-700 text-xs font-bold px-2.5 py-1 rounded-full">{game.game_type}</span>
+                <span className="bg-teal-50 text-teal-700 text-xs font-bold px-2.5 py-1 rounded-full">{typeLabel}</span>
               </div>
               <h1 className="text-3xl font-black text-slate-800">{game.title}</h1>
               {game.description && (
@@ -144,8 +192,20 @@ export default async function GameDetailPage({ params }: { params: Promise<{ id:
               <div className="border-t mt-4 pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">{t("format")}</span>
-                  <span className="font-semibold text-slate-700">{game.game_type}</span>
+                  <span className="font-semibold text-slate-700">{typeLabel}</span>
                 </div>
+                {kind === "download" && game.file_name && (
+                  <div className="flex justify-between gap-3 text-sm">
+                    <span className="text-slate-400 shrink-0">{t("file")}</span>
+                    <span className="font-semibold text-slate-700 truncate" title={game.file_name}>{game.file_name}</span>
+                  </div>
+                )}
+                {kind === "download" && fileSize && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">{t("size")}</span>
+                    <span className="font-semibold text-slate-700">{fileSize}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">{t("added")}</span>
                   <span className="font-semibold text-slate-700">{formatDate(game.CreatedAt, locale)}</span>
