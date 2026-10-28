@@ -24,7 +24,7 @@ export default function CampusModel() {
   }, [])
 
   return (
-    <div ref={ref} className="relative w-full h-[70vh] min-h-[420px] max-h-[760px] rounded-3xl overflow-hidden bg-[#dfe9f5] shadow-xl">
+    <div ref={ref} className="relative w-full h-[52vh] sm:h-[70vh] min-h-[360px] sm:min-h-[420px] max-h-[760px] rounded-3xl overflow-hidden bg-[#dfe9f5] shadow-xl">
       {visible && <CampusModelCanvas onLoaded={() => setLoaded(true)} />}
       {!loaded && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-500 pointer-events-none">

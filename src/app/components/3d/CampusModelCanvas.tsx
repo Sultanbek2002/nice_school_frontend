@@ -42,6 +42,22 @@ function AllowPageScroll() {
 const deg = THREE.MathUtils.degToRad
 // Same starting view as the model author's viewer: orbit 155°, tilt 60°, 200 m.
 const START = new THREE.Vector3().setFromSphericalCoords(200, deg(60), deg(155))
+const MAX_DISTANCE = 320
+
+// 200 m frames the campus on a wide screen; on a narrow (phone) canvas only
+// the middle fits, so back the camera off in proportion to the aspect ratio.
+function distanceScale(aspect: number) {
+  return Math.min(2.5, Math.max(1, 1.3 / aspect))
+}
+
+function FitToScreen() {
+  const camera = useThree((s) => s.camera)
+  const aspect = useThree((s) => s.size.width / s.size.height)
+  useEffect(() => {
+    camera.position.copy(START).multiplyScalar(distanceScale(aspect))
+  }, [camera, aspect])
+  return null
+}
 
 export default function CampusModelCanvas({ onLoaded }: { onLoaded?: () => void }) {
   return (
@@ -75,11 +91,12 @@ export default function CampusModelCanvas({ onLoaded }: { onLoaded?: () => void 
         autoRotate
         autoRotateSpeed={0.6}
         minDistance={25}
-        maxDistance={320}
+        maxDistance={MAX_DISTANCE * 2.5}
         minPolarAngle={deg(5)}
         maxPolarAngle={deg(88)}
       />
       <AllowPageScroll />
+      <FitToScreen />
     </Canvas>
   )
 }

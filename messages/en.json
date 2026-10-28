@@ -1014,7 +1014,14 @@
     "model3dTitle": "Our school in 3D",
     "model3dSubtitle": "Explore the campus from every angle: buildings, sports grounds and school grounds.",
     "model3dLoading": "Loading 3D model…",
-    "model3dHint": "Drag to rotate · scroll to zoom"
+    "model3dHint": "Drag to rotate · scroll to zoom",
+    "factArea": "Campus area",
+    "factAreaNote": "buildings — 2,142 m²",
+    "factBuildings": "Buildings",
+    "factFloors": "Floors per building",
+    "factRooms": "Rooms",
+    "factLabs": "Laboratories",
+    "unitM2": "m²"
   },
   "TeacherForm": {
     "linkInvalid": "The link is invalid",
