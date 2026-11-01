@@ -1,20 +1,17 @@
 import Link from "next/link";
-import Image from "next/image";
 
 const Logo: React.FC = () => {
   return (
-    <Link href="/" className="inline-flex items-center gap-2 select-none">
-      <Image
-        src="/images/logo/logo-mark.png"
-        alt="Nice School"
-        width={40}
-        height={62}
-        className="h-10 w-auto"
-        quality={100}
+    <Link href="/" className="inline-flex items-center select-none">
+      {/* Векторный логотип «nice Global» (знак школы на месте «g»). */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/images/logo/logo-full.svg"
+        alt="nice Global"
+        width={180}
+        height={36}
+        className="h-8 w-auto sm:h-9"
       />
-      <span className="font-[family-name:var(--font-heading)] text-lg font-bold leading-none text-midnight_text sm:text-xl">
-        Nice <span className="text-primary">School</span>
-      </span>
     </Link>
   );
 };
