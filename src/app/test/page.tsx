@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import PaperResults from "@/app/components/PaperResults";
 import { GO_API_URL } from "@/utils/apiData";
 
 export default function LiveTestHomePage() {
@@ -60,6 +61,7 @@ export default function LiveTestHomePage() {
           </div>
           {error && <p className="mt-2 text-center text-sm text-red-500">{error}</p>}
         </div>
+        <PaperResults />
       </div>
     </div>
   );
