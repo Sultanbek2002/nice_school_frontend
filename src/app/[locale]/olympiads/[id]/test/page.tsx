@@ -109,6 +109,18 @@ export default function TestPage({ params }: { params: Promise<{ id: string; loc
     const [currentIdx, setCurrentIdx] = useState(0);
     const [flagged,    setFlagged]    = useState<Set<number>>(new Set());
 
+    const deadlineRef = useRef(0);
+    const submitRef = useRef<(auto?: boolean) => void>(() => {});
+    const readQuestions = async (response: Response): Promise<Question[]> => {
+        if (!response.ok) throw new Error("Test unavailable");
+        const deadline = Date.parse(response.headers.get("X-Test-Deadline") || "");
+        const serverNow = Date.parse(response.headers.get("X-Server-Time") || "");
+        if (!Number.isFinite(deadline) || !Number.isFinite(serverNow)) throw new Error("Missing test deadline");
+        deadlineRef.current = Date.now() + Math.max(0, deadline - serverNow);
+        setTimeLeft(Math.max(0, Math.ceil((deadline - serverNow) / 1000)));
+        return response.json();
+    };
+
     // ── 1. Load olympiad + check access ──────────────────
     useEffect(() => {
         const token = getToken();
@@ -138,6 +150,11 @@ export default function TestPage({ params }: { params: Promise<{ id: string; loc
                 return;
             }
 
+            if (olym.status !== "active" || (olym.start_time && Date.now() < new Date(olym.start_time).getTime())) {
+                setNoAccessMsg("Олимпиада ещё не началась или уже завершена");
+                setStage("no-access");
+                return;
+            }
             if (olym.start_time) {
                 const deadline = new Date(olym.start_time).getTime() + (olym.time_limit || 60) * 60000;
                 if (Date.now() > deadline) {
@@ -161,7 +178,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string; loc
             if (!olym.require_face_verification) {
                 fetch(`${GO_API_URL}/api/olympiads/${id}/test-questions`, {
                     headers: { Authorization: `Bearer ${token}` },
-                }).then(r => r.ok ? r.json() : Promise.reject())
+                }).then(readQuestions)
                   .then(qs => {
                       setQuestions(qs);
                       setStartedAt(Date.now());
@@ -501,7 +518,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string; loc
                     headers: { Authorization: `Bearer ${getToken()}` },
                 });
                 if (qRes.ok) {
-                    const qs = await qRes.json();
+                    const qs = await readQuestions(qRes);
                     setQuestions(qs);
                     setStartedAt(Date.now());
                     setTimeout(() => setStage("testing"), 1000);
@@ -542,14 +559,14 @@ export default function TestPage({ params }: { params: Promise<{ id: string; loc
     // ── Timer ──────────────────────────────────────────────
     useEffect(() => {
         if (stage !== "testing") return;
-        const iv = setInterval(() => {
-            setTimeLeft(t => {
-                if (t <= 1) { clearInterval(iv); handleSubmit(true); return 0; }
-                return t - 1;
-            });
-        }, 1000);
+        const tick = () => {
+            const remaining = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
+            setTimeLeft(remaining);
+            if (remaining === 0) submitRef.current(true);
+        };
+        const iv = setInterval(tick, 1000);
+        tick();
         return () => clearInterval(iv);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stage]);
 
     useEffect(() => {
@@ -638,6 +655,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string; loc
             }
         } finally { setSubmitting(false); }
     };
+    submitRef.current = handleSubmit;
 
     const fmtTime = (s: number) => {
         const m = Math.floor(s / 60), sec = s % 60;
